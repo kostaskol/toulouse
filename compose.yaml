@@ -15,6 +15,12 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       REDIS_URL: redis://redis:6379/0
+      # OrbStack gives every container a routable IP and a .orb.local name;
+      # Rails host authorization rejects those names unless they are allowed.
+      # Both forms are listed because Rails allows only one subdomain label
+      # per pattern: .orb.local covers toulouse-api-1.orb.local, and
+      # .toulouse.orb.local covers the compose-style api.toulouse.orb.local.
+      RAILS_DEVELOPMENT_HOSTS: .orb.local,.toulouse.orb.local
     volumes:
       # Live reload: the working tree shadows the copy baked into the image.
       # Gems live in /usr/local/bundle and are not shadowed.
