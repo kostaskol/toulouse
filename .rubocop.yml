@@ -1,6 +1,17 @@
 # Omakase Ruby styling for Rails
 inherit_gem: { rubocop-rails-omakase: rubocop.yml }
 
+plugins:
+  - rubocop-rspec
+
+AllCops:
+  NewCops: enable
+
+# Describing a behaviour by name reads better than naming a class for specs that
+# cover wiring rather than one object.
+RSpec/DescribeClass:
+  Enabled: false
+
 # Overwrite or add rules to create your own house style
 #
 # # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`

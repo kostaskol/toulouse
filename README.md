@@ -19,7 +19,7 @@ connect to them from `psql`, `redis-cli`, or a Rails server running natively.
 | Command | |
 |---|---|
 | `docker compose exec api ./bin/rails console` | Rails console |
-| `docker compose exec api ./bin/rails test` | Test suite |
+| `docker compose exec api ./bin/rspec` | Test suite |
 | `docker compose exec api ./bin/rails generate ...` | Generators |
 | `docker compose build api` | Rebuild after changing the Gemfile |
 | `docker compose down -v` | Stop and delete the data volumes |
