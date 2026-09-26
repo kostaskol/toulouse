@@ -36,6 +36,10 @@ gem "thruster", require: false
 # Use Active Storage variants [https://guides.rubyonrails.org/active_storage_overview.html#transforming-images]
 gem "image_processing", "~> 2.1"
 
+# image_processing 2.0 dropped its backends, so the one Active Storage is
+# configured for has to be declared here.
+gem "ruby-vips", "~> 2.0"
+
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
 # gem "rack-cors"
 
