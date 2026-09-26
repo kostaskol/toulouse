@@ -1,0 +1,11 @@
+#!/bin/bash -e
+
+# Starting the server: make sure the database exists and is migrated, and
+# clear a pidfile left behind by an unclean shutdown (common in development,
+# where tmp/ is bind-mounted and survives the container).
+if [[ "${*}" == *"rails"*"server"* ]]; then
+  rm -f tmp/pids/server.pid
+  ./bin/rails db:prepare
+fi
+
+exec "${@}"

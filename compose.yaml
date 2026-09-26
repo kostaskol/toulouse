@@ -1,0 +1,70 @@
+name: toulouse
+
+services:
+  api:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3000:3000"
+    environment:
+      RAILS_ENV: development
+      RAILS_MAX_THREADS: 5
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      # Live reload: the working tree shadows the copy baked into the image.
+      # Gems live in /usr/local/bundle and are not shadowed.
+      - .:/rails
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - toulouse
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: toulouse_development
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d toulouse_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - toulouse
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - toulouse
+
+networks:
+  toulouse:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
