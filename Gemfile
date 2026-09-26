@@ -17,7 +17,7 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 
 # Redis client, reachable at REDIS_URL. Note that Rails.cache, Active Job and
 # Action Cable are backed by the Solid adapters (Postgres) below, not by Redis.
-gem "redis", "~> 5.0"
+gem "redis", "~> 6.0"
 
 # Use the database-backed adapters for Rails.cache, Active Job, and Action Cable
 gem "solid_cache"
