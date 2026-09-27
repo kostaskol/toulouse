@@ -55,4 +55,12 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+  gem "rubocop-rspec", require: false
+
+  gem "rspec-rails", "~> 8.0"
+
+  # Factories, not fixtures: every tenant-scoped record needs a tenant.
+  gem "factory_bot_rails"
+
+  gem "shoulda-matchers", "~> 6.0"
 end
