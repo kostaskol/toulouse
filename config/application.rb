@@ -29,6 +29,13 @@ module Toulouse
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # Appended, so it lands inside ActionDispatch::Executor, which clears Current
+    # per request. After the autoloader because the constant is autoloaded, and
+    # the stack is built two initializers later.
+    initializer "toulouse.resolve_tenant", after: :setup_main_autoloader do |app|
+      app.middleware.use Tenancy::Resolve
+    end
+
     config.generators do |g|
       g.test_framework :rspec
       g.fixture_replacement :factory_bot, dir: "spec/factories"
