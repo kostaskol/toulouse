@@ -36,3 +36,5 @@
 /docs/
 
 CLAUDE.md
+# Ignore superpowers execution scratch.
+/.superpowers/
