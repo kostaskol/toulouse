@@ -7,6 +7,10 @@ class Tenant::ApiKey < ApplicationRecord
   # list. Counted after TOKEN_PREFIX, which would otherwise be the whole slice.
   DISPLAY_CHARS = 8
 
+  # Not shorter than Tenancy::ResolutionCache::TTL, or staleness gets judged
+  # against a cached timestamp that is already past the threshold.
+  LAST_USED_THROTTLE = 5.minutes
+
   # Readable only on the instance that generated it. Nothing recovers it later.
   attr_reader :token
 
@@ -25,6 +29,18 @@ class Tenant::ApiKey < ApplicationRecord
 
     key = find_by(token_digest: digest(token))
     key if key&.usable?
+  end
+
+  def self.touch_last_used(id, last_used_at)
+    return last_used_at unless last_used_stale?(last_used_at)
+
+    now = Time.current
+    where(id: id).update_all(last_used_at: now)
+    now
+  end
+
+  def self.last_used_stale?(last_used_at)
+    last_used_at.nil? || last_used_at < LAST_USED_THROTTLE.ago
   end
 
   def usable?
