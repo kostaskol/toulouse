@@ -35,6 +35,15 @@ module Tenancy
         )
       end
 
+      # Keeps expires_at, so a digest under constant load still expires and
+      # picks up a revocation within the TTL.
+      def touch_last_used(digest, entry)
+        touched = Tenant::ApiKey.touch_last_used(entry.api_key_id, entry.last_used_at)
+        return if touched == entry.last_used_at
+
+        @store.compute_if_present(digest) { |cached| cached.with(last_used_at: touched) }
+      end
+
       def clear
         @store.clear
       end

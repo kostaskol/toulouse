@@ -75,4 +75,63 @@ RSpec.describe Tenancy::ResolutionCache do
 
     expect(described_class.read(digest)).to be_nil
   end
+
+  describe ".touch_last_used" do
+    it "stores the new timestamp so the write is not repeated" do
+      described_class.write(digest, api_key)
+      described_class.touch_last_used(digest, described_class.read(digest))
+      refreshed = described_class.read(digest)
+
+      expect(count_queries { described_class.touch_last_used(digest, refreshed) }).to eq(0)
+    end
+
+    it "keeps the original expiry when it refreshes the timestamp" do
+      described_class.write(digest, api_key)
+      entry = described_class.read(digest)
+
+      described_class.touch_last_used(digest, entry)
+
+      expect(described_class.read(digest).expires_at).to eq(entry.expires_at)
+    end
+
+    it "still expires a digest that is refreshed on every read" do
+      described_class.write(digest, api_key)
+
+      travel(described_class::TTL - 1.second) do
+        described_class.touch_last_used(digest, described_class.read(digest))
+      end
+
+      travel(described_class::TTL + 1.second) do
+        expect(described_class.read(digest)).to be_nil
+      end
+    end
+
+    it "does not resurrect an entry that was evicted" do
+      described_class.write(digest, api_key)
+      entry = described_class.read(digest)
+      described_class.clear
+
+      described_class.touch_last_used(digest, entry)
+
+      expect(described_class.read(digest)).to be_nil
+    end
+  end
+
+  describe "eviction" do
+    it "clears when an api key is committed" do
+      described_class.write(digest, api_key)
+
+      api_key.update!(revoked_at: Time.current)
+
+      expect(described_class.read(digest)).to be_nil
+    end
+
+    it "clears when a tenant is committed" do
+      described_class.write(digest, api_key)
+
+      api_key.tenant.update!(status: :suspended)
+
+      expect(described_class.read(digest)).to be_nil
+    end
+  end
 end

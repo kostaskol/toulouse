@@ -18,6 +18,8 @@ class Tenant::ApiKey < ApplicationRecord
 
   before_create :assign_token
 
+  after_commit { Tenancy::ResolutionCache.clear }
+
   # SHA-256 rather than bcrypt: the token is 256 bits of randomness, so there is
   # nothing to slow down, and a digest has to be indexable for lookup.
   def self.digest(token)

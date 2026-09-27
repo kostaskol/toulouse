@@ -11,4 +11,5 @@ class Tenant < ApplicationRecord
   validates :slug, presence: true, format: { with: SLUG_FORMAT }
 
   after_create { create_setting! }
+  after_commit { Tenancy::ResolutionCache.clear }
 end
