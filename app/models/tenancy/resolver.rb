@@ -1,0 +1,35 @@
+module Tenancy
+  class Resolver
+    def self.call(token)
+      new(token).call
+    end
+
+    def initialize(token)
+      @token = token
+    end
+
+    def call
+      return Resolution.failed(:missing_api_key) if @token.blank?
+
+      cached = ResolutionCache.read(digest)
+      return resolved(cached) if cached
+
+      api_key = Tenant::ApiKey.authenticate(@token)
+      return Resolution.failed(:invalid_api_key) if api_key.nil?
+      return Resolution.failed(:inactive) unless api_key.tenant.active?
+
+      resolved(ResolutionCache.write(digest, api_key))
+    end
+
+    private
+
+    def digest
+      @digest ||= Tenant::ApiKey.digest(@token)
+    end
+
+    def resolved(entry)
+      ResolutionCache.touch_last_used(digest, entry)
+      Resolution.resolved(entry.tenant)
+    end
+  end
+end
