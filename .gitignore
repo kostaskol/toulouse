@@ -34,3 +34,5 @@
 
 # Ignore design docs and specs.
 /docs/
+
+CLAUDE.md
