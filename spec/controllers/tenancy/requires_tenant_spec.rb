@@ -2,7 +2,8 @@ require "rails_helper"
 
 RSpec.describe Tenancy::RequiresTenant, type: :controller do
   controller(ApplicationController) do
-    include Tenancy::RequiresTenant
+    # described_class is unavailable here: the block is class_exec'd on the controller.
+    include Tenancy::RequiresTenant # rubocop:disable RSpec/DescribedClass
 
     def index
       head :no_content
