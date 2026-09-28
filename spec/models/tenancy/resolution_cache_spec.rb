@@ -4,12 +4,16 @@ RSpec.describe Tenancy::ResolutionCache do
   let(:api_key) { create(:tenant_api_key) }
   let(:digest) { api_key.token_digest }
 
+  def write_entry(digest = self.digest, api_key = self.api_key)
+    described_class.write(digest, api_key, generation: described_class.generation)
+  end
+
   it "returns nil for a digest it has never seen" do
     expect(described_class.read(Tenant::ApiKey.digest(api_key.token_prefix))).to be_nil
   end
 
   it "reads back an entry it wrote" do
-    described_class.write(digest, api_key)
+    write_entry
     entry = described_class.read(digest)
 
     expect(entry.api_key_id).to eq(api_key.id)
@@ -18,14 +22,14 @@ RSpec.describe Tenancy::ResolutionCache do
   end
 
   it "builds the tenant without a query" do
-    described_class.write(digest, api_key)
+    write_entry
     entry = described_class.read(digest)
 
     expect(count_queries { entry.tenant }).to eq(0)
   end
 
   it "builds a tenant that is persisted and fully attributed" do
-    described_class.write(digest, api_key)
+    write_entry
     tenant = described_class.read(digest).tenant
 
     expect(tenant).to be_persisted
@@ -34,7 +38,7 @@ RSpec.describe Tenancy::ResolutionCache do
   end
 
   it "hands out a separate tenant object per read" do
-    described_class.write(digest, api_key)
+    write_entry
 
     first = described_class.read(digest).tenant
     second = described_class.read(digest).tenant
@@ -45,7 +49,7 @@ RSpec.describe Tenancy::ResolutionCache do
   end
 
   it "keeps an entry until the TTL elapses" do
-    described_class.write(digest, api_key)
+    write_entry
 
     travel(described_class::TTL - 1.second) do
       expect(described_class.read(digest)).not_to be_nil
@@ -53,7 +57,7 @@ RSpec.describe Tenancy::ResolutionCache do
   end
 
   it "drops an entry once the TTL has elapsed" do
-    described_class.write(digest, api_key)
+    write_entry
 
     travel(described_class::TTL + 1.second) do
       expect(described_class.read(digest)).to be_nil
@@ -62,15 +66,15 @@ RSpec.describe Tenancy::ResolutionCache do
 
   it "keeps entries for different digests apart" do
     other = create(:tenant_api_key)
-    described_class.write(digest, api_key)
-    described_class.write(other.token_digest, other)
+    write_entry
+    write_entry(other.token_digest, other)
 
     expect(described_class.read(digest).tenant).to eq(api_key.tenant)
     expect(described_class.read(other.token_digest).tenant).to eq(other.tenant)
   end
 
   it "drops everything on clear" do
-    described_class.write(digest, api_key)
+    write_entry
     described_class.clear
 
     expect(described_class.read(digest)).to be_nil
@@ -78,7 +82,7 @@ RSpec.describe Tenancy::ResolutionCache do
 
   describe ".touch_last_used" do
     it "stores the new timestamp so the write is not repeated" do
-      described_class.write(digest, api_key)
+      write_entry
       described_class.touch_last_used(digest, described_class.read(digest))
       refreshed = described_class.read(digest)
 
@@ -86,7 +90,7 @@ RSpec.describe Tenancy::ResolutionCache do
     end
 
     it "keeps the original expiry when it refreshes the timestamp" do
-      described_class.write(digest, api_key)
+      write_entry
       entry = described_class.read(digest)
 
       described_class.touch_last_used(digest, entry)
@@ -95,7 +99,7 @@ RSpec.describe Tenancy::ResolutionCache do
     end
 
     it "still expires a digest that is refreshed on every read" do
-      described_class.write(digest, api_key)
+      write_entry
 
       travel(described_class::TTL - 1.second) do
         described_class.touch_last_used(digest, described_class.read(digest))
@@ -107,7 +111,7 @@ RSpec.describe Tenancy::ResolutionCache do
     end
 
     it "does not resurrect an entry that was evicted" do
-      described_class.write(digest, api_key)
+      write_entry
       entry = described_class.read(digest)
       described_class.clear
 
@@ -117,9 +121,28 @@ RSpec.describe Tenancy::ResolutionCache do
     end
   end
 
+  describe "a write racing an eviction" do
+    it "drops a write whose lookups began before the cache was cleared" do
+      generation = described_class.generation
+      described_class.clear
+
+      described_class.write(digest, api_key, generation: generation)
+
+      expect(described_class.read(digest)).to be_nil
+    end
+
+    it "keeps a write whose lookups began after the last clear" do
+      described_class.clear
+
+      described_class.write(digest, api_key, generation: described_class.generation)
+
+      expect(described_class.read(digest)).not_to be_nil
+    end
+  end
+
   describe "eviction" do
     it "clears when an api key is committed" do
-      described_class.write(digest, api_key)
+      write_entry
 
       api_key.update!(revoked_at: Time.current)
 
@@ -127,7 +150,7 @@ RSpec.describe Tenancy::ResolutionCache do
     end
 
     it "clears when a tenant is committed" do
-      described_class.write(digest, api_key)
+      write_entry
 
       api_key.tenant.update!(status: :suspended)
 

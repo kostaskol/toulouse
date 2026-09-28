@@ -19,6 +19,14 @@ RSpec.describe Tenancy::Resolver do
     expect(described_class.call(key.token_prefix).reason).to eq(:invalid_api_key)
   end
 
+  # Puma tags header values ASCII-8BIT, but another rack server may hand back
+  # UTF-8, where invalid bytes raise from String#blank?.
+  it "fails with invalid_api_key for a token tagged UTF-8 with invalid bytes" do
+    token = "#{Tenant::ApiKey::TOKEN_PREFIX}\xC3".dup.force_encoding(Encoding::UTF_8)
+
+    expect(described_class.call(token).reason).to eq(:invalid_api_key)
+  end
+
   it "fails with invalid_api_key for a revoked key" do
     key = create(:tenant_api_key, revoked_at: 1.minute.ago)
 

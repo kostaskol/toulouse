@@ -4,8 +4,10 @@ module Tenancy
       new(token).call
     end
 
+    # Binary because a credential is bytes, and invalid bytes under a text
+    # encoding raise from String#blank?.
     def initialize(token)
-      @token = token
+      @token = token&.dup&.force_encoding(Encoding::BINARY)
     end
 
     def call
@@ -14,11 +16,12 @@ module Tenancy
       cached = ResolutionCache.read(digest)
       return resolved(cached) if cached
 
+      generation = ResolutionCache.generation
       api_key = Tenant::ApiKey.authenticate(@token)
       return Resolution.failed(:invalid_api_key) if api_key.nil?
       return Resolution.failed(:inactive) unless api_key.tenant.active?
 
-      resolved(ResolutionCache.write(digest, api_key))
+      resolved(ResolutionCache.write(digest, api_key, generation: generation))
     end
 
     private

@@ -15,8 +15,13 @@ module Tenancy
     end
 
     @store = Concurrent::Map.new
+    @generation = Concurrent::AtomicFixnum.new
 
     class << self
+      def generation
+        @generation.value
+      end
+
       def read(digest)
         entry = @store[digest]
         return if entry.nil?
@@ -26,13 +31,17 @@ module Tenancy
         nil
       end
 
-      def write(digest, api_key)
-        @store[digest] = Entry.new(
+      # A revocation committed while this caller was querying would otherwise be
+      # undone by the write, re-serving the revoked key for a whole TTL.
+      def write(digest, api_key, generation:)
+        entry = Entry.new(
           tenant_attributes: api_key.tenant.attributes_for_database.freeze,
           api_key_id: api_key.id,
           last_used_at: api_key.last_used_at,
           expires_at: Time.current + TTL
         )
+        @store[digest] = entry if generation == self.generation
+        entry
       end
 
       # Keeps expires_at, so a digest under constant load still expires and
@@ -45,6 +54,7 @@ module Tenancy
       end
 
       def clear
+        @generation.increment
         @store.clear
       end
     end

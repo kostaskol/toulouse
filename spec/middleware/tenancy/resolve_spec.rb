@@ -6,8 +6,17 @@ RSpec.describe Tenancy::Resolve do
   let(:seen) { [] }
   let(:app) { ->(_env) { seen << Current.resolution; [ 204, {}, [] ] } }
 
-  def env_for(headers = {})
-    Rack::MockRequest.env_for("/").merge(headers)
+  def env_for(headers = {}, path = "/")
+    Rack::MockRequest.env_for(path).merge(headers)
+  end
+
+  def captured_log(level: Logger::DEBUG)
+    log = StringIO.new
+    logger = ActiveSupport::Logger.new(log)
+    logger.level = level
+    allow(Rails).to receive(:logger).and_return(logger)
+    yield
+    log.string
   end
 
   it "names the rack env key after the wire header" do
@@ -68,23 +77,47 @@ RSpec.describe Tenancy::Resolve do
     expect(seen.last.reason).to eq(:invalid_api_key)
   end
 
-  it "logs the discriminated failure reason" do
-    log = StringIO.new
-    allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(log))
+  it "logs the discriminated failure reason with the path" do
+    logged = captured_log { middleware.call(env_for({}, "/up")) }
 
-    middleware.call(env_for)
+    expect(logged).to include("missing_api_key")
+    expect(logged).to include("/up")
+  end
 
-    expect(log.string).to include("missing_api_key")
+  # Health checks and scanners send no credential, so warning on them would bury
+  # the failures that mean a real credential was rejected.
+  it "keeps a credential-free request below warn" do
+    logged = captured_log(level: Logger::WARN) { middleware.call(env_for({}, "/up")) }
+
+    expect(logged).to be_empty
+  end
+
+  it "warns when a presented credential is rejected" do
+    key = create(:tenant_api_key)
+
+    logged = captured_log(level: Logger::WARN) do
+      middleware.call(env_for(described_class::ENV_KEY => key.token_prefix))
+    end
+
+    expect(logged).to include("invalid_api_key")
+  end
+
+  it "warns when the tenant is not active" do
+    key = create(:tenant_api_key, tenant: create(:tenant, status: :suspended))
+
+    logged = captured_log(level: Logger::WARN) do
+      middleware.call(env_for(described_class::ENV_KEY => key.token))
+    end
+
+    expect(logged).to include("inactive")
   end
 
   it "logs nothing for a resolved request" do
-    log = StringIO.new
-    allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(log))
     key = create(:tenant_api_key)
 
-    middleware.call(env_for(described_class::ENV_KEY => key.token))
+    logged = captured_log { middleware.call(env_for(described_class::ENV_KEY => key.token)) }
 
-    expect(log.string).to be_empty
+    expect(logged).to be_empty
   end
 
   it "is registered in the application middleware stack" do
