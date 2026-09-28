@@ -26,7 +26,9 @@ class Tenant::ApiKey < ApplicationRecord
   def self.authenticate(token)
     return if token.blank?
 
-    key = find_by(token_digest: digest(token))
+    # token_digest is globally unique and is how the tenant is discovered, so
+    # there is no tenant to scope by yet.
+    key = Tenancy.across_tenants { find_by(token_digest: digest(token)) }
     key if key&.usable?
   end
 

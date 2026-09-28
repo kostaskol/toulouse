@@ -73,4 +73,21 @@ RSpec.describe Tenant, type: :model do
       expect(described_class.columns_hash["created_at"].sql_type).to include("with time zone")
     end
   end
+
+  describe "lifecycle with no current tenant" do
+    it "creates its setting" do
+      expect(create(:tenant).setting).to be_present
+    end
+
+    it "destroys its scoped children" do
+      tenant = create(:tenant)
+      Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      Tenancy.across_tenants { create(:tenant_domain, tenant: tenant) }
+
+      tenant.destroy
+
+      expect(Tenancy.across_tenants { Tenant::ApiKey.where(tenant_id: tenant.id).count }).to eq(0)
+      expect(Tenancy.across_tenants { Tenant::Domain.where(tenant_id: tenant.id).count }).to eq(0)
+    end
+  end
 end

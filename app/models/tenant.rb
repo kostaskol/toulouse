@@ -10,5 +10,12 @@ class Tenant < ApplicationRecord
   validates :name, presence: true
   validates :slug, presence: true, format: { with: SLUG_FORMAT }
 
-  after_create { create_setting! }
+  after_create { Tenancy.across_tenants { create_setting! } }
+
+  # Deprovisioning has no current tenant, and dependent: :destroy loads scoped
+  # children. Overridden rather than around_destroy, which would run inside the
+  # association callbacks registered above it.
+  def destroy
+    Tenancy.across_tenants { super }
+  end
 end
