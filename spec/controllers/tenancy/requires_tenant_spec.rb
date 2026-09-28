@@ -44,7 +44,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "makes the key's tenant current for the action" do
-    key = create(:tenant_api_key)
+    key = Tenancy.across_tenants { create(:tenant_api_key) }
     present_key(key.token)
 
     get :index
@@ -60,7 +60,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "rejects an unrecognised key" do
-    present_key(create(:tenant_api_key).token_prefix)
+    present_key(Tenancy.across_tenants { create(:tenant_api_key) }.token_prefix)
 
     get :index
 
@@ -68,7 +68,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "rejects a key whose tenant is not active" do
-    present_key(create(:tenant_api_key, tenant: create(:tenant, status: :suspended)).token)
+    present_key(Tenancy.across_tenants { create(:tenant_api_key, tenant: create(:tenant, status: :suspended)) }.token)
 
     get :index
 
@@ -76,7 +76,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "does not resolve from the Host header" do
-    domain = create(:tenant_domain, is_primary: true)
+    domain = Tenancy.across_tenants { create(:tenant_domain, is_primary: true) }
     request.host = domain.hostname
 
     get :index
@@ -85,8 +85,8 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "ignores tenant_id in the query string and the body" do
-    key = create(:tenant_api_key)
-    other = create(:tenant)
+    key = Tenancy.across_tenants { create(:tenant_api_key) }
+    other = Tenancy.across_tenants { create(:tenant) }
     present_key(key.token)
 
     post :index, params: { tenant_id: other.id }, as: :json
@@ -125,7 +125,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "warns when a presented credential is rejected" do
-    present_key(create(:tenant_api_key).token_prefix)
+    present_key(Tenancy.across_tenants { create(:tenant_api_key) }.token_prefix)
 
     logged = captured_log(level: Logger::WARN) { get :index }
 
@@ -133,7 +133,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "warns when the tenant is not active" do
-    present_key(create(:tenant_api_key, tenant: create(:tenant, status: :suspended)).token)
+    present_key(Tenancy.across_tenants { create(:tenant_api_key, tenant: create(:tenant, status: :suspended)) }.token)
 
     logged = captured_log(level: Logger::WARN) { get :index }
 
@@ -141,7 +141,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
   end
 
   it "logs nothing for a resolved request" do
-    present_key(create(:tenant_api_key).token)
+    present_key(Tenancy.across_tenants { create(:tenant_api_key) }.token)
 
     logged = captured_log { get :index }
 

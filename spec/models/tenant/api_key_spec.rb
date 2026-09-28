@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Tenant::ApiKey, type: :model do
+RSpec.describe Tenant::ApiKey, :across_tenants, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   describe "token generation" do

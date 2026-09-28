@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Tenant::Domain, type: :model do
+RSpec.describe Tenant::Domain, :across_tenants, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   it "downcases the hostname before validation" do

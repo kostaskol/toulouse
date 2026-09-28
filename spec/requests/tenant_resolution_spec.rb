@@ -22,7 +22,7 @@ RSpec.describe "Tenant resolution in the request cycle", type: :request do
   end
 
   it "serves /up when the credential is invalid" do
-    key = create(:tenant_api_key)
+    key = Tenancy.across_tenants { create(:tenant_api_key) }
 
     get "/up", headers: { Tenancy::RequiresTenant::HEADER => key.token_prefix }
 
@@ -36,7 +36,7 @@ RSpec.describe "Tenant resolution in the request cycle", type: :request do
   end
 
   it "resolves during the request" do
-    key = create(:tenant_api_key)
+    key = Tenancy.across_tenants { create(:tenant_api_key) }
 
     get "/probe", headers: headers_for(key)
 
@@ -45,14 +45,14 @@ RSpec.describe "Tenant resolution in the request cycle", type: :request do
   end
 
   it "does not let the resolution survive the response" do
-    get "/probe", headers: headers_for(create(:tenant_api_key))
+    get "/probe", headers: headers_for(Tenancy.across_tenants { create(:tenant_api_key) })
 
     expect(Current.resolution).to be_nil
   end
 
   it "does not carry one request's tenant into the next" do
-    first = create(:tenant_api_key)
-    second = create(:tenant_api_key)
+    first = Tenancy.across_tenants { create(:tenant_api_key) }
+    second = Tenancy.across_tenants { create(:tenant_api_key) }
 
     get "/probe", headers: headers_for(first)
     get "/probe", headers: headers_for(second)

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Tenant::Setting, type: :model do
+RSpec.describe Tenant::Setting, :across_tenants, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   it "is created alongside its tenant" do
