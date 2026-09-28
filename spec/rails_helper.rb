@@ -61,11 +61,22 @@ RSpec.configure do |config|
   # config.infer_spec_type_from_file_location!
 
   config.include FactoryBot::Syntax::Methods
+  config.include TenantContext
   config.include ActiveSupport::Testing::TimeHelpers
   config.include QueryCounter
 
+  # For specs whose subject is a tenant owning table itself, rather than tenant
+  # scoped behaviour.
+  config.around(:each, :across_tenants) do |example|
+    Tenancy.across_tenants { example.run }
+  end
+
   config.before do
     Current.reset
+  end
+
+  config.before(:each, :across_tenants) do
+    Current.across_tenants = true
   end
 
   # Filter lines from Rails gems in backtraces.
