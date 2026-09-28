@@ -78,4 +78,58 @@ RSpec.describe Tenancy::Scoped do
       expect(ids).to contain_exactly(tenant.id, other_tenant.id)
     end
   end
+
+  describe "writes" do
+    it "saves a record belonging to the current tenant" do
+      as_tenant(tenant)
+
+      expect { Tenant::ApiKey.create!(attributes_for(:tenant_api_key)) }.to change(Tenant::ApiKey, :count).by(1)
+    end
+
+    it "rejects a new record assigned to another tenant" do
+      as_tenant(tenant)
+      key = Tenant::ApiKey.new(attributes_for(:tenant_api_key).merge(tenant_id: other_tenant.id))
+
+      expect { key.save }.to raise_error(Tenancy::CrossTenantWriteError)
+    end
+
+    it "rejects a tenant_id change on a persisted record" do
+      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      as_tenant(tenant)
+      key.tenant_id = other_tenant.id
+
+      expect { key.save }.to raise_error(Tenancy::CrossTenantWriteError)
+    end
+
+    it "rejects a tenant_id change even inside across_tenants" do
+      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      key.tenant_id = other_tenant.id
+
+      expect { Tenancy.across_tenants { key.save } }.to raise_error(Tenancy::CrossTenantWriteError)
+    end
+
+    it "allows an unrelated update inside across_tenants" do
+      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+
+      expect { Tenancy.across_tenants { key.update!(attributes_for(:tenant_api_key)) } }.not_to raise_error
+    end
+
+    it "raises when saving with no current tenant and no block" do
+      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      key.name = attributes_for(:tenant_api_key)[:name]
+
+      expect { key.save }.to raise_error(Tenancy::NoTenantError)
+    end
+
+    it "updates only the current tenant's rows through update_all" do
+      mine = Tenancy.across_tenants { create(:tenant_domain, tenant: tenant) }
+      theirs = Tenancy.across_tenants { create(:tenant_domain, tenant: other_tenant) }
+      as_tenant(tenant)
+
+      Tenant::Domain.update_all(is_primary: true)
+
+      expect(mine.reload.is_primary).to be(true)
+      expect(Tenancy.across_tenants { theirs.reload.is_primary }).to be(false)
+    end
+  end
 end
