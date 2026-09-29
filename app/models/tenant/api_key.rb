@@ -7,6 +7,9 @@ class Tenant::ApiKey < ApplicationRecord
   # list. Counted after TOKEN_PREFIX, which would otherwise be the whole slice.
   DISPLAY_CHARS = 8
 
+  # Keeps last_used_at from turning every request into a write.
+  LAST_USED_THROTTLE = 5.minutes
+
   # Readable only on the instance that generated it. Nothing recovers it later.
   attr_reader :token
 
@@ -29,6 +32,14 @@ class Tenant::ApiKey < ApplicationRecord
 
   def usable?
     revoked_at.nil? && (expires_at.nil? || expires_at.future?)
+  end
+
+  def touch_last_used
+    update_columns(last_used_at: Time.current) if last_used_stale?
+  end
+
+  def last_used_stale?
+    last_used_at.nil? || last_used_at < LAST_USED_THROTTLE.ago
   end
 
   private

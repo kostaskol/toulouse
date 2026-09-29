@@ -102,4 +102,37 @@ RSpec.describe Tenant::ApiKey, type: :model do
       expect(index.columns).to eq([ "tenant_id", "created_at" ])
     end
   end
+
+  describe "#touch_last_used" do
+    it "treats a null timestamp as stale and writes" do
+      key = create(:tenant_api_key)
+
+      key.touch_last_used
+
+      expect(key.reload.last_used_at).to be_within(5.seconds).of(Time.current)
+    end
+
+    it "writes when the timestamp is older than the throttle" do
+      key = create(:tenant_api_key, last_used_at: (described_class::LAST_USED_THROTTLE + 1.second).ago)
+
+      key.touch_last_used
+
+      expect(key.reload.last_used_at).to be_within(5.seconds).of(Time.current)
+    end
+
+    it "does not write inside the throttle window" do
+      recent = (described_class::LAST_USED_THROTTLE - 1.second).ago
+      key = create(:tenant_api_key, last_used_at: recent)
+
+      key.touch_last_used
+
+      expect(key.reload.last_used_at).to be_within(1.second).of(recent)
+    end
+
+    it "issues no query inside the throttle window" do
+      key = create(:tenant_api_key, last_used_at: Time.current)
+
+      expect(count_queries { key.touch_last_used }).to eq(0)
+    end
+  end
 end
