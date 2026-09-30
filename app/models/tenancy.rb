@@ -7,8 +7,6 @@ module Tenancy
 
   class CrossTenantWriteError < StandardError; end
 
-  class TenantUnavailableError < StandardError; end
-
   class << self
     # Runs the block as the given tenant, for work that starts with none, such
     # as provisioning.
