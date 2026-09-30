@@ -32,7 +32,13 @@ module Tenancy
 
     def require_tenant!
       Current.resolution = Resolver.call(request.headers[HEADER])
-      return if Current.resolution.resolved?
+
+      if Current.resolution.resolved?
+        # Only once the tenant is current, because row-level security lets the
+        # key's row be written by its own tenant alone.
+        Current.resolution.api_key.touch_last_used
+        return
+      end
 
       log_resolution_failure(Current.resolution.reason)
       failure = FAILURES.fetch(Current.resolution.reason)

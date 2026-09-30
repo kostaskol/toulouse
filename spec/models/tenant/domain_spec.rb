@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Tenant::Domain, :across_tenants, type: :model do
+RSpec.describe Tenant::Domain, :as_tenant, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   it "downcases the hostname before validation" do
@@ -15,9 +15,11 @@ RSpec.describe Tenant::Domain, :across_tenants, type: :model do
 
   describe "database constraints" do
     def insert_domain(tenant:, **attributes)
-      described_class.insert!({
-        tenant_id: tenant.id, hostname: "a.example.com", is_primary: false
-      }.merge(attributes))
+      as_tenant(tenant) do
+        described_class.insert!({
+          tenant_id: tenant.id, hostname: "a.example.com", is_primary: false
+        }.merge(attributes))
+      end
     end
 
     it "rejects the same hostname for two different tenants" do

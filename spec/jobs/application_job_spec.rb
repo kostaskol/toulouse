@@ -18,7 +18,7 @@ RSpec.describe ApplicationJob do
 
   it "discards a job whose tenant was suspended after enqueue" do
     as_tenant(tenant) { TenantRecordingJob.perform_later }
-    Tenancy.across_tenants { tenant.update!(status: :suspended) }
+    tenant.update!(status: :suspended)
 
     perform_enqueued_jobs
 

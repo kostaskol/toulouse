@@ -27,8 +27,10 @@ class Tenant::ApiKey < ApplicationRecord
     return if token.blank?
 
     # token_digest is globally unique and is how the tenant is discovered, so
-    # there is no tenant to scope by yet.
-    key = Tenancy.across_tenants { find_by(token_digest: digest(token)) }
+    # there is no tenant yet. Row-level security admits only the row whose digest
+    # is current.
+    token_digest = digest(token)
+    key = Current.set(api_key_digest: token_digest) { unscoped.find_by(token_digest:) }
     key if key&.usable?
   end
 

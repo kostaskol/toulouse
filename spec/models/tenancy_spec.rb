@@ -1,50 +1,40 @@
 require "rails_helper"
 
 RSpec.describe Tenancy do
-  describe ".across_tenants?" do
-    it "is false outside a block" do
-      expect(described_class).not_to be_across_tenants
+  describe ".with_tenant" do
+    let(:tenant) { create(:tenant) }
+
+    it "makes the tenant current inside the block" do
+      described_class.with_tenant(tenant) { expect(Current.tenant_id).to eq(tenant.id) }
     end
 
-    it "is true inside a block" do
-      described_class.across_tenants { expect(described_class).to be_across_tenants }
+    it "restores the previous tenant after the block" do
+      previous = as_tenant
+
+      described_class.with_tenant(tenant) { nil }
+
+      expect(Current.tenant_id).to eq(previous.id)
     end
 
-    it "is false again after the block" do
-      described_class.across_tenants { nil }
+    it "restores the previous tenant when the block raises" do
+      expect { described_class.with_tenant(tenant) { raise ArgumentError } }.to raise_error(ArgumentError)
 
-      expect(described_class).not_to be_across_tenants
-    end
-
-    it "stays true in a nested block and after it returns" do
-      described_class.across_tenants do
-        described_class.across_tenants { nil }
-
-        expect(described_class).to be_across_tenants
-      end
-    end
-
-    it "is restored when the block raises" do
-      expect { described_class.across_tenants { raise ArgumentError } }.to raise_error(ArgumentError)
-
-      expect(described_class).not_to be_across_tenants
+      expect(Current.tenant_id).to be_nil
     end
 
     # A block that suspends across a fiber never reaches its ensure, and Puma
     # hands that thread to the next request.
     it "is cleared at the executor boundary after a suspended block left it set" do
-      enumerator = Enumerator.new { |yielder| described_class.across_tenants { yielder << 1 } }
+      enumerator = Enumerator.new { |yielder| described_class.with_tenant(tenant) { yielder << 1 } }
       enumerator.next
 
       Rails.application.executor.wrap do
-        expect(described_class).not_to be_across_tenants
+        expect(Current.tenant_id).to be_nil
       end
     end
-  end
 
-  describe ".across_tenants" do
     it "returns the block's value" do
-      expect(described_class.across_tenants { :value }).to eq(:value)
+      expect(described_class.with_tenant(tenant) { :value }).to eq(:value)
     end
   end
 

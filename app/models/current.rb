@@ -1,6 +1,5 @@
 class Current < ActiveSupport::CurrentAttributes
   attribute :resolution
-  attribute :across_tenants
   attribute :api_key_digest
 
   def tenant

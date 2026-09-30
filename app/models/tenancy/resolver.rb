@@ -17,8 +17,7 @@ module Tenancy
       return Resolution.failed(:invalid_api_key) if api_key.nil?
       return Resolution.failed(:inactive) unless api_key.tenant.active?
 
-      api_key.touch_last_used
-      Resolution.resolved(api_key.tenant)
+      Resolution.resolved(api_key.tenant, api_key)
     end
   end
 end

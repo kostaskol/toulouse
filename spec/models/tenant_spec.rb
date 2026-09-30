@@ -81,13 +81,13 @@ RSpec.describe Tenant, type: :model do
 
     it "destroys its scoped children" do
       tenant = create(:tenant)
-      Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
-      Tenancy.across_tenants { create(:tenant_domain, tenant: tenant) }
+      create(:tenant_api_key, tenant: tenant)
+      create(:tenant_domain, tenant: tenant)
 
       tenant.destroy
 
-      expect(Tenancy.across_tenants { Tenant::ApiKey.where(tenant_id: tenant.id).count }).to eq(0)
-      expect(Tenancy.across_tenants { Tenant::Domain.where(tenant_id: tenant.id).count }).to eq(0)
+      expect(as_tenant(tenant) { Tenant::ApiKey.count }).to eq(0)
+      expect(as_tenant(tenant) { Tenant::Domain.count }).to eq(0)
     end
   end
 end

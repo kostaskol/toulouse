@@ -14,7 +14,7 @@ RSpec.describe Tenancy::Resolver do
   end
 
   it "fails with invalid_api_key for an unknown token" do
-    key = Tenancy.across_tenants { create(:tenant_api_key) }
+    key = create(:tenant_api_key)
 
     expect(described_class.call(key.token_prefix).reason).to eq(:invalid_api_key)
   end
@@ -28,64 +28,67 @@ RSpec.describe Tenancy::Resolver do
   end
 
   it "fails with invalid_api_key for a revoked key" do
-    key = Tenancy.across_tenants { create(:tenant_api_key, revoked_at: 1.minute.ago) }
+    key = create(:tenant_api_key, revoked_at: 1.minute.ago)
 
     expect(described_class.call(key.token).reason).to eq(:invalid_api_key)
   end
 
   it "fails with invalid_api_key for an expired key" do
-    key = Tenancy.across_tenants { create(:tenant_api_key, expires_at: 1.minute.ago) }
+    key = create(:tenant_api_key, expires_at: 1.minute.ago)
 
     expect(described_class.call(key.token).reason).to eq(:invalid_api_key)
   end
 
   it "fails with inactive for a pending tenant" do
-    key = Tenancy.across_tenants { create(:tenant_api_key, tenant: create(:tenant, status: :pending)) }
+    key = create(:tenant_api_key, tenant: create(:tenant, status: :pending))
 
     expect(described_class.call(key.token).reason).to eq(:inactive)
   end
 
   it "fails with inactive for a suspended tenant" do
-    key = Tenancy.across_tenants { create(:tenant_api_key, tenant: create(:tenant, status: :suspended)) }
+    key = create(:tenant_api_key, tenant: create(:tenant, status: :suspended))
 
     expect(described_class.call(key.token).reason).to eq(:inactive)
   end
 
-  it "resolves an active tenant" do
-    key = Tenancy.across_tenants { create(:tenant_api_key) }
+  it "resolves an active tenant and the key that named it" do
+    key = create(:tenant_api_key)
     resolution = described_class.call(key.token)
 
     expect(resolution).to be_resolved
     expect(resolution.tenant).to eq(key.tenant)
+    expect(resolution.api_key).to eq(key)
   end
 
   it "resolves each token to its own tenant" do
-    first = Tenancy.across_tenants { create(:tenant_api_key) }
-    second = Tenancy.across_tenants { create(:tenant_api_key) }
+    first = create(:tenant_api_key)
+    second = create(:tenant_api_key)
 
     expect(described_class.call(first.token).tenant).to eq(first.tenant)
     expect(described_class.call(second.token).tenant).to eq(second.tenant)
   end
 
-  it "stamps last_used_at on the first resolution" do
-    key = Tenancy.across_tenants { create(:tenant_api_key) }
+  # The key's row is writable only once its tenant is current, which is after
+  # resolution returns.
+  it "leaves last_used_at to the caller" do
+    key = create(:tenant_api_key)
 
     described_class.call(key.token)
 
-    expect(key.reload.last_used_at).to be_within(5.seconds).of(Time.current)
+    expect(as_tenant(key.tenant) { key.reload.last_used_at }).to be_nil
   end
 
   it "rejects a key revoked since the last resolution" do
-    key = Tenancy.across_tenants { create(:tenant_api_key) }
+    key = create(:tenant_api_key)
     described_class.call(key.token)
 
-    Tenancy.across_tenants { key.update!(revoked_at: Time.current) }
+    as_tenant(key.tenant) { key.update!(revoked_at: Time.current) }
 
     expect(described_class.call(key.token).reason).to eq(:invalid_api_key)
   end
 
   it "rejects a tenant suspended since the last resolution" do
-    key = Tenancy.across_tenants { create(:tenant_api_key) }
+    key = create(:tenant_api_key)
     described_class.call(key.token)
 
     key.tenant.update!(status: :suspended)
