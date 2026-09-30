@@ -1,11 +1,11 @@
 require "rails_helper"
 
 RSpec.describe Tenancy::MigrationHelpers do
-  let(:connection) { ActiveRecord::Base.connection }
+  let(:connection) { SchemaOwnerRecord.lease_connection }
 
   def run_migration(&block)
     migration = Class.new(ActiveRecord::Migration[8.1]) { define_method(:change, &block) }
-    ActiveRecord::Migration.suppress_messages { migration.new.migrate(:up) }
+    ActiveRecord::Migration.suppress_messages { migration.new.exec_migration(connection, :up) }
   end
 
   def index_for(*columns)
@@ -61,14 +61,18 @@ RSpec.describe Tenancy::MigrationHelpers do
     expect(created_at.sql_type).to include("with time zone")
   end
 
+  # The owner writes both rows, because the app role's uncommitted tenant is
+  # invisible to the owner's connection.
   it "cascades deletes from the owning tenant" do
-    tenant = create(:tenant)
+    tenant_id = connection.select_value(
+      "INSERT INTO tenants (name, slug, created_at, updated_at) VALUES ('w', 'w', now(), now()) RETURNING id"
+    )
     connection.execute(
       "INSERT INTO widgets (tenant_id, code, created_at, updated_at) " \
-      "VALUES ('#{tenant.id}', 'w1', now(), now())"
+      "VALUES ('#{tenant_id}', 'w1', now(), now())"
     )
 
-    tenant.delete
+    connection.execute("DELETE FROM tenants WHERE id = '#{tenant_id}'")
 
     expect(connection.select_value("SELECT count(*) FROM widgets")).to eq(0)
   end
