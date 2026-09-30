@@ -234,6 +234,52 @@ ALTER TABLE ONLY public.tenant_api_keys
 
 
 --
+-- Name: tenant_api_keys api_key_lookup; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_digest = NULLIF(current_setting('app.api_key_digest'::text, true), ''::text)));
+
+
+--
+-- Name: tenant_api_keys; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tenant_api_keys ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tenant_domains; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: tenant_api_keys tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.tenant_api_keys USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: tenant_domains tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.tenant_domains USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: tenant_settings tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.tenant_settings USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: tenant_settings; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tenant_settings ENABLE ROW LEVEL SECURITY;
+
+--
 -- PostgreSQL database dump complete
 --
 
@@ -245,6 +291,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
 INSERT INTO "schema_migrations" (version) VALUES
+('20260930194708'),
 ('20260930194057'),
 ('20260926180646'),
 ('20260926180509'),

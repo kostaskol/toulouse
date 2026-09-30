@@ -61,6 +61,14 @@ RSpec.describe Tenancy::MigrationHelpers do
     expect(created_at.sql_type).to include("with time zone")
   end
 
+  it "enables row-level security with the tenant isolation policy" do
+    enabled = connection.select_value("SELECT relrowsecurity FROM pg_class WHERE relname = 'widgets'")
+    policies = connection.select_values("SELECT policyname FROM pg_policies WHERE tablename = 'widgets'")
+
+    expect(enabled).to be(true)
+    expect(policies).to eq([ "tenant_isolation" ])
+  end
+
   # The owner writes both rows, because the app role's uncommitted tenant is
   # invisible to the owner's connection.
   it "cascades deletes from the owning tenant" do
