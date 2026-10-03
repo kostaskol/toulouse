@@ -33,6 +33,18 @@ are baked into the image, so adding one needs `docker compose build api`.
 and `POSTGRES_PASSWORD`, defaulting to `localhost` when unset. Compose points
 them at the `postgres` service. Redis is at `REDIS_URL`.
 
+The app connects as `POSTGRES_APP_USER`, a role that row-level security applies
+to. `POSTGRES_USER` owns the tables and runs every database task. Compose
+creates the app role when the Postgres volume is first initialised. On a volume
+that predates it, create it once:
+
+```sh
+docker compose exec -u postgres postgres sh /docker-entrypoint-initdb.d/create_app_role.sh
+```
+
+The schema lives in `db/structure.sql`, because policies and grants have no
+`schema.rb` form.
+
 Rails.cache, Active Job and Action Cable use the Solid adapters, which are
 backed by Postgres rather than Redis. The `redis` gem is available for anything
 you want to put on Redis directly.

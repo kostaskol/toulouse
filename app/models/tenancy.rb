@@ -1,28 +1,20 @@
 module Tenancy
   class NoTenantError < StandardError
-    def initialize(message = "No tenant is set. If this is wanted, wrap in Tenancy.across_tenants.")
+    def initialize(message = "No tenant is set. Resolve one for the request, or wrap the call in Tenancy.with_tenant.")
       super
     end
   end
 
   class CrossTenantWriteError < StandardError; end
 
-  class TenantUnavailableError < StandardError; end
-
   class << self
-    # Runs the block with tenant scoping suspended.
+    # Runs the block as the given tenant, for work that starts with none, such
+    # as provisioning.
     #
+    # @param tenant [Tenant]
     # @return [Object] the block's value
-    def across_tenants
-      previous = Current.across_tenants
-      Current.across_tenants = true
-      yield
-    ensure
-      Current.across_tenants = previous
-    end
-
-    def across_tenants?
-      Current.across_tenants == true
+    def with_tenant(tenant, &)
+      Current.set(resolution: Resolution.resolved(tenant), &)
     end
 
     # Reads the tenant every scoped query filters by.

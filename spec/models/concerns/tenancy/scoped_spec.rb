@@ -19,18 +19,8 @@ RSpec.describe Tenancy::Scoped do
       expect(Tenant::Setting.find_by(id: other_setting.id)).to be_nil
     end
 
-    # Association merge replaces a same column equality rather than anding it,
-    # so the foreign key wins over the scope. Only Tenant is an unscoped owner,
-    # and TOULIS-27 closes this at the database.
-    it "does not filter a traversal from a tenant record" do
-      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: other_tenant) }
-      as_tenant(tenant)
-
-      expect(other_tenant.api_keys).to eq([ key ])
-    end
-
-    it "filters the same rows when they are queried directly" do
-      Tenancy.across_tenants { create(:tenant_api_key, tenant: other_tenant) }
+    it "does not count another tenant's rows" do
+      create(:tenant_api_key, tenant: other_tenant)
       as_tenant(tenant)
 
       expect(Tenant::ApiKey.count).to eq(0)
@@ -55,30 +45,6 @@ RSpec.describe Tenancy::Scoped do
     end
   end
 
-  describe "inside across_tenants" do
-    it "returns every tenant's rows" do
-      tenant
-      other_tenant
-
-      ids = Tenancy.across_tenants { Tenant::Setting.pluck(:tenant_id) }
-
-      expect(ids).to contain_exactly(tenant.id, other_tenant.id)
-    end
-
-    it "assigns no tenant_id on instantiation" do
-      expect(Tenancy.across_tenants { Tenant::ApiKey.new.tenant_id }).to be_nil
-    end
-
-    it "ignores a current tenant that is set" do
-      as_tenant(tenant)
-      other_tenant
-
-      ids = Tenancy.across_tenants { Tenant::Setting.pluck(:tenant_id) }
-
-      expect(ids).to contain_exactly(tenant.id, other_tenant.id)
-    end
-  end
-
   describe "writes" do
     it "saves a record belonging to the current tenant" do
       as_tenant(tenant)
@@ -94,42 +60,35 @@ RSpec.describe Tenancy::Scoped do
     end
 
     it "rejects a tenant_id change on a persisted record" do
-      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      key = create(:tenant_api_key, tenant: tenant)
       as_tenant(tenant)
       key.tenant_id = other_tenant.id
 
       expect { key.save }.to raise_error(Tenancy::CrossTenantWriteError)
     end
 
-    it "rejects a tenant_id change even inside across_tenants" do
-      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
-      key.tenant_id = other_tenant.id
+    it "allows an unrelated update as the record's tenant" do
+      key = create(:tenant_api_key, tenant: tenant)
 
-      expect { Tenancy.across_tenants { key.save } }.to raise_error(Tenancy::CrossTenantWriteError)
-    end
-
-    it "allows an unrelated update inside across_tenants" do
-      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
-
-      expect { Tenancy.across_tenants { key.update!(attributes_for(:tenant_api_key)) } }.not_to raise_error
+      expect { as_tenant(tenant) { key.update!(attributes_for(:tenant_api_key)) } }.not_to raise_error
     end
 
     it "raises when saving with no current tenant and no block" do
-      key = Tenancy.across_tenants { create(:tenant_api_key, tenant: tenant) }
+      key = create(:tenant_api_key, tenant: tenant)
       key.name = attributes_for(:tenant_api_key)[:name]
 
       expect { key.save }.to raise_error(Tenancy::NoTenantError)
     end
 
     it "updates only the current tenant's rows through update_all" do
-      mine = Tenancy.across_tenants { create(:tenant_domain, tenant: tenant) }
-      theirs = Tenancy.across_tenants { create(:tenant_domain, tenant: other_tenant) }
+      mine = create(:tenant_domain, tenant: tenant)
+      theirs = create(:tenant_domain, tenant: other_tenant)
       as_tenant(tenant)
 
       Tenant::Domain.update_all(is_primary: true)
 
       expect(mine.reload.is_primary).to be(true)
-      expect(Tenancy.across_tenants { theirs.reload.is_primary }).to be(false)
+      expect(as_tenant(other_tenant) { theirs.reload.is_primary }).to be(false)
     end
   end
 end

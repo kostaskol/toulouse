@@ -81,10 +81,18 @@ jobs:
         with:
           bundler-cache: true
 
+      # DATABASE_URL would merge into the primary entry only and connect the app
+      # as the superuser, which row-level security does not apply to.
       - name: Run tests
         env:
           RAILS_ENV: test
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432
+          POSTGRES_HOST: localhost
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_APP_USER: toulouse_app
+          POSTGRES_APP_PASSWORD: toulouse_app
+          PGHOST: localhost
+          PGPASSWORD: postgres
           # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           # REDIS_URL: redis://localhost:6379/0
-        run: bin/rails db:test:prepare && bin/rspec
+        run: script/create_app_role.sh && bin/rails db:test:prepare && bin/rspec

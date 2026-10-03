@@ -6,11 +6,10 @@ module TenantContext
   # @return [Tenant]
   def as_tenant(tenant = nil, &block)
     tenant ||= create(:tenant)
-    resolution = Tenancy::Resolution.resolved(tenant)
 
-    return Current.set(resolution: resolution) { block.call(tenant) } if block
+    return Tenancy.with_tenant(tenant) { block.call(tenant) } if block
 
-    Current.resolution = resolution
+    Current.resolution = Tenancy::Resolution.resolved(tenant)
     tenant
   end
 end

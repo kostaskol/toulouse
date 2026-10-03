@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Tenant::ApiKey, :across_tenants, type: :model do
+RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   describe "token generation" do
@@ -86,12 +86,15 @@ RSpec.describe Tenant::ApiKey, :across_tenants, type: :model do
   describe "database constraints" do
     it "rejects a duplicate token digest across tenants" do
       existing = create(:tenant_api_key)
+      other = create(:tenant)
 
       expect {
-        described_class.insert!({
-          tenant_id: create(:tenant).id, name: "Clash",
-          token_prefix: "tou_clash00", token_digest: existing.token_digest
-        })
+        as_tenant(other) do
+          described_class.insert!({
+            tenant_id: other.id, name: "Clash",
+            token_prefix: "tou_clash00", token_digest: existing.token_digest
+          })
+        end
       }.to raise_error(ActiveRecord::RecordNotUnique)
     end
 

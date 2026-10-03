@@ -6,7 +6,10 @@ RSpec.describe ApplicationJob do
   let(:tenant) { create(:tenant) }
   let(:other_tenant) { create(:tenant) }
 
-  before { TenantRecordingJob.performed_tenant_ids = [] }
+  before do
+    TenantRecordingJob.performed_tenant_ids = []
+    RecordArgumentJob.performed_records = []
+  end
 
   it "performs with the tenant that enqueued it" do
     as_tenant(tenant) { TenantRecordingJob.perform_later }
@@ -16,9 +19,20 @@ RSpec.describe ApplicationJob do
     expect(TenantRecordingJob.performed_tenant_ids).to eq([ tenant.id ])
   end
 
+  # Arguments are deserialized before the perform callbacks run, and row-level
+  # security hides the record until its tenant is current.
+  it "finds a record argument as the job's tenant" do
+    domain = create(:tenant_domain, tenant: tenant)
+    as_tenant(tenant) { RecordArgumentJob.perform_later(domain) }
+
+    perform_enqueued_jobs
+
+    expect(RecordArgumentJob.performed_records).to eq([ domain ])
+  end
+
   it "discards a job whose tenant was suspended after enqueue" do
     as_tenant(tenant) { TenantRecordingJob.perform_later }
-    Tenancy.across_tenants { tenant.update!(status: :suspended) }
+    tenant.update!(status: :suspended)
 
     perform_enqueued_jobs
 
