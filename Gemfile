@@ -62,5 +62,5 @@ group :development, :test do
   # Factories, not fixtures: every tenant-scoped record needs a tenant.
   gem "factory_bot_rails"
 
-  gem "shoulda-matchers", "~> 6.0"
+  gem "shoulda-matchers", "~> 8.0"
 end
