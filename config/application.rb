@@ -1,6 +1,18 @@
 require_relative "boot"
 
-require "rails/all"
+require "rails"
+
+# Action Mailbox is left out because its ingress routes take requests with no
+# tenant.
+require "active_record/railtie"
+require "active_storage/engine"
+require "action_controller/railtie"
+require "action_view/railtie"
+require "action_mailer/railtie"
+require "active_job/railtie"
+require "action_cable/engine"
+require "action_text/engine"
+require "rails/test_unit/railtie"
 
 # Require the gems listed in Gemfile, including any gems
 # you've limited to :test, :development, or :production.
@@ -28,6 +40,10 @@ module Toulouse
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Blob and upload routes take requests with no tenant, and blobs carry no
+    # tenant_id.
+    config.active_storage.draw_routes = false
 
     config.generators do |g|
       g.test_framework :rspec
