@@ -61,6 +61,7 @@ RSpec.describe "Row-level security" do
     before do
       create(:tenant_api_key, tenant: tenant)
       create(:tenant_domain, tenant: tenant)
+      create(:staff, tenant: tenant)
     end
 
     it "sees the rows as their tenant" do

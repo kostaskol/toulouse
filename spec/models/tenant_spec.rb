@@ -5,6 +5,7 @@ RSpec.describe Tenant, type: :model do
 
   it { is_expected.to have_many(:domains) }
   it { is_expected.to have_many(:api_keys) }
+  it { is_expected.to have_many(:staff) }
 
   it "assigns a UUIDv7 primary key on create" do
     tenant = create(:tenant)

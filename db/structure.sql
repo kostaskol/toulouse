@@ -36,6 +36,24 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: staff; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.staff (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    email text NOT NULL,
+    password_digest text,
+    role integer DEFAULT 0 NOT NULL,
+    status integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    CONSTRAINT staff_email_lowercase CHECK ((email = lower(email))),
+    CONSTRAINT staff_password_unless_pending CHECK (((status = 0) OR (password_digest IS NOT NULL)))
+);
+
+
+--
 -- Name: tenant_api_keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -115,6 +133,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: staff staff_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff
+    ADD CONSTRAINT staff_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tenant_api_keys tenant_api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -144,6 +170,20 @@ ALTER TABLE ONLY public.tenant_settings
 
 ALTER TABLE ONLY public.tenants
     ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_staff_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_staff_on_tenant_id ON public.staff USING btree (tenant_id);
+
+
+--
+-- Name: index_staff_on_tenant_id_and_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_staff_on_tenant_id_and_email ON public.staff USING btree (tenant_id, email);
 
 
 --
@@ -226,6 +266,14 @@ ALTER TABLE ONLY public.tenant_settings
 
 
 --
+-- Name: staff fk_rails_61253bcc4f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff
+    ADD CONSTRAINT fk_rails_61253bcc4f FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tenant_api_keys fk_rails_cf4e1e4e6e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -241,6 +289,12 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 
 
 --
+-- Name: staff; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: tenant_api_keys; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -251,6 +305,13 @@ ALTER TABLE public.tenant_api_keys ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.staff USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
 
 --
 -- Name: tenant_api_keys tenant_isolation; Type: POLICY; Schema: public; Owner: -
@@ -291,6 +352,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261004080536'),
 ('20260930194708'),
 ('20260930194057'),
 ('20260926180646'),
