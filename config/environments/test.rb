@@ -50,4 +50,9 @@ Rails.application.configure do
 
   # Raise error when a before_action's only/except options reference missing actions.
   config.action_controller.raise_on_missing_callback_actions = true
+
+  # Not secret. CI has no master key to read credentials with.
+  config.active_record.encryption.primary_key = "8Tk7hz1z7z9BCc5xWTbHQZkE9BofscBI"
+  config.active_record.encryption.deterministic_key = "mI0LI4DvnJ194WbueemJkcme1U2Rsj59"
+  config.active_record.encryption.key_derivation_salt = "zNRNlLD5VaualtWV6V3AJzWiPh998ujT"
 end
