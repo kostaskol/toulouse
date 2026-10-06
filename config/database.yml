@@ -37,6 +37,14 @@ app_role: &app_role
   password: <%= ENV.fetch("POSTGRES_APP_PASSWORD", nil) %>
   database_tasks: false
 
+# Platform admin's own role. Row-level security applies to it as to the app
+# role, and it alone can reach the platform_ tables.
+platform_role: &platform_role
+  <<: *default
+  username: <%= ENV.fetch("POSTGRES_PLATFORM_USER", nil) %>
+  password: <%= ENV.fetch("POSTGRES_PLATFORM_PASSWORD", nil) %>
+  database_tasks: false
+
 owner_role: &owner_role
   <<: *default
   migrations_paths: db/migrate
@@ -48,6 +56,9 @@ development:
   primary:
     <<: *app_role
     database: toulouse_development
+  platform:
+    <<: *platform_role
+    database: toulouse_development
   owner:
     <<: *owner_role
     database: toulouse_development
@@ -58,6 +69,9 @@ development:
 test:
   primary:
     <<: *app_role
+    database: toulouse_test
+  platform:
+    <<: *platform_role
     database: toulouse_test
   owner:
     <<: *owner_role
@@ -95,6 +109,10 @@ production:
     database: toulouse_production
     username: toulouse
     password: <%= ENV["TOULOUSE_DATABASE_PASSWORD"] %>
+  # One role until production gets the split roles development and test have.
+  platform:
+    <<: *primary_production
+    database_tasks: false
   cache:
     <<: *primary_production
     database: toulouse_production_cache
