@@ -44,6 +44,8 @@ module Toulouse
     # The tenant admin session travels in a cookie.
     config.middleware.use ActionDispatch::Cookies
 
+    config.x.admin_origin = ENV["ADMIN_ORIGIN"]
+
     # Blob and upload routes take requests with no tenant, and blobs carry no
     # tenant_id.
     config.active_storage.draw_routes = false
