@@ -15,7 +15,9 @@ RSpec.describe "Tenant admin sessions", type: :request do
 
       expect(response).to have_http_status(:created)
       expect(response.parsed_body).to eq(
-        "staff" => { "id" => staff.id, "email" => staff.email, "role" => staff.role },
+        "staff" => {
+          "id" => staff.id, "email" => staff.email, "role" => staff.role, "permissions" => staff.permissions.map(&:to_s)
+        },
         "tenant" => { "name" => tenant.name, "slug" => tenant.slug, "status" => tenant.status }
       )
     end
@@ -85,6 +87,14 @@ RSpec.describe "Tenant admin sessions", type: :request do
       get "/v1/admin/session", headers: staff_cookie(staff_session)
 
       expect(response.parsed_body.dig("staff", "id")).to eq(staff.id)
+    end
+
+    it "lists what the member's role permits" do
+      owner = create(:staff, tenant:, role: "owner")
+
+      get "/v1/admin/session", headers: staff_cookie(create(:staff_session, tenant:, staff: owner))
+
+      expect(response.parsed_body.dig("staff", "permissions")).to match_array(owner.permissions.map(&:to_s))
     end
 
     it "refuses a request with no cookie" do

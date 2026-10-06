@@ -3,6 +3,8 @@ module V1
     class SessionsController < BaseController
       skip_before_action :require_staff_session!, only: :create
       skip_before_action :reject_writes_while_suspended!, only: [:create, :destroy]
+      skip_before_action :authorize_staff!, only: :create
+      allow_any_staff only: [:show, :destroy]
 
       FAILURES = {
         invalid_credentials: Failure.new(
@@ -51,7 +53,7 @@ module V1
         tenant = session.tenant
 
         {
-          staff: { id: staff.id, email: staff.email, role: staff.role },
+          staff: { id: staff.id, email: staff.email, role: staff.role, permissions: staff.permissions },
           tenant: { name: tenant.name, slug: tenant.slug, status: tenant.status }
         }
       end
