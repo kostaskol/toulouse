@@ -29,6 +29,12 @@ RSpec.describe Tenancy::ConnectionSettings do
     expect(setting("app.api_key_digest")).to eq(Current.api_key_digest)
   end
 
+  it "sets the staff session digest" do
+    Current.staff_session_digest = Staff::Session.digest(SecureRandom.hex)
+
+    expect(setting("app.staff_session_digest")).to eq(Current.staff_session_digest)
+  end
+
   # The query cache keys on SQL alone, and a hit never reaches Postgres.
   it "does not answer from the query cache across a tenant change" do
     connection.cache do

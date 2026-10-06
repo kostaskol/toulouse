@@ -54,6 +54,21 @@ CREATE TABLE public.staff (
 
 
 --
+-- Name: staff_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.staff_sessions (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    staff_id uuid NOT NULL,
+    token_digest text NOT NULL,
+    expires_at timestamp(6) with time zone NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: tenant_api_keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -141,6 +156,14 @@ ALTER TABLE ONLY public.staff
 
 
 --
+-- Name: staff_sessions staff_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT staff_sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: tenant_api_keys tenant_api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -184,6 +207,27 @@ CREATE INDEX index_staff_on_tenant_id ON public.staff USING btree (tenant_id);
 --
 
 CREATE UNIQUE INDEX index_staff_on_tenant_id_and_email ON public.staff USING btree (tenant_id, email);
+
+
+--
+-- Name: index_staff_sessions_on_staff_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_staff_sessions_on_staff_id ON public.staff_sessions USING btree (staff_id);
+
+
+--
+-- Name: index_staff_sessions_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_staff_sessions_on_tenant_id ON public.staff_sessions USING btree (tenant_id);
+
+
+--
+-- Name: index_staff_sessions_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_staff_sessions_on_token_digest ON public.staff_sessions USING btree (token_digest);
 
 
 --
@@ -274,11 +318,27 @@ ALTER TABLE ONLY public.staff
 
 
 --
+-- Name: staff_sessions fk_rails_b69a960ef4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT fk_rails_b69a960ef4 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tenant_api_keys fk_rails_cf4e1e4e6e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tenant_api_keys
     ADD CONSTRAINT fk_rails_cf4e1e4e6e FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_sessions fk_rails_e948faa396; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT fk_rails_e948faa396 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -293,6 +353,19 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 --
 
 ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_sessions staff_session_lookup; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY staff_session_lookup ON public.staff_sessions FOR SELECT USING ((token_digest = NULLIF(current_setting('app.staff_session_digest'::text, true), ''::text)));
+
+
+--
+-- Name: staff_sessions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.staff_sessions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tenant_api_keys; Type: ROW SECURITY; Schema: public; Owner: -
@@ -311,6 +384,13 @@ ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.staff USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: staff_sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.staff_sessions USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -352,6 +432,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261004190000'),
 ('20261004080536'),
 ('20260930194708'),
 ('20260930194057'),

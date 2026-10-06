@@ -7,11 +7,14 @@ module Tenancy
     TRANSACTION_CONTROL = /\A\s*(BEGIN|COMMIT|END|ROLLBACK|SAVEPOINT|RELEASE)\b/i
     ROLLBACK = /\A\s*ROLLBACK\b/i
 
-    SYNC_SQL = "SELECT set_config('app.tenant_id', $1, false), set_config('app.api_key_digest', $2, false)".freeze
+    SYNC_SQL = <<~SQL.squish.freeze
+      SELECT set_config('app.tenant_id', $1, false), set_config('app.api_key_digest', $2, false),
+             set_config('app.staff_session_digest', $3, false)
+    SQL
 
-    # A new or reset session has neither setting, which the policies read the
-    # same as an empty string.
-    UNSET = [ "", "" ].freeze
+    # A new or reset session has none of the settings, which the policies read
+    # the same as an empty string.
+    UNSET = [ "", "", "" ].freeze
 
     # A query cache hit never reaches perform_query, and the cache keys on SQL
     # alone, so a result cached as one tenant could answer for another.
@@ -38,7 +41,7 @@ module Tenancy
     end
 
     def wanted_tenancy_settings
-      [ Current.tenant_id.to_s, Current.api_key_digest.to_s ]
+      [ Current.tenant_id.to_s, Current.api_key_digest.to_s, Current.staff_session_digest.to_s ]
     end
 
     def sync_tenancy_settings(raw_connection)

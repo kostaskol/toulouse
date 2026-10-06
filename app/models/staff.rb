@@ -5,6 +5,8 @@ class Staff < ApplicationRecord
   # have none until they accept their invite.
   has_secure_password validations: false
 
+  has_many :sessions
+
   enum :role, { staff: 0, owner: 1 }, validate: true
   enum :status, { pending: 0, active: 1 }, validate: true
 
