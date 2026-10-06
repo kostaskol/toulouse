@@ -3,6 +3,8 @@ module V1
     class SessionsController < BaseController
       skip_before_action :require_staff_session!, only: :create
       skip_before_action :reject_writes_while_suspended!, only: [:create, :destroy]
+      skip_before_action :authorize_staff!, only: :create
+      allow_any_staff only: [:show, :destroy]
 
       FAILURES = {
         invalid_credentials: Failure.new(
