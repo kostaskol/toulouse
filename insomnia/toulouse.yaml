@@ -94,6 +94,98 @@ collection:
             send: true
             store: true
           rebuildPath: true
+  - name: Platform admin
+    meta:
+      id: fld_ba69d648aad6a21677cbe1c17db315fb
+      created: 1791319630754
+      modified: 1791319630754
+      sortKey: 2
+      description: >-
+        Server-rendered. Sign-in form stores the CSRF token that Sign in and Sign
+        out send. Sign in asks for a code from
+        `bin/rails platform:admins:code EMAIL=...`.
+    children:
+      - url: "{{ _.base_url }}/platform/session/new"
+        name: Sign-in form
+        meta:
+          id: req_936592d139c5f522be48332474e5bd57
+          created: 1791319630754
+          modified: 1791319630754
+          isPrivate: false
+          sortKey: 0
+        method: GET
+        scripts:
+          afterResponse: |-
+            const token = insomnia.response.text().match(/name="authenticity_token" value="([^"]+)"/)?.[1];
+            insomnia.environment.set("platform_authenticity_token", token ?? "");
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/session"
+        name: Sign in
+        meta:
+          id: req_d87ef4328e463452155317c20ac4902c
+          created: 1791319630754
+          modified: 1791319630754
+          isPrivate: false
+          sortKey: 1
+        method: POST
+        body:
+          mimeType: application/x-www-form-urlencoded
+          params:
+            - name: authenticity_token
+              value: "{{ _.platform_authenticity_token }}"
+            - name: email
+              value: "{{ _.platform_email }}"
+            - name: password
+              value: "{{ _.password }}"
+            - name: code
+              value: "{% prompt 'Authenticator code', 'From platform:admins:code', '', '', false, false %}"
+        headers:
+          - name: Content-Type
+            value: application/x-www-form-urlencoded
+        scripts:
+          afterResponse: |-
+            const token = insomnia.response.text().match(/name="authenticity_token" value="([^"]+)"/)?.[1];
+            insomnia.environment.set("platform_authenticity_token", token ?? "");
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/logout"
+        name: Sign out
+        meta:
+          id: req_5af37acfa1c9c862cee875779cf967f2
+          created: 1791319630754
+          modified: 1791319630754
+          isPrivate: false
+          sortKey: 2
+        method: POST
+        body:
+          mimeType: application/x-www-form-urlencoded
+          params:
+            - name: authenticity_token
+              value: "{{ _.platform_authenticity_token }}"
+        headers:
+          - name: Content-Type
+            value: application/x-www-form-urlencoded
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -112,3 +204,5 @@ environments:
     slug: demo-store
     email: owner@example.com
     password: toulouse-dev-password
+    platform_email: admin@example.com
+    platform_authenticity_token: ""

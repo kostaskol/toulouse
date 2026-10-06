@@ -34,12 +34,14 @@ and `POSTGRES_PASSWORD`, defaulting to `localhost` when unset. Compose points
 them at the `postgres` service. Redis is at `REDIS_URL`.
 
 The app connects as `POSTGRES_APP_USER`, a role that row-level security applies
-to. `POSTGRES_USER` owns the tables and runs every database task. Compose
-creates the app role when the Postgres volume is first initialised. On a volume
-that predates it, create it once:
+to. Platform admin connects as `POSTGRES_PLATFORM_USER`, which row-level
+security also applies to and which alone can reach the `platform` schema.
+`POSTGRES_USER` owns the tables and runs every database task. Compose creates
+both roles when the Postgres volume is first initialised. On a volume that
+predates either, create them once:
 
 ```sh
-docker compose exec -u postgres postgres sh /docker-entrypoint-initdb.d/create_app_role.sh
+docker compose exec -u postgres postgres sh /docker-entrypoint-initdb.d/create_roles.sh
 ```
 
 The schema lives in `db/structure.sql`, because policies and grants have no
@@ -48,6 +50,25 @@ The schema lives in `db/structure.sql`, because policies and grants have no
 Rails.cache, Active Job and Action Cable use the Solid adapters, which are
 backed by Postgres rather than Redis. The `redis` gem is available for anything
 you want to put on Redis directly.
+
+## Platform admin
+
+Sign in at `/platform` with email, password and an authenticator code. There
+is no signup. Create an admin, or reset one who lost their password or phone:
+
+```sh
+docker compose exec api bin/rails platform:admins:create
+```
+
+It prints a secret and an `otpauth://` URI for the authenticator app. In
+production, run it through `kamal app exec --interactive`.
+
+The development seed creates `admin@example.com` with the seed password and a
+new secret on every run. Print its current code with:
+
+```sh
+docker compose exec api bin/rails platform:admins:code EMAIL=admin@example.com
+```
 
 ## Production image
 

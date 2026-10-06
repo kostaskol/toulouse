@@ -44,6 +44,12 @@ module Toulouse
     # The tenant admin session travels in a cookie.
     config.middleware.use ActionDispatch::Cookies
 
+    # Holds platform admin's CSRF token. The API never loads a session, so it
+    # never sets this cookie.
+    config.session_store :cookie_store, key: "_platform_session", path: "/platform", same_site: :strict,
+                                        secure: !Rails.env.local?
+    config.middleware.use config.session_store, config.session_options
+
     config.x.admin_origin = ENV["ADMIN_ORIGIN"]
 
     # Blob and upload routes take requests with no tenant, and blobs carry no
