@@ -9,6 +9,10 @@ class LoginAttempt < ApplicationRecord
 
   normalizes :email, with: ->(email) { email.strip.downcase }
 
+  scope :expired, -> {
+    where(last_failed_at: ...WINDOW.ago).where("locked_until IS NULL OR locked_until < ?", Time.current)
+  }
+
   # @param email [String]
   # @return [ActiveSupport::TimeWithZone, nil] the end of an active lock
   def self.locked_until(email)

@@ -16,6 +16,8 @@ class Staff::Session < ApplicationRecord
 
   belongs_to :staff
 
+  scope :expired, -> { where(expires_at: ..Time.current) }
+
   before_create :assign_token
 
   def self.digest(token)

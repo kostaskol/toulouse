@@ -82,4 +82,19 @@ RSpec.describe LoginAttempt, :as_tenant, type: :model do
       expect(described_class.find_by(email:)).to be_nil
     end
   end
+
+  describe ".expired" do
+    it "includes a row whose window and lock have passed" do
+      fail_times(described_class::MAX_FAILURES)
+      travel described_class::WINDOW + 1.second
+
+      expect(described_class.expired.count).to eq(1)
+    end
+
+    it "excludes a row inside its window" do
+      fail_times(1)
+
+      expect(described_class.expired).to be_empty
+    end
+  end
 end
