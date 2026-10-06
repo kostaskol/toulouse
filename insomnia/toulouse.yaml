@@ -1,0 +1,114 @@
+type: collection.insomnia.rest/5.0
+name: Toulouse
+meta:
+  id: wrk_08ac6a7e05ab21feda57b60c5b8ad67b
+  created: 1791313871000
+  modified: 1791313871000
+  description: >-
+    Base environment values match db/seeds/development.rb. Real credentials go
+    in a private sub-environment.
+collection:
+  - name: Health
+    meta:
+      id: fld_6229c7fe5fa4bc18bcb8ef7af13f5fc5
+      created: 1791313871000
+      modified: 1791313871000
+      sortKey: 0
+    children:
+      - url: "{{ _.base_url }}/up"
+        name: Up
+        meta:
+          id: req_2513d4518f4a09cc333401554ea1bc5a
+          created: 1791313871000
+          modified: 1791313871000
+          isPrivate: false
+          sortKey: 0
+        method: GET
+  - name: Tenant admin
+    meta:
+      id: fld_a23e16e973639ede2e7463b1281a452b
+      created: 1791313871000
+      modified: 1791313871000
+      sortKey: 1
+      description: Authenticated by the staff_session cookie that Log in stores in the cookie jar.
+    children:
+      - url: "{{ _.base_url }}/v1/admin/session"
+        name: Log in
+        meta:
+          id: req_64a3d800846189f3ccb527c0729e1640
+          created: 1791313871000
+          modified: 1791313871000
+          isPrivate: false
+          sortKey: 0
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "slug": "{{ _.slug }}",
+              "email": "{{ _.email }}",
+              "password": "{{ _.password }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/admin/session"
+        name: Current session
+        meta:
+          id: req_b07bf0b753da14a978b134c8c3da88e2
+          created: 1791313871000
+          modified: 1791313871000
+          isPrivate: false
+          sortKey: 1
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/admin/session"
+        name: Log out
+        meta:
+          id: req_e9cabae54786cd2181aa8bd8b28ee949
+          created: 1791313871000
+          modified: 1791313871000
+          isPrivate: false
+          sortKey: 2
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+cookieJar:
+  name: Default Jar
+  meta:
+    id: jar_fc58b6ec1a2afc190566920af8d6c211
+    created: 1791313871000
+    modified: 1791313871000
+environments:
+  name: Base Environment
+  meta:
+    id: env_99293c471f837620f5bec5b03a39dea3
+    created: 1791313871000
+    modified: 1791313871000
+    isPrivate: false
+  data:
+    base_url: http://localhost:3000
+    slug: demo-store
+    email: owner@example.com
+    password: toulouse-dev-password
