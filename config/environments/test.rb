@@ -55,4 +55,6 @@ Rails.application.configure do
   config.active_record.encryption.primary_key = "8Tk7hz1z7z9BCc5xWTbHQZkE9BofscBI"
   config.active_record.encryption.deterministic_key = "mI0LI4DvnJ194WbueemJkcme1U2Rsj59"
   config.active_record.encryption.key_derivation_salt = "zNRNlLD5VaualtWV6V3AJzWiPh998ujT"
+
+  config.x.admin_origin = "https://admin.example.com"
 end

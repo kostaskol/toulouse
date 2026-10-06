@@ -40,8 +40,8 @@ gem "image_processing", "~> 2.2"
 # configured for has to be declared here.
 gem "ruby-vips", "~> 2.0"
 
-# Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin Ajax possible
-# gem "rack-cors"
+# The tenant admin UI calls the API from its own origin with a session cookie.
+gem "rack-cors"
 
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem

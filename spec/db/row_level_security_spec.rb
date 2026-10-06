@@ -62,6 +62,8 @@ RSpec.describe "Row-level security" do
       create(:tenant_api_key, tenant: tenant)
       create(:tenant_domain, tenant: tenant)
       create(:staff, tenant: tenant)
+      create(:staff_session, tenant: tenant)
+      create(:login_attempt, tenant: tenant)
     end
 
     it "sees the rows as their tenant" do
@@ -92,6 +94,28 @@ RSpec.describe "Row-level security" do
       Current.api_key_digest = key.token_digest
 
       expect(connection.exec_update("UPDATE tenant_api_keys SET last_used_at = now()")).to eq(0)
+    end
+  end
+
+  describe "staff session lookup by digest" do
+    let!(:session) { create(:staff_session, tenant: tenant) }
+
+    before { create(:staff_session, tenant: other_tenant) }
+
+    it "reveals only the session whose digest is set" do
+      Current.staff_session_digest = session.token_digest
+
+      expect(connection.select_values("SELECT id FROM staff_sessions")).to eq([ session.id ])
+    end
+
+    it "grants no writes" do
+      Current.staff_session_digest = session.token_digest
+
+      expect(connection.exec_update("UPDATE staff_sessions SET expires_at = now()")).to eq(0)
+    end
+
+    it "reveals nothing with no digest set" do
+      expect(connection.select_values("SELECT id FROM staff_sessions")).to be_empty
     end
   end
 

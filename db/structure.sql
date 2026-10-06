@@ -27,6 +27,23 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: login_attempts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.login_attempts (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    email text NOT NULL,
+    failed_count integer DEFAULT 0 NOT NULL,
+    last_failed_at timestamp(6) with time zone,
+    locked_until timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    CONSTRAINT login_attempts_email_lowercase CHECK ((email = lower(email)))
+);
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -50,6 +67,21 @@ CREATE TABLE public.staff (
     updated_at timestamp(6) with time zone NOT NULL,
     CONSTRAINT staff_email_lowercase CHECK ((email = lower(email))),
     CONSTRAINT staff_password_unless_pending CHECK (((status = 0) OR (password_digest IS NOT NULL)))
+);
+
+
+--
+-- Name: staff_sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.staff_sessions (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    staff_id uuid NOT NULL,
+    token_digest text NOT NULL,
+    expires_at timestamp(6) with time zone NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
 );
 
 
@@ -125,6 +157,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 
 --
+-- Name: login_attempts login_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_attempts
+    ADD CONSTRAINT login_attempts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -138,6 +178,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 ALTER TABLE ONLY public.staff
     ADD CONSTRAINT staff_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: staff_sessions staff_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT staff_sessions_pkey PRIMARY KEY (id);
 
 
 --
@@ -173,6 +221,20 @@ ALTER TABLE ONLY public.tenants
 
 
 --
+-- Name: index_login_attempts_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_login_attempts_on_tenant_id ON public.login_attempts USING btree (tenant_id);
+
+
+--
+-- Name: index_login_attempts_on_tenant_id_and_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_login_attempts_on_tenant_id_and_email ON public.login_attempts USING btree (tenant_id, email);
+
+
+--
 -- Name: index_staff_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -184,6 +246,27 @@ CREATE INDEX index_staff_on_tenant_id ON public.staff USING btree (tenant_id);
 --
 
 CREATE UNIQUE INDEX index_staff_on_tenant_id_and_email ON public.staff USING btree (tenant_id, email);
+
+
+--
+-- Name: index_staff_sessions_on_staff_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_staff_sessions_on_staff_id ON public.staff_sessions USING btree (staff_id);
+
+
+--
+-- Name: index_staff_sessions_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_staff_sessions_on_tenant_id ON public.staff_sessions USING btree (tenant_id);
+
+
+--
+-- Name: index_staff_sessions_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_staff_sessions_on_token_digest ON public.staff_sessions USING btree (token_digest);
 
 
 --
@@ -266,11 +349,27 @@ ALTER TABLE ONLY public.tenant_settings
 
 
 --
+-- Name: login_attempts fk_rails_4e3518a87b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_attempts
+    ADD CONSTRAINT fk_rails_4e3518a87b FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: staff fk_rails_61253bcc4f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.staff
     ADD CONSTRAINT fk_rails_61253bcc4f FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: staff_sessions fk_rails_b69a960ef4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT fk_rails_b69a960ef4 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE CASCADE;
 
 
 --
@@ -282,6 +381,14 @@ ALTER TABLE ONLY public.tenant_api_keys
 
 
 --
+-- Name: staff_sessions fk_rails_e948faa396; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.staff_sessions
+    ADD CONSTRAINT fk_rails_e948faa396 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tenant_api_keys api_key_lookup; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -289,10 +396,29 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 
 
 --
+-- Name: login_attempts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: staff; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.staff ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: staff_sessions staff_session_lookup; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY staff_session_lookup ON public.staff_sessions FOR SELECT USING ((token_digest = NULLIF(current_setting('app.staff_session_digest'::text, true), ''::text)));
+
+
+--
+-- Name: staff_sessions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.staff_sessions ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tenant_api_keys; Type: ROW SECURITY; Schema: public; Owner: -
@@ -307,10 +433,24 @@ ALTER TABLE public.tenant_api_keys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: login_attempts tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.login_attempts USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
 -- Name: staff tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.staff USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: staff_sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.staff_sessions USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -352,6 +492,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261004190100'),
+('20261004190000'),
 ('20261004080536'),
 ('20260930194708'),
 ('20260930194057'),
