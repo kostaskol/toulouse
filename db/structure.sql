@@ -27,6 +27,23 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: login_attempts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.login_attempts (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    email text NOT NULL,
+    failed_count integer DEFAULT 0 NOT NULL,
+    last_failed_at timestamp(6) with time zone,
+    locked_until timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    CONSTRAINT login_attempts_email_lowercase CHECK ((email = lower(email)))
+);
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -140,6 +157,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 
 --
+-- Name: login_attempts login_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_attempts
+    ADD CONSTRAINT login_attempts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: schema_migrations schema_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -193,6 +218,20 @@ ALTER TABLE ONLY public.tenant_settings
 
 ALTER TABLE ONLY public.tenants
     ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_login_attempts_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_login_attempts_on_tenant_id ON public.login_attempts USING btree (tenant_id);
+
+
+--
+-- Name: index_login_attempts_on_tenant_id_and_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_login_attempts_on_tenant_id_and_email ON public.login_attempts USING btree (tenant_id, email);
 
 
 --
@@ -310,6 +349,14 @@ ALTER TABLE ONLY public.tenant_settings
 
 
 --
+-- Name: login_attempts fk_rails_4e3518a87b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.login_attempts
+    ADD CONSTRAINT fk_rails_4e3518a87b FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: staff fk_rails_61253bcc4f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -349,6 +396,12 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 
 
 --
+-- Name: login_attempts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: staff; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -378,6 +431,13 @@ ALTER TABLE public.tenant_api_keys ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: login_attempts tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.login_attempts USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
 
 --
 -- Name: staff tenant_isolation; Type: POLICY; Schema: public; Owner: -
@@ -432,6 +492,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261004190100'),
 ('20261004190000'),
 ('20261004080536'),
 ('20260930194708'),
