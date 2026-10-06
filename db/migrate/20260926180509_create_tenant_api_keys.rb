@@ -11,6 +11,6 @@ class CreateTenantApiKeys < ActiveRecord::Migration[8.1]
 
     # Resolution looks a key up by digest alone, so it identifies one tenant.
     add_index :tenant_api_keys, :token_digest, unique: true
-    add_index :tenant_api_keys, [ :tenant_id, :created_at ]
+    add_index :tenant_api_keys, [:tenant_id, :created_at]
   end
 end

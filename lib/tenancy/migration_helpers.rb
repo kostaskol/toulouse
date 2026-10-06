@@ -10,7 +10,7 @@ module Tenancy
     #
     # @param name [Symbol]
     # @param unique [Array<Symbol, Array<Symbol>>] one unique index per element,
-    #   over tenant_id plus that element's columns. `[ :code, [ :kind, :size ] ]`
+    #   over tenant_id plus that element's columns. `[:code, [:kind, :size]]`
     #   yields unique (tenant_id, code) and unique (tenant_id, kind, size).
     # @param one_row_per_tenant [Boolean] makes the tenant_id index unique, so a
     #   tenant can own at most one row.
@@ -28,7 +28,7 @@ module Tenancy
       # The explicit add_index is what makes the index lead with tenant_id. An
       # index led by any other column cannot serve a tenant-filtered scan.
       add_index name, :tenant_id, unique: one_row_per_tenant
-      Array(unique).each { |columns| add_index name, [ :tenant_id, *Array(columns) ], unique: true }
+      Array(unique).each { |columns| add_index name, [:tenant_id, *Array(columns)], unique: true }
 
       enable_tenant_isolation name
     end

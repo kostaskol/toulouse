@@ -87,7 +87,7 @@ RSpec.describe "Row-level security" do
     it "reveals only the key whose digest is set" do
       Current.api_key_digest = key.token_digest
 
-      expect(connection.select_values("SELECT id FROM tenant_api_keys")).to eq([ key.id ])
+      expect(connection.select_values("SELECT id FROM tenant_api_keys")).to eq([key.id])
     end
 
     it "grants no writes" do
@@ -105,7 +105,7 @@ RSpec.describe "Row-level security" do
     it "reveals only the session whose digest is set" do
       Current.staff_session_digest = session.token_digest
 
-      expect(connection.select_values("SELECT id FROM staff_sessions")).to eq([ session.id ])
+      expect(connection.select_values("SELECT id FROM staff_sessions")).to eq([session.id])
     end
 
     it "grants no writes" do

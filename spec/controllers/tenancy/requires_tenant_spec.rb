@@ -35,7 +35,7 @@ RSpec.describe Tenancy::RequiresTenant, type: :controller do
 
     expect(response).to have_http_status(failure.status)
     expect(response.parsed_body["errors"]).to eq(
-      [ { "code" => failure.code, "message" => failure.message } ]
+      [{ "code" => failure.code, "message" => failure.message }]
     )
   end
 

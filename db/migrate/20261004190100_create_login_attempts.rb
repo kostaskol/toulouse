@@ -1,6 +1,6 @@
 class CreateLoginAttempts < ActiveRecord::Migration[8.1]
   def change
-    tenant_scoped_table :login_attempts, unique: [ :email ] do |t|
+    tenant_scoped_table :login_attempts, unique: [:email] do |t|
       t.text :email, null: false
       t.integer :failed_count, null: false, default: 0
       t.datetime :last_failed_at

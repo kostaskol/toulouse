@@ -9,7 +9,7 @@ RSpec.describe Tenancy::Scoped do
       other_tenant
       as_tenant(tenant)
 
-      expect(Tenant::Setting.pluck(:tenant_id)).to eq([ tenant.id ])
+      expect(Tenant::Setting.pluck(:tenant_id)).to eq([tenant.id])
     end
 
     it "cannot find another tenant's row by id" do

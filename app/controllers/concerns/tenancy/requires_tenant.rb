@@ -43,7 +43,7 @@ module Tenancy
       log_resolution_failure(Current.resolution.reason)
       failure = FAILURES.fetch(Current.resolution.reason)
       render status: failure.status,
-             json: { errors: [ { code: failure.code, message: failure.message } ] }
+             json: { errors: [{ code: failure.code, message: failure.message }] }
     end
 
     # An inactive tenant is indistinguishable from a missing one on the wire, so
