@@ -41,6 +41,9 @@ module Toulouse
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
+    # The tenant admin session travels in a cookie.
+    config.middleware.use ActionDispatch::Cookies
+
     # Blob and upload routes take requests with no tenant, and blobs carry no
     # tenant_id.
     config.active_storage.draw_routes = false
