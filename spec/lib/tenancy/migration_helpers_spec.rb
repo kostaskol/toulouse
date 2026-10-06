@@ -14,7 +14,7 @@ RSpec.describe Tenancy::MigrationHelpers do
 
   before do
     run_migration do
-      tenant_scoped_table :widgets, unique: [ :code, [ :kind, :size ] ] do |t|
+      tenant_scoped_table :widgets, unique: [:code, [:kind, :size]] do |t|
         t.text :code, null: false
         t.text :kind
         t.text :size
@@ -66,7 +66,7 @@ RSpec.describe Tenancy::MigrationHelpers do
     policies = connection.select_values("SELECT policyname FROM pg_policies WHERE tablename = 'widgets'")
 
     expect(enabled).to be(true)
-    expect(policies).to eq([ "tenant_isolation" ])
+    expect(policies).to eq(["tenant_isolation"])
   end
 
   # The owner writes both rows, because the app role's uncommitted tenant is
@@ -91,13 +91,13 @@ RSpec.describe Tenancy::MigrationHelpers do
     after { connection.drop_table :gizmos, if_exists: true }
 
     it "makes the tenant_id index unique" do
-      index = connection.indexes(:gizmos).find { |i| i.columns == [ "tenant_id" ] }
+      index = connection.indexes(:gizmos).find { |i| i.columns == ["tenant_id"] }
 
       expect(index.unique).to be(true)
     end
 
     it "does not leave a redundant second index on tenant_id" do
-      indexes = connection.indexes(:gizmos).select { |i| i.columns == [ "tenant_id" ] }
+      indexes = connection.indexes(:gizmos).select { |i| i.columns == ["tenant_id"] }
 
       expect(indexes.size).to eq(1)
     end

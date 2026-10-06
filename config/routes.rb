@@ -7,7 +7,7 @@ Rails.application.routes.draw do
 
   namespace :v1 do
     namespace :admin do
-      resource :session, only: [ :create, :show, :destroy ]
+      resource :session, only: [:create, :show, :destroy]
     end
   end
 end

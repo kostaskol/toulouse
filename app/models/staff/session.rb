@@ -50,7 +50,7 @@ class Staff::Session < ApplicationRecord
 
   # Must run as the session's tenant, since the lookup policy grants no writes.
   def refresh_expiry
-    refreshed = [ IDLE_TIMEOUT.from_now, absolute_expiry ].min
+    refreshed = [IDLE_TIMEOUT.from_now, absolute_expiry].min
     update_columns(expires_at: refreshed) if refreshed - expires_at >= REFRESH_THROTTLE
   end
 

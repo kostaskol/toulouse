@@ -102,7 +102,7 @@ RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
       index = ActiveRecord::Base.connection.indexes(:tenant_api_keys)
         .find { |i| i.columns.first == "tenant_id" && i.columns.size > 1 }
 
-      expect(index.columns).to eq([ "tenant_id", "created_at" ])
+      expect(index.columns).to eq(["tenant_id", "created_at"])
     end
   end
 

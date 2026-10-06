@@ -16,7 +16,7 @@ RSpec.describe ApplicationJob do
 
     perform_enqueued_jobs
 
-    expect(TenantRecordingJob.performed_tenant_ids).to eq([ tenant.id ])
+    expect(TenantRecordingJob.performed_tenant_ids).to eq([tenant.id])
   end
 
   # Arguments are deserialized before the perform callbacks run, and row-level
@@ -27,7 +27,7 @@ RSpec.describe ApplicationJob do
 
     perform_enqueued_jobs
 
-    expect(RecordArgumentJob.performed_records).to eq([ domain ])
+    expect(RecordArgumentJob.performed_records).to eq([domain])
   end
 
   it "discards a job whose tenant was suspended after enqueue" do
@@ -53,7 +53,7 @@ RSpec.describe ApplicationJob do
 
     perform_enqueued_jobs
 
-    expect(TenantRecordingJob.performed_tenant_ids).to eq([ nil ])
+    expect(TenantRecordingJob.performed_tenant_ids).to eq([nil])
   end
 
   # This exact path, because perform_now alone never deserializes and
@@ -64,7 +64,7 @@ RSpec.describe ApplicationJob do
 
     ActiveJob::Base.deserialize(job_data).perform_now
 
-    expect(TenantRecordingJob.performed_tenant_ids).to eq([ other_tenant.id ])
+    expect(TenantRecordingJob.performed_tenant_ids).to eq([other_tenant.id])
     expect(Current.tenant_id).to eq(tenant.id)
   end
 end

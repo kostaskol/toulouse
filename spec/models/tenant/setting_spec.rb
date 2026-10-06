@@ -35,7 +35,7 @@ RSpec.describe Tenant::Setting, :as_tenant, type: :model do
     it "rejects a settings value that is not a JSON object" do
       tenant.setting.delete
 
-      expect { insert_setting(tenant: tenant, settings: [ 1, 2 ]) }
+      expect { insert_setting(tenant: tenant, settings: [1, 2]) }
         .to raise_error(ActiveRecord::StatementInvalid, /tenant_settings_is_object/)
     end
   end

@@ -1,6 +1,6 @@
 class CreateStaff < ActiveRecord::Migration[8.1]
   def change
-    tenant_scoped_table :staff, unique: [ :email ] do |t|
+    tenant_scoped_table :staff, unique: [:email] do |t|
       t.text :email, null: false
       t.text :password_digest
       t.integer :role, null: false, default: 0

@@ -19,8 +19,5 @@ RSpec/MultipleExpectations:
 RSpec/ExampleLength:
   Max: 10
 
-# Overwrite or add rules to create your own house style
-#
-# # Use `[a, [b, c]]` not `[ a, [ b, c ] ]`
-# Layout/SpaceInsideArrayLiteralBrackets:
-#   Enabled: false
+Layout/SpaceInsideArrayLiteralBrackets:
+  EnforcedStyle: no_space

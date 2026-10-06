@@ -1,5 +1,5 @@
 module QueryCounter
-  IGNORED_NAMES = [ "SCHEMA", "TRANSACTION" ].freeze
+  IGNORED_NAMES = ["SCHEMA", "TRANSACTION"].freeze
   IGNORED_SQL = /\A\s*(BEGIN|COMMIT|ROLLBACK|SAVEPOINT|RELEASE)/i
 
   def count_queries
