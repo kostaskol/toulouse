@@ -4,21 +4,23 @@ RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
   it { is_expected.to belong_to(:tenant) }
 
   describe "token generation" do
-    it "exposes the plaintext token once on the created record" do
+    it "starts the token with the token prefix" do
       key = create(:tenant_api_key)
 
-      expect(key.token).to start_with("tou_")
+      expect(key.token).to start_with(described_class::TOKEN_PREFIX)
     end
 
-    it "has no column to persist the plaintext token in" do
-      expect(described_class.column_names).not_to include("token")
-    end
-
-    # reload keeps instance variables, so the token must be read from a fresh load.
-    it "never persists the plaintext token" do
+    it "keeps the token readable after a fresh load" do
       key = create(:tenant_api_key)
 
-      expect(described_class.find(key.id).token).to be_nil
+      expect(described_class.find(key.id).token).to eq(key.token)
+    end
+
+    it "encrypts the stored token" do
+      key = create(:tenant_api_key)
+      raw = ApplicationRecord.lease_connection.select_value(described_class.where(id: key.id).select(:token).to_sql)
+
+      expect(raw).not_to include(key.token)
     end
 
     it "stores a digest rather than the token" do
@@ -46,6 +48,71 @@ RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
       digests = Array.new(3) { create(:tenant_api_key).token_digest }
 
       expect(digests.uniq.size).to eq(3)
+    end
+  end
+
+  describe "keeping the token and digest in step" do
+    def other_key = create(:tenant_api_key)
+
+    it "refuses to change the token through the model" do
+      key = create(:tenant_api_key)
+
+      expect { key.update(token: other_key.token) }.to raise_error(described_class::TokenChangeError)
+    end
+
+    it "refuses to change the digest in the database" do
+      key = create(:tenant_api_key)
+
+      expect { key.update_columns(token_digest: described_class.digest(other_key.token)) }
+        .to raise_error(ActiveRecord::StatementInvalid, /cannot change/)
+    end
+
+    it "refuses to change the prefix in the database" do
+      key = create(:tenant_api_key)
+
+      expect { described_class.where(id: key.id).update_all(token_prefix: other_key.token_prefix) }
+        .to raise_error(ActiveRecord::StatementInvalid, /cannot change/)
+    end
+
+    it "still updates other columns" do
+      key = create(:tenant_api_key)
+      name = attributes_for(:tenant_api_key)[:name]
+
+      key.update!(name:)
+
+      expect(key.reload.name).to eq(name)
+    end
+
+    it "lets the token be re-encrypted" do
+      key = create(:tenant_api_key)
+
+      expect { key.encrypt }.not_to raise_error
+      expect(described_class.find(key.id).token).to eq(key.token)
+    end
+  end
+
+  describe "#verified_token" do
+    it "returns the token while it matches the digest" do
+      key = create(:tenant_api_key)
+
+      expect(described_class.find(key.id).verified_token).to eq(key.token)
+    end
+
+    it "returns nil once the stored token no longer matches" do
+      key = create(:tenant_api_key)
+      key.update_columns(token: other_token = create(:tenant_api_key).token)
+
+      expect(described_class.find(key.id)).to have_attributes(token: other_token, verified_token: nil)
+    end
+
+    it "returns nil when the token cannot be decrypted" do
+      key = create(:tenant_api_key)
+      # Raw SQL, because every Active Record write path encrypts.
+      ApplicationRecord.lease_connection.exec_update(
+        "UPDATE tenant_api_keys SET token = $1 WHERE id = $2", "Store plaintext", [key.token, key.id]
+      )
+
+      expect(described_class.find(key.id).verified_token).to be_nil
     end
   end
 
@@ -92,7 +159,7 @@ RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
         as_tenant(other) do
           described_class.insert!({
             tenant_id: other.id, name: "Clash",
-            token_prefix: "tou_clash00", token_digest: existing.token_digest
+            token: existing.token, token_prefix: existing.token_prefix, token_digest: existing.token_digest
           })
         end
       }.to raise_error(ActiveRecord::RecordNotUnique)

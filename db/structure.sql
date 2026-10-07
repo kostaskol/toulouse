@@ -17,6 +17,19 @@ SET row_security = off;
 CREATE SCHEMA platform;
 
 
+--
+-- Name: tenant_api_keys_reject_token_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tenant_api_keys_reject_token_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  RAISE EXCEPTION 'tenant_api_keys.token_digest and token_prefix cannot change';
+END;
+$$;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
@@ -138,7 +151,8 @@ CREATE TABLE public.tenant_api_keys (
     expires_at timestamp(6) with time zone,
     revoked_at timestamp(6) with time zone,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    token text NOT NULL
 );
 
 
@@ -409,6 +423,13 @@ CREATE UNIQUE INDEX index_tenants_on_slug ON public.tenants USING btree (slug);
 
 
 --
+-- Name: tenant_api_keys freeze_token_digest; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER freeze_token_digest BEFORE UPDATE OF token_digest, token_prefix ON public.tenant_api_keys FOR EACH ROW WHEN (((old.token_digest IS DISTINCT FROM new.token_digest) OR (old.token_prefix IS DISTINCT FROM new.token_prefix))) EXECUTE FUNCTION public.tenant_api_keys_reject_token_change();
+
+
+--
 -- Name: admin_sessions fk_rails_879ac839ae; Type: FK CONSTRAINT; Schema: platform; Owner: -
 --
 
@@ -584,6 +605,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261007120000'),
 ('20261006180000'),
 ('20261004190100'),
 ('20261004190000'),
