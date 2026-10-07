@@ -102,14 +102,14 @@ RSpec.describe Staff, :as_tenant, type: :model do
     let(:owner) { described_class.new(role: "owner") }
     let(:staff) { described_class.new(role: "staff") }
 
-    it "lets an owner manage staff and API keys" do
-      expect(owner.permissions).to contain_exactly(:manage_staff, :manage_api_keys)
+    it "lets an owner manage staff" do
+      expect(owner.permissions).to contain_exactly(:manage_staff)
       expect(owner.can?(:manage_staff)).to be(true)
     end
 
-    it "keeps staff from managing staff or API keys" do
+    it "keeps staff from managing staff" do
       expect(staff.permissions).to be_empty
-      expect(staff.can?(:manage_api_keys)).to be(false)
+      expect(staff.can?(:manage_staff)).to be(false)
     end
 
     it "knows which permissions exist" do
