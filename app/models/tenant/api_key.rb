@@ -38,6 +38,11 @@ class Tenant::ApiKey < ApplicationRecord
     revoked_at.nil? && (expires_at.nil? || expires_at.future?)
   end
 
+  # Keeps the first revocation time when called again.
+  def revoke!
+    update!(revoked_at: Time.current) if revoked_at.nil?
+  end
+
   def touch_last_used
     update_columns(last_used_at: Time.current) if last_used_stale?
   end

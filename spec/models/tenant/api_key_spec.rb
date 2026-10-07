@@ -106,6 +106,25 @@ RSpec.describe Tenant::ApiKey, :as_tenant, type: :model do
     end
   end
 
+  describe "#revoke!" do
+    it "stops the key from authenticating" do
+      key = create(:tenant_api_key)
+
+      key.revoke!
+
+      expect(described_class.authenticate(key.token)).to be_nil
+    end
+
+    it "keeps the first revocation time" do
+      revoked_at = 1.hour.ago
+      key = create(:tenant_api_key, revoked_at:)
+
+      key.revoke!
+
+      expect(key.reload.revoked_at).to be_within(1.second).of(revoked_at)
+    end
+  end
+
   describe "#touch_last_used" do
     it "treats a null timestamp as stale and writes" do
       key = create(:tenant_api_key)
