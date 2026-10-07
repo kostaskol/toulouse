@@ -5,6 +5,7 @@ RSpec.describe Shopper, :as_tenant, type: :model do
 
   it { is_expected.to belong_to(:tenant) }
   it { is_expected.to belong_to(:staff).optional }
+  it { is_expected.to have_many(:sessions) }
 
   describe "email" do
     it "is stored lowercased and stripped" do

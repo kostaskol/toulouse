@@ -6,6 +6,7 @@ class Shopper < ApplicationRecord
   has_secure_password validations: false
 
   belongs_to :staff, optional: true
+  has_many :sessions
 
   normalizes :email, with: ->(email) { email.strip.downcase }
 
