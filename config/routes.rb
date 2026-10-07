@@ -5,6 +5,13 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  namespace :platform do
+    root "home#show"
+    resource :session, only: [:new, :create]
+    # HTML forms cannot send DELETE, and method override stays off the API.
+    post "logout", to: "sessions#destroy"
+  end
+
   namespace :v1 do
     namespace :admin do
       resource :session, only: [:create, :show, :destroy]

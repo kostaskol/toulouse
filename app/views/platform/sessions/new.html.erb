@@ -1,0 +1,21 @@
+<h1>Platform admin</h1>
+
+<% if @failed %>
+  <p role="alert">Invalid email, password or code.</p>
+<% end %>
+
+<%= form_with url: platform_session_path do |form| %>
+  <p>
+    <%= form.label :email %>
+    <%= form.email_field :email, value: params[:email], autocomplete: "username", required: true %>
+  </p>
+  <p>
+    <%= form.label :password %>
+    <%= form.password_field :password, autocomplete: "current-password", required: true %>
+  </p>
+  <p>
+    <%= form.label :code, "Authenticator code" %>
+    <%= form.text_field :code, autocomplete: "one-time-code", inputmode: "numeric", required: true %>
+  </p>
+  <%= form.submit "Sign in" %>
+<% end %>

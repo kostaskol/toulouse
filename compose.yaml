@@ -16,6 +16,8 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_APP_USER: toulouse_app
       POSTGRES_APP_PASSWORD: toulouse_app
+      POSTGRES_PLATFORM_USER: toulouse_platform
+      POSTGRES_PLATFORM_PASSWORD: toulouse_platform
       REDIS_URL: redis://redis:6379/0
       # OrbStack gives every container a routable IP and a .orb.local name;
       # Rails host authorization rejects those names unless they are allowed.
@@ -43,13 +45,15 @@ services:
       POSTGRES_DB: toulouse_development
       POSTGRES_APP_USER: toulouse_app
       POSTGRES_APP_PASSWORD: toulouse_app
+      POSTGRES_PLATFORM_USER: toulouse_platform
+      POSTGRES_PLATFORM_PASSWORD: toulouse_platform
     ports:
       - "5432:5432"
     volumes:
       # Postgres 18 images store data under a major-version subdirectory, so the
       # mount goes one level up. Mounting /data makes the container refuse to start.
       - postgres-data:/var/lib/postgresql
-      - ./script/create_app_role.sh:/docker-entrypoint-initdb.d/create_app_role.sh:ro
+      - ./script/create_roles.sh:/docker-entrypoint-initdb.d/create_roles.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d toulouse_development"]
       interval: 5s

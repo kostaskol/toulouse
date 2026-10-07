@@ -10,9 +10,48 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+--
+-- Name: platform; Type: SCHEMA; Schema: -; Owner: -
+--
+
+CREATE SCHEMA platform;
+
+
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: admin_sessions; Type: TABLE; Schema: platform; Owner: -
+--
+
+CREATE TABLE platform.admin_sessions (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    admin_id uuid NOT NULL,
+    token_digest text NOT NULL,
+    expires_at timestamp(6) with time zone NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
+-- Name: admins; Type: TABLE; Schema: platform; Owner: -
+--
+
+CREATE TABLE platform.admins (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    email text NOT NULL,
+    password_digest text NOT NULL,
+    otp_secret text NOT NULL,
+    last_otp_at timestamp(6) with time zone,
+    failed_count integer DEFAULT 0 NOT NULL,
+    last_failed_at timestamp(6) with time zone,
+    locked_until timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
 
 --
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
@@ -149,6 +188,22 @@ CREATE TABLE public.tenants (
 
 
 --
+-- Name: admin_sessions admin_sessions_pkey; Type: CONSTRAINT; Schema: platform; Owner: -
+--
+
+ALTER TABLE ONLY platform.admin_sessions
+    ADD CONSTRAINT admin_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: admins admins_pkey; Type: CONSTRAINT; Schema: platform; Owner: -
+--
+
+ALTER TABLE ONLY platform.admins
+    ADD CONSTRAINT admins_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ar_internal_metadata ar_internal_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -218,6 +273,27 @@ ALTER TABLE ONLY public.tenant_settings
 
 ALTER TABLE ONLY public.tenants
     ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: index_admin_sessions_on_admin_id; Type: INDEX; Schema: platform; Owner: -
+--
+
+CREATE INDEX index_admin_sessions_on_admin_id ON platform.admin_sessions USING btree (admin_id);
+
+
+--
+-- Name: index_admin_sessions_on_token_digest; Type: INDEX; Schema: platform; Owner: -
+--
+
+CREATE UNIQUE INDEX index_admin_sessions_on_token_digest ON platform.admin_sessions USING btree (token_digest);
+
+
+--
+-- Name: index_admins_on_email; Type: INDEX; Schema: platform; Owner: -
+--
+
+CREATE UNIQUE INDEX index_admins_on_email ON platform.admins USING btree (email);
 
 
 --
@@ -330,6 +406,14 @@ CREATE UNIQUE INDEX index_tenant_settings_on_tenant_id ON public.tenant_settings
 --
 
 CREATE UNIQUE INDEX index_tenants_on_slug ON public.tenants USING btree (slug);
+
+
+--
+-- Name: admin_sessions fk_rails_879ac839ae; Type: FK CONSTRAINT; Schema: platform; Owner: -
+--
+
+ALTER TABLE ONLY platform.admin_sessions
+    ADD CONSTRAINT fk_rails_879ac839ae FOREIGN KEY (admin_id) REFERENCES platform.admins(id) ON DELETE CASCADE;
 
 
 --
@@ -491,7 +575,16 @@ GRANT USAGE ON SCHEMA public TO "toulouse_app";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse_app";
 REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_app";
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_app";
+
+GRANT USAGE ON SCHEMA public TO "toulouse_platform";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "toulouse_platform";
+REVOKE ALL ON "schema_migrations", "ar_internal_metadata" FROM "toulouse_platform";
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
+GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
+ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261006180000'),
 ('20261004190100'),
 ('20261004190000'),
 ('20261004080536'),

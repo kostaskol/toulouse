@@ -91,8 +91,10 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_APP_USER: toulouse_app
           POSTGRES_APP_PASSWORD: toulouse_app
+          POSTGRES_PLATFORM_USER: toulouse_platform
+          POSTGRES_PLATFORM_PASSWORD: toulouse_platform
           PGHOST: localhost
           PGPASSWORD: postgres
           # RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
           # REDIS_URL: redis://localhost:6379/0
-        run: script/create_app_role.sh && bin/rails db:test:prepare && bin/rspec
+        run: script/create_roles.sh && bin/rails db:test:prepare && bin/rspec

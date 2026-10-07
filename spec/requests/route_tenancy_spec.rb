@@ -2,11 +2,12 @@ require "rails_helper"
 
 RSpec.describe "Tenant resolution on every route", type: :request do
   def self.tenantless = ["rails/health#show"]
-  # Resolves its tenant from the credentials in its body.
-  def self.sessionless = ["v1/admin/sessions#create"]
+  # Sign-in endpoints, which take credentials rather than a session.
+  def self.sessionless = ["v1/admin/sessions#create", "platform/sessions#new", "platform/sessions#create"]
   def self.routes = Rails.application.routes.routes.reject(&:internal)
   def self.endpoint(route) = "#{route.defaults[:controller]}##{route.defaults[:action]}"
   def self.tenant_admin?(route) = route.defaults[:controller].start_with?("v1/admin/")
+  def self.platform?(route) = route.defaults[:controller].start_with?("platform/")
 
   # Each segment is filled with its own name, because the request must be
   # turned away before any parameter is read.
@@ -27,6 +28,15 @@ RSpec.describe "Tenant resolution on every route", type: :request do
         process route.verb.downcase.to_sym, path_for(route), **body
 
         expect_failure(RequiresStaffSession::FAILURES.fetch(:missing_session))
+      end
+    elsif platform?(route)
+      it "sends #{route.verb} #{route.path.spec} to sign in without a platform admin session" do
+        # With a valid token, so the session check rather than forgery
+        # protection answers.
+        get new_platform_session_path
+        process route.verb.downcase.to_sym, path_for(route), params: { authenticity_token: page_authenticity_token }
+
+        expect(response).to redirect_to(new_platform_session_path)
       end
     else
       it "rejects #{route.verb} #{route.path.spec} without an api key" do

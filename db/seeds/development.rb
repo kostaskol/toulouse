@@ -19,3 +19,7 @@ seed_staff.call(demo, email: "staff@example.com", role: "staff")
 # Same owner email in a second store, so the slug decides which one logs in.
 suspended = seed_tenant.call(name: "Suspended Store", slug: "suspended-store", status: "suspended")
 seed_staff.call(suspended, email: "owner@example.com", role: "owner")
+
+# A new TOTP secret on every seed, so none is committed. Print the current code
+# with bin/rails platform:admins:code EMAIL=admin@example.com.
+Platform::Admin.provision(email: "admin@example.com", password:)
