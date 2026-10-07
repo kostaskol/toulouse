@@ -1,0 +1,19 @@
+<h1>Tenants</h1>
+
+<p><%= link_to "Platform admin", platform_root_path %></p>
+
+<table>
+  <thead>
+    <tr><th>Name</th><th>Slug</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    <% @tenants.each do |tenant| %>
+      <tr>
+        <td><%= tenant.name %></td>
+        <td><%= tenant.slug %></td>
+        <td><%= tenant.status %></td>
+        <td><%= link_to "API keys", platform_tenant_api_keys_path(tenant) %></td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

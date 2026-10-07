@@ -138,7 +138,7 @@ RSpec.describe "Row-level security" do
     end
 
     it "rejects an upsert that lands on another tenant's row" do
-      attributes = theirs.attributes.slice("id", "name", "token_prefix", "token_digest")
+      attributes = theirs.attributes.slice("id", "name", "token", "token_prefix", "token_digest")
 
       expect { Tenant::ApiKey.upsert(attributes, unique_by: :id) }.to raise_error(ActiveRecord::StatementInvalid, /row-level security/)
     end

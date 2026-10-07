@@ -2,4 +2,6 @@
 
 <p>Signed in as <%= Current.user.email %>.</p>
 
+<p><%= link_to "Tenants", platform_tenants_path %></p>
+
 <%= button_to "Sign out", platform_logout_path %>

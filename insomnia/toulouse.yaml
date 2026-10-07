@@ -102,8 +102,8 @@ collection:
       sortKey: 2
       description: >-
         Server-rendered. Sign-in form stores the CSRF token that Sign in and Sign
-        out send. Sign in asks for a code from
-        `bin/rails platform:admins:code EMAIL=...`.
+        out send, and API keys stores the one that Issue and Revoke send. Sign in
+        asks for a code from `bin/rails platform:admins:code EMAIL=...`.
     children:
       - url: "{{ _.base_url }}/platform/session/new"
         name: Sign-in form
@@ -186,6 +186,113 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants"
+        name: Tenants
+        meta:
+          id: req_bf7405923cd4d5b236958d0ad81c1ee2
+          created: 1791374400000
+          modified: 1791374400000
+          isPrivate: false
+          sortKey: 3
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants/{{ _.platform_tenant_id }}/api_keys"
+        name: API keys
+        meta:
+          id: req_99b2c518e18b5376b84523d960a3ee81
+          created: 1791374400000
+          modified: 1791374400000
+          isPrivate: false
+          sortKey: 4
+        method: GET
+        scripts:
+          afterResponse: |-
+            const token = insomnia.response.text().match(/name="csrf-token" content="([^"]+)"/)?.[1];
+            insomnia.environment.set("platform_authenticity_token", token ?? "");
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants/{{ _.platform_tenant_id }}/api_keys/{{ _.platform_api_key_id }}"
+        name: Show API key
+        meta:
+          id: req_6d29dbc1171726e8109a92974bfa3d5d
+          created: 1791374400000
+          modified: 1791374400000
+          isPrivate: false
+          sortKey: 5
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants/{{ _.platform_tenant_id }}/api_keys"
+        name: Issue API key
+        meta:
+          id: req_f79943b52d6d5b7f93007deace84c63d
+          created: 1791374400000
+          modified: 1791374400000
+          isPrivate: false
+          sortKey: 6
+        method: POST
+        body:
+          mimeType: application/x-www-form-urlencoded
+          params:
+            - name: authenticity_token
+              value: "{{ _.platform_authenticity_token }}"
+            - name: api_key[name]
+              value: "{% prompt 'Key name', '', '', '', false, false %}"
+        headers:
+          - name: Content-Type
+            value: application/x-www-form-urlencoded
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants/{{ _.platform_tenant_id }}/api_keys/{{ _.platform_api_key_id }}/revoke"
+        name: Revoke API key
+        meta:
+          id: req_f2c4631bce8984882813683de04dad6e
+          created: 1791374400000
+          modified: 1791374400000
+          isPrivate: false
+          sortKey: 7
+        method: POST
+        body:
+          mimeType: application/x-www-form-urlencoded
+          params:
+            - name: authenticity_token
+              value: "{{ _.platform_authenticity_token }}"
+        headers:
+          - name: Content-Type
+            value: application/x-www-form-urlencoded
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -206,3 +313,5 @@ environments:
     password: toulouse-dev-password
     platform_email: admin@example.com
     platform_authenticity_token: ""
+    platform_tenant_id: "{% prompt 'Tenant id', 'From Tenants', '', 'tenant_id', false, true %}"
+    platform_api_key_id: "{% prompt 'Key id', 'From API keys', '', '', false, false %}"

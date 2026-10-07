@@ -6,7 +6,7 @@ class Staff < ApplicationRecord
   has_secure_password validations: false
 
   # Actions open to every role are declared as such and need no permission here.
-  PERMISSIONS = { "owner" => [:manage_staff, :manage_api_keys].freeze, "staff" => [].freeze }.freeze
+  PERMISSIONS = { "owner" => [:manage_staff].freeze, "staff" => [].freeze }.freeze
 
   has_many :sessions
 

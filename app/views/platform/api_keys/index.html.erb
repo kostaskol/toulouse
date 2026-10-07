@@ -1,0 +1,42 @@
+<h1>API keys for <%= @tenant.name %></h1>
+
+<p><%= link_to "Tenants", platform_tenants_path %></p>
+
+<table>
+  <thead>
+    <tr><th>Name</th><th>Prefix</th><th>Created</th><th>Last used</th><th>Expires</th><th>Status</th><th></th></tr>
+  </thead>
+  <tbody>
+    <% @api_keys.each do |api_key| %>
+      <tr id="<%= dom_id(api_key) %>">
+        <td><%= api_key.name %></td>
+        <td><code><%= api_key.token_prefix %></code></td>
+        <td><%= api_key.created_at %></td>
+        <td><%= api_key.last_used_at || "Never" %></td>
+        <td><%= api_key.expires_at || "Never" %></td>
+        <td><%= api_key.revoked_at ? "Revoked #{api_key.revoked_at}" : (api_key.usable? ? "Active" : "Expired") %></td>
+        <td>
+          <% if api_key.revoked_at.nil? %>
+            <%= link_to "Reveal", platform_tenant_api_key_path(@tenant, api_key) %>
+            <%= button_to "Revoke", revoke_platform_tenant_api_key_path(@tenant, api_key),
+                          form: { onsubmit: "return confirm('Anything still using this key stops working.')" } %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>
+
+<h2>Issue a key</h2>
+
+<% if @api_key.errors.any? %>
+  <p role="alert"><%= @api_key.errors.full_messages.to_sentence %></p>
+<% end %>
+
+<%= form_with model: @api_key, scope: :api_key, url: platform_tenant_api_keys_path(@tenant) do |form| %>
+  <p>
+    <%= form.label :name %>
+    <%= form.text_field :name, required: true %>
+  </p>
+  <%= form.submit "Issue key" %>
+<% end %>
