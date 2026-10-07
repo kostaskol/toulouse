@@ -90,5 +90,14 @@ RSpec.describe Tenant, type: :model do
       expect(as_tenant(tenant) { Tenant::ApiKey.count }).to eq(0)
       expect(as_tenant(tenant) { Tenant::Domain.count }).to eq(0)
     end
+
+    it "destroys a staff-linked shopper along with its staff" do
+      tenant = create(:tenant)
+      create(:shopper, :linked_to_staff, tenant:)
+
+      tenant.destroy
+
+      expect(as_tenant(tenant) { [Shopper.count, Staff.count] }).to eq([0, 0])
+    end
   end
 end
