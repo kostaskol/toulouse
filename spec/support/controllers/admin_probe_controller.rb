@@ -1,5 +1,5 @@
 # Stands in for tenant admin endpoints until the first resource exists.
-class AdminProbeController < V1::Admin::BaseController
+class AdminProbeController < Admin::BaseController
   allow_any_staff
 
   def show

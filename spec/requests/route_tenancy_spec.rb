@@ -3,10 +3,10 @@ require "rails_helper"
 RSpec.describe "Tenant resolution on every route", type: :request do
   def self.tenantless = ["rails/health#show"]
   # Sign-in endpoints, which take credentials rather than a session.
-  def self.sessionless = ["v1/admin/sessions#create", "platform/sessions#new", "platform/sessions#create"]
+  def self.sessionless = ["admin/sessions#create", "platform/sessions#new", "platform/sessions#create"]
   def self.routes = Rails.application.routes.routes.reject(&:internal)
   def self.endpoint(route) = "#{route.defaults[:controller]}##{route.defaults[:action]}"
-  def self.tenant_admin?(route) = route.defaults[:controller].start_with?("v1/admin/")
+  def self.tenant_admin?(route) = route.defaults[:controller].start_with?("admin/")
   def self.platform?(route) = route.defaults[:controller].start_with?("platform/")
 
   # Each segment is filled with its own name, because the request must be

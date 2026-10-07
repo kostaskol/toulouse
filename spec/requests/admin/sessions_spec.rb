@@ -6,10 +6,10 @@ RSpec.describe "Tenant admin sessions", type: :request do
   let!(:staff) { create(:staff, tenant:, password:) }
 
   def log_in(password: self.password)
-    post "/v1/admin/session", params: { slug: tenant.slug, email: staff.email, password: }, as: :json
+    post "/admin/session", params: { slug: tenant.slug, email: staff.email, password: }, as: :json
   end
 
-  describe "POST /v1/admin/session" do
+  describe "POST /admin/session" do
     it "opens a session and describes it" do
       log_in
 
@@ -41,7 +41,7 @@ RSpec.describe "Tenant admin sessions", type: :request do
 
     it "lets the cookie authenticate the next request" do
       log_in
-      get "/v1/admin/session"
+      get "/admin/session"
 
       expect(response).to have_http_status(:ok)
     end
@@ -49,25 +49,25 @@ RSpec.describe "Tenant admin sessions", type: :request do
     it "refuses a wrong password" do
       log_in(password: SecureRandom.alphanumeric(16))
 
-      expect_failure(V1::Admin::SessionsController::FAILURES.fetch(:invalid_credentials))
+      expect_failure(Admin::SessionsController::FAILURES.fetch(:invalid_credentials))
       expect(session_set_cookie).to be_nil
     end
 
     it "says when the email is locked, and for how long" do
       LoginAttempt::MAX_FAILURES.times { log_in(password: SecureRandom.alphanumeric(16)) }
 
-      expect_failure(V1::Admin::SessionsController::FAILURES.fetch(:too_many_attempts))
+      expect_failure(Admin::SessionsController::FAILURES.fetch(:too_many_attempts))
       expect(response.headers["Retry-After"].to_i).to be_between(1, LoginAttempt::LOCKOUT.to_i)
     end
 
     it "refuses a request with no credentials" do
-      post "/v1/admin/session", params: {}, as: :json
+      post "/admin/session", params: {}, as: :json
 
-      expect_failure(V1::Admin::SessionsController::FAILURES.fetch(:invalid_credentials))
+      expect_failure(Admin::SessionsController::FAILURES.fetch(:invalid_credentials))
     end
 
     it "refuses a body that is not JSON" do
-      post "/v1/admin/session", params: { slug: tenant.slug, email: staff.email, password: }
+      post "/admin/session", params: { slug: tenant.slug, email: staff.email, password: }
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:unsupported_media_type))
     end
@@ -80,11 +80,11 @@ RSpec.describe "Tenant admin sessions", type: :request do
     end
   end
 
-  describe "GET /v1/admin/session" do
+  describe "GET /admin/session" do
     let(:staff_session) { create(:staff_session, tenant:, staff:) }
 
     it "describes the session" do
-      get "/v1/admin/session", headers: staff_cookie(staff_session)
+      get "/admin/session", headers: staff_cookie(staff_session)
 
       expect(response.parsed_body.dig("staff", "id")).to eq(staff.id)
     end
@@ -92,19 +92,19 @@ RSpec.describe "Tenant admin sessions", type: :request do
     it "lists what the member's role permits" do
       owner = create(:staff, tenant:, role: "owner")
 
-      get "/v1/admin/session", headers: staff_cookie(create(:staff_session, tenant:, staff: owner))
+      get "/admin/session", headers: staff_cookie(create(:staff_session, tenant:, staff: owner))
 
       expect(response.parsed_body.dig("staff", "permissions")).to match_array(owner.permissions.map(&:to_s))
     end
 
     it "refuses a request with no cookie" do
-      get "/v1/admin/session"
+      get "/admin/session"
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:missing_session))
     end
 
     it "does not accept an api key in place of the cookie" do
-      get "/v1/admin/session", headers: { Tenancy::RequiresTenant::HEADER => create(:tenant_api_key, tenant:).token }
+      get "/admin/session", headers: { Tenancy::RequiresTenant::HEADER => create(:tenant_api_key, tenant:).token }
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:missing_session))
     end
@@ -113,7 +113,7 @@ RSpec.describe "Tenant admin sessions", type: :request do
       token = staff_session.token
       travel Staff::Session::IDLE_TIMEOUT + 1.second
 
-      get "/v1/admin/session", headers: { "Cookie" => "#{RequiresStaffSession::COOKIE}=#{token}" }
+      get "/admin/session", headers: { "Cookie" => "#{RequiresStaffSession::COOKIE}=#{token}" }
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:invalid_session))
       expect(session_set_cookie).to match(/max-age=0|expires=Thu, 01 Jan 1970/i)
@@ -122,7 +122,7 @@ RSpec.describe "Tenant admin sessions", type: :request do
     it "refuses an api key sent as the cookie" do
       key = create(:tenant_api_key, tenant:)
 
-      get "/v1/admin/session", headers: { "Cookie" => "#{RequiresStaffSession::COOKIE}=#{key.token}" }
+      get "/admin/session", headers: { "Cookie" => "#{RequiresStaffSession::COOKIE}=#{key.token}" }
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:invalid_session))
     end
@@ -130,25 +130,25 @@ RSpec.describe "Tenant admin sessions", type: :request do
     it "shows a suspended tenant's status" do
       tenant.update!(status: "suspended")
 
-      get "/v1/admin/session", headers: staff_cookie(staff_session)
+      get "/admin/session", headers: staff_cookie(staff_session)
 
       expect(response.parsed_body.dig("tenant", "status")).to eq("suspended")
     end
   end
 
-  describe "DELETE /v1/admin/session" do
+  describe "DELETE /admin/session" do
     let(:staff_session) { create(:staff_session, tenant:, staff:) }
 
     it "ends the session" do
-      delete "/v1/admin/session", headers: staff_cookie(staff_session)
+      delete "/admin/session", headers: staff_cookie(staff_session)
 
       expect(response).to have_http_status(:no_content)
       expect(as_tenant(tenant) { Staff::Session.exists?(staff_session.id) }).to be(false)
     end
 
     it "makes the old cookie useless" do
-      delete "/v1/admin/session", headers: staff_cookie(staff_session)
-      get "/v1/admin/session", headers: staff_cookie(staff_session)
+      delete "/admin/session", headers: staff_cookie(staff_session)
+      get "/admin/session", headers: staff_cookie(staff_session)
 
       expect_failure(RequiresStaffSession::FAILURES.fetch(:invalid_session))
     end
@@ -156,7 +156,7 @@ RSpec.describe "Tenant admin sessions", type: :request do
     it "logs out of a suspended tenant" do
       tenant.update!(status: "suspended")
 
-      delete "/v1/admin/session", headers: staff_cookie(staff_session)
+      delete "/admin/session", headers: staff_cookie(staff_session)
 
       expect(response).to have_http_status(:no_content)
     end

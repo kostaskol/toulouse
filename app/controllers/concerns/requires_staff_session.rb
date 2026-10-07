@@ -2,7 +2,7 @@ module RequiresStaffSession
   extend ActiveSupport::Concern
 
   COOKIE = "staff_session".freeze
-  COOKIE_PATH = "/v1/admin".freeze
+  COOKIE_PATH = "/admin".freeze
 
   # A plain cross-site form can send these. A JSON body cannot without a CORS
   # preflight, which only the admin origin passes.

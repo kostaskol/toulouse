@@ -12,9 +12,7 @@ Rails.application.routes.draw do
     post "logout", to: "sessions#destroy"
   end
 
-  namespace :v1 do
-    namespace :admin do
-      resource :session, only: [:create, :show, :destroy]
-    end
+  namespace :admin do
+    resource :session, only: [:create, :show, :destroy]
   end
 end
