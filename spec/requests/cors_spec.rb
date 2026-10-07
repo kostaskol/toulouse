@@ -12,14 +12,14 @@ RSpec.describe "CORS", type: :request do
   end
 
   it "admits the tenant admin origin with credentials" do
-    preflight("/v1/admin/session", admin_origin)
+    preflight("/admin/session", admin_origin)
 
     expect(response.headers["Access-Control-Allow-Origin"]).to eq(admin_origin)
     expect(response.headers["Access-Control-Allow-Credentials"]).to eq("true")
   end
 
   it "admits no other origin" do
-    preflight("/v1/admin/session", "#{admin_origin}.evil")
+    preflight("/admin/session", "#{admin_origin}.evil")
 
     expect(response.headers["Access-Control-Allow-Origin"]).to be_nil
   end

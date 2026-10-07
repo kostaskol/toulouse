@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe AuthorizesStaff do
-  def controller_class(&) = Class.new(V1::Admin::BaseController, &)
+  def controller_class(&) = Class.new(Admin::BaseController, &)
 
   it "applies a declaration without only to every action" do
     controller = controller_class { requires_permission :manage_staff }

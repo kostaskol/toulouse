@@ -5,7 +5,7 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
     # Read per request, so an unset origin admits nothing.
     origins { |source, _env| source.present? && source == Rails.configuration.x.admin_origin }
 
-    resource "/v1/admin/*",
+    resource "/admin/*",
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head],
       credentials: true

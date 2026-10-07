@@ -1,5 +1,5 @@
 # Stands in for owner-only tenant admin endpoints until the first one exists.
-class PermissionProbeController < V1::Admin::BaseController
+class PermissionProbeController < Admin::BaseController
   allow_any_staff only: :show
   requires_permission :manage_staff, only: :update
 

@@ -32,7 +32,7 @@ collection:
       sortKey: 1
       description: Authenticated by the staff_session cookie that Log in stores in the cookie jar.
     children:
-      - url: "{{ _.base_url }}/v1/admin/session"
+      - url: "{{ _.base_url }}/admin/session"
         name: Log in
         meta:
           id: req_64a3d800846189f3ccb527c0729e1640
@@ -60,7 +60,7 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/v1/admin/session"
+      - url: "{{ _.base_url }}/admin/session"
         name: Current session
         meta:
           id: req_b07bf0b753da14a978b134c8c3da88e2
@@ -77,7 +77,7 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/v1/admin/session"
+      - url: "{{ _.base_url }}/admin/session"
         name: Log out
         meta:
           id: req_e9cabae54786cd2181aa8bd8b28ee949

@@ -4,8 +4,8 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
   around do |example|
     with_routing do |routes|
       routes.draw do
-        get "v1/admin/probe" => "admin_probe#show"
-        patch "v1/admin/probe" => "admin_probe#update"
+        get "admin/probe" => "admin_probe#show"
+        patch "admin/probe" => "admin_probe#update"
       end
       example.run
     end
@@ -15,7 +15,7 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
   let(:staff_session) { create(:staff_session, tenant:) }
 
   it "acts as the session's staff member in the session's tenant" do
-    get "/v1/admin/probe", headers: staff_cookie(staff_session)
+    get "/admin/probe", headers: staff_cookie(staff_session)
 
     expect(response.parsed_body).to eq("tenant_id" => tenant.id, "staff_id" => staff_session.staff_id)
   end
@@ -25,7 +25,7 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
     api_key = create(:tenant_api_key, tenant: other)
     headers = staff_cookie(staff_session).merge(Tenancy::RequiresTenant::HEADER => api_key.token)
 
-    get "/v1/admin/probe", params: { tenant_id: other.id }, headers: headers
+    get "/admin/probe", params: { tenant_id: other.id }, headers: headers
 
     expect(response.parsed_body["tenant_id"]).to eq(tenant.id)
   end
@@ -34,21 +34,21 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
     headers = staff_cookie(staff_session)
     travel Staff::Session::IDLE_TIMEOUT / 2
 
-    get "/v1/admin/probe", headers: headers
+    get "/admin/probe", headers: headers
 
     expect(as_tenant(tenant) { staff_session.reload.expires_at })
       .to be_within(1.second).of(Staff::Session::IDLE_TIMEOUT.from_now)
   end
 
   it "leaves no actor behind after the response" do
-    get "/v1/admin/probe", headers: staff_cookie(staff_session)
+    get "/admin/probe", headers: staff_cookie(staff_session)
 
     expect(Current.user).to be_nil
     expect(Current.tenant).to be_nil
   end
 
   it "accepts writes from an active tenant" do
-    patch "/v1/admin/probe", params: {}, headers: staff_cookie(staff_session), as: :json
+    patch "/admin/probe", params: {}, headers: staff_cookie(staff_session), as: :json
 
     expect(response).to have_http_status(:no_content)
   end
@@ -56,7 +56,7 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
   it "rejects writes from a suspended tenant" do
     tenant.update!(status: "suspended")
 
-    patch "/v1/admin/probe", params: {}, headers: staff_cookie(staff_session), as: :json
+    patch "/admin/probe", params: {}, headers: staff_cookie(staff_session), as: :json
 
     expect_failure(RequiresStaffSession::FAILURES.fetch(:tenant_suspended))
   end
@@ -64,13 +64,13 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
   it "serves reads to a suspended tenant" do
     tenant.update!(status: "suspended")
 
-    get "/v1/admin/probe", headers: staff_cookie(staff_session)
+    get "/admin/probe", headers: staff_cookie(staff_session)
 
     expect(response).to have_http_status(:ok)
   end
 
   it "rejects a write that is not JSON" do
-    patch "/v1/admin/probe", params: {}, headers: staff_cookie(staff_session)
+    patch "/admin/probe", params: {}, headers: staff_cookie(staff_session)
 
     expect_failure(RequiresStaffSession::FAILURES.fetch(:unsupported_media_type))
   end
