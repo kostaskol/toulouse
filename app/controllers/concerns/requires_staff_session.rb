@@ -1,5 +1,6 @@
 module RequiresStaffSession
   extend ActiveSupport::Concern
+  include RendersFailures
 
   COOKIE = "staff_session".freeze
   COOKIE_PATH = "/admin".freeze
@@ -7,8 +8,6 @@ module RequiresStaffSession
   # A plain cross-site form can send these. A JSON body cannot without a CORS
   # preflight, which only the admin origin passes.
   BODY_METHODS = %w[POST PUT PATCH].freeze
-
-  Failure = Data.define(:status, :code, :message)
 
   FAILURES = {
     missing_session: Failure.new(
@@ -90,10 +89,5 @@ module RequiresStaffSession
 
   def clear_session_cookie
     cookies.delete(COOKIE, path: COOKIE_PATH)
-  end
-
-  def render_failure(failure, headers: {})
-    headers.each { |name, value| response.set_header(name, value) }
-    render status: failure.status, json: { errors: [{ code: failure.code, message: failure.message }] }
   end
 end

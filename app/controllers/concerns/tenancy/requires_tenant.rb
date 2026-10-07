@@ -1,10 +1,9 @@
 module Tenancy
   module RequiresTenant
     extend ActiveSupport::Concern
+    include RendersFailures
 
     HEADER = "X-Api-Key".freeze
-
-    Failure = Data.define(:status, :code, :message)
 
     FAILURES = {
       missing_api_key: Failure.new(
@@ -41,9 +40,7 @@ module Tenancy
       end
 
       log_resolution_failure(Current.resolution.reason)
-      failure = FAILURES.fetch(Current.resolution.reason)
-      render status: failure.status,
-             json: { errors: [{ code: failure.code, message: failure.message }] }
+      render_failure(FAILURES.fetch(Current.resolution.reason))
     end
 
     # An inactive tenant is indistinguishable from a missing one on the wire, so

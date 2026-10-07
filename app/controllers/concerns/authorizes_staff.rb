@@ -6,7 +6,7 @@ module AuthorizesStaff
   class UndeclaredAction < StandardError; end
 
   FAILURES = {
-    permission_denied: RequiresStaffSession::Failure.new(
+    permission_denied: RendersFailures::Failure.new(
       status: :forbidden,
       code: "permission_denied",
       message: "Your role does not allow this action."
