@@ -18,6 +18,12 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :v1 do
+    namespace :storefront do
+      resource :session, only: [:create, :show, :destroy]
+    end
+  end
+
   namespace :admin do
     resource :session, only: [:create, :show, :destroy]
   end
