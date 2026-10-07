@@ -10,6 +10,12 @@ Rails.application.routes.draw do
     resource :session, only: [:new, :create]
     # HTML forms cannot send DELETE, and method override stays off the API.
     post "logout", to: "sessions#destroy"
+
+    resources :tenants, only: :index do
+      resources :api_keys, only: [:index, :show, :create] do
+        post :revoke, on: :member
+      end
+    end
   end
 
   namespace :admin do

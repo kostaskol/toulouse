@@ -1,0 +1,11 @@
+<h1><%= @api_key.name %></h1>
+
+<p>API key for <%= @tenant.name %>.</p>
+
+<% if (token = @api_key.verified_token) %>
+  <p><code id="token"><%= token %></code></p>
+<% else %>
+  <p role="alert">This key cannot be shown. Issue a new key and revoke this one.</p>
+<% end %>
+
+<p><%= link_to "Back to API keys", platform_tenant_api_keys_path(@tenant) %></p>
