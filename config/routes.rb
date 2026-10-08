@@ -26,5 +26,6 @@ Rails.application.routes.draw do
 
   namespace :admin do
     resource :session, only: [:create, :show, :destroy]
+    resource :password_reset, only: [:create, :update]
   end
 end

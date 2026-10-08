@@ -24,6 +24,7 @@ seed_linked_shopper = lambda do |tenant, email:|
 end
 
 demo = seed_tenant.call(name: "Demo Store", slug: "demo-store", status: "active")
+Tenancy.with_tenant(demo) { demo.setting.update!(sender_email: "demo-store@example.com") }
 seed_staff.call(demo, email: "owner@example.com", role: "owner")
 seed_staff.call(demo, email: "staff@example.com", role: "staff")
 seed_shopper.call(demo, email: "shopper@example.com")
