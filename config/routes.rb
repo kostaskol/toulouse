@@ -28,5 +28,6 @@ Rails.application.routes.draw do
     resource :session, only: [:create, :show, :destroy]
     resource :password_reset, only: [:create, :update]
     resources :staff, only: :create
+    resource :invite, only: :update
   end
 end

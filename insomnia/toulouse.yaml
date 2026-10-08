@@ -178,6 +178,35 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/invite"
+        name: Accept invite
+        meta:
+          id: req_4a1e73bfdbeaca17cbd34878b69da52d
+          created: 1791478941200
+          modified: 1791478941200
+          isPrivate: false
+          sortKey: 6
+          description: Signs in as the invited member, replacing the current session cookie.
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "slug": "{{ _.slug }}",
+              "token": "{% prompt 'Invite token', 'From the link in the invite email', '', '', false, false %}",
+              "password": "{% prompt 'Password', '', '', '', true, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Platform admin
     meta:
       id: fld_ba69d648aad6a21677cbe1c17db315fb
