@@ -415,7 +415,8 @@ collection:
       description: >-
         Called by a storefront's BFF. Every request sends the tenant API key,
         from Show API key in platform admin. Current session and Log out send
-        the token that Log in returns.
+        the token that Log in returns. Complete signup takes the code from the
+        mail under tmp/mails.
     children:
       - url: "{{ _.base_url }}/v1/storefront/session"
         name: Log in
@@ -490,6 +491,64 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/signup"
+        name: Request signup code
+        meta:
+          id: req_03c7937001a22520326148c9c2524591
+          created: 1791490000000
+          modified: 1791490000000
+          isPrivate: false
+          sortKey: 3
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "{{ _.signup_email }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/signup"
+        name: Complete signup
+        meta:
+          id: req_eb85834a04f70c0f7d2cfc3f3eec8b9a
+          created: 1791490000000
+          modified: 1791490000000
+          isPrivate: false
+          sortKey: 4
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "{{ _.signup_email }}",
+              "code": "{{ _.signup_code }}",
+              "password": "{{ _.password }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -510,6 +569,8 @@ environments:
     password: toulouse-dev-password
     platform_email: admin@example.com
     shopper_email: shopper@example.com
+    signup_email: "{% prompt 'Signup email', 'An email with no account in this store', '', 'signup_email', true, false %}"
+    signup_code: "{% prompt 'Signup code', 'From the mail under tmp/mails', '', '', false, false %}"
     api_key: "{% prompt 'API key', 'From Show API key', '', 'api_key', true, true %}"
     shopper_token: "{% response 'body', 'req_88be0382da29cfe4996a412f823b27f6', 'b64::JC50b2tlbg==::46b', 'never', 60 %}"
     platform_authenticity_token: ""
