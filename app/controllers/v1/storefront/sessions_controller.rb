@@ -40,14 +40,6 @@ module V1
         shopper_session.destroy!
         head :no_content
       end
-
-      private
-
-      def session_body(session)
-        shopper = session.shopper
-
-        { shopper: { id: shopper.id, email: shopper.email }, expires_at: session.absolute_expiry }
-      end
     end
   end
 end

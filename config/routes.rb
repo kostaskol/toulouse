@@ -21,6 +21,7 @@ Rails.application.routes.draw do
   namespace :v1 do
     namespace :storefront do
       resource :session, only: [:create, :show, :destroy]
+      resource :signup, only: [:create, :update]
     end
   end
 
