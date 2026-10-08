@@ -63,6 +63,7 @@ RSpec.describe "Row-level security" do
       create(:tenant_domain, tenant: tenant)
       create(:staff, tenant: tenant)
       create(:staff_session, tenant: tenant)
+      create(:shopper_session, tenant: tenant)
       create(:login_attempt, tenant: tenant)
     end
 

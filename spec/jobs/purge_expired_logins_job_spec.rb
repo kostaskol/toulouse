@@ -42,4 +42,22 @@ RSpec.describe PurgeExpiredLoginsJob do
 
     expect(count_in(tenant, Staff::Session)).to eq(1)
   end
+
+  it "removes expired shopper sessions in every tenant" do
+    tenants.each { |tenant| create(:shopper_session, tenant:) }
+    travel Shopper::Session::IDLE_TIMEOUT + 1.second
+
+    described_class.perform_now
+
+    expect(tenants.map { |tenant| count_in(tenant, Shopper::Session) }).to all(eq(0))
+  end
+
+  it "keeps live shopper sessions" do
+    tenant = tenants.first
+    create(:shopper_session, tenant:)
+
+    described_class.perform_now
+
+    expect(count_in(tenant, Shopper::Session)).to eq(1)
+  end
 end

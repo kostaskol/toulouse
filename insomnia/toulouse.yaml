@@ -293,6 +293,90 @@ collection:
             send: true
             store: true
           rebuildPath: true
+  - name: Storefront
+    meta:
+      id: fld_5b67cc497bee939d102857d59b70eabe
+      created: 1791398000000
+      modified: 1791398000000
+      sortKey: 3
+      description: >-
+        Called by a storefront's BFF. Every request sends the tenant API key,
+        from Show API key in platform admin. Current session and Log out send
+        the token that Log in returns.
+    children:
+      - url: "{{ _.base_url }}/v1/storefront/session"
+        name: Log in
+        meta:
+          id: req_88be0382da29cfe4996a412f823b27f6
+          created: 1791398000000
+          modified: 1791398000000
+          isPrivate: false
+          sortKey: 0
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "{{ _.shopper_email }}",
+              "password": "{{ _.password }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/session"
+        name: Current session
+        meta:
+          id: req_b3909016818fac477d6ac1db115335c9
+          created: 1791398000000
+          modified: 1791398000000
+          isPrivate: false
+          sortKey: 1
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+          - name: Authorization
+            value: Bearer {{ _.shopper_token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/session"
+        name: Log out
+        meta:
+          id: req_7f9e3bb6240b5d1489ba00491085f9b2
+          created: 1791398000000
+          modified: 1791398000000
+          isPrivate: false
+          sortKey: 2
+        method: DELETE
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+          - name: Authorization
+            value: Bearer {{ _.shopper_token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -312,6 +396,9 @@ environments:
     email: owner@example.com
     password: toulouse-dev-password
     platform_email: admin@example.com
+    shopper_email: shopper@example.com
+    api_key: "{% prompt 'API key', 'From Show API key', '', 'api_key', true, true %}"
+    shopper_token: "{% response 'body', 'req_88be0382da29cfe4996a412f823b27f6', 'b64::JC50b2tlbg==::46b', 'never', 60 %}"
     platform_authenticity_token: ""
     platform_tenant_id: "{% prompt 'Tenant id', 'From Tenants', '', 'tenant_id', false, true %}"
     platform_api_key_id: "{% prompt 'Key id', 'From API keys', '', '', false, false %}"

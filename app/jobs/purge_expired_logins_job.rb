@@ -5,6 +5,7 @@ class PurgeExpiredLoginsJob < ApplicationJob
       Tenancy.with_tenant(tenant) do
         LoginAttempt.expired.delete_all
         Staff::Session.expired.delete_all
+        Shopper::Session.expired.delete_all
       end
     end
   end

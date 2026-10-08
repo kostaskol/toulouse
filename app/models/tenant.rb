@@ -5,6 +5,7 @@ class Tenant < ApplicationRecord
 
   has_many :domains, dependent: :destroy
   has_many :api_keys, dependent: :destroy
+  has_many :shoppers, dependent: :destroy
   has_many :staff, dependent: :destroy
   has_one :setting, dependent: :destroy
 
