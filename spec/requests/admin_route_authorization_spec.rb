@@ -1,8 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Staff authorization on every tenant admin route" do
-  # Signs the staff member in, so there is nobody to authorize yet.
-  def self.exempt = ["admin/sessions#create"]
+  # These sign the staff member in, so there is nobody to authorize yet.
+  def self.exempt = ["admin/sessions#create", "admin/password_resets#create", "admin/password_resets#update"]
   def self.routes = Rails.application.routes.routes.reject(&:internal).select { |route| tenant_admin?(route) }
   def self.tenant_admin?(route) = route.defaults[:controller]&.start_with?("admin/")
   def self.endpoint(route) = "#{route.defaults[:controller]}##{route.defaults[:action]}"

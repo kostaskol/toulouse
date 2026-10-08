@@ -9,6 +9,7 @@ class Staff < ApplicationRecord
   PERMISSIONS = { "owner" => [:manage_staff].freeze, "staff" => [].freeze }.freeze
 
   has_many :sessions
+  has_one :shopper
 
   enum :role, { staff: 0, owner: 1 }, validate: true
   enum :status, { pending: 0, active: 1 }, validate: true

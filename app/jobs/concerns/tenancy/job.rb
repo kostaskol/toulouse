@@ -6,6 +6,8 @@ module Tenancy
     included do
       # Set during deserialize, so it is nil for a job sent straight to perform_now.
       attr_reader :tenant_id
+
+      class_attribute :tenant_statuses, instance_accessor: false, default: ["active"].freeze
     end
 
     def serialize
@@ -32,11 +34,11 @@ module Tenancy
       return yield if tenant_id.nil?
 
       tenant = Tenant.find_by(id: tenant_id)
-      return Tenancy.with_tenant(tenant) { yield } if tenant&.active?
+      return Tenancy.with_tenant(tenant) { yield } if tenant && self.class.tenant_statuses.include?(tenant.status)
 
       # Logged here rather than with discard_on, which sees only errors raised
       # inside perform_now.
-      Rails.logger.warn { "Discarded #{self.class.name}: tenant #{tenant_id} is missing or not active" }
+      Rails.logger.warn { "Discarded #{self.class.name}: tenant #{tenant_id} is #{tenant&.status || "missing"}" }
       nil
     end
   end

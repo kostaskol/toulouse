@@ -94,6 +94,63 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/password_reset"
+        name: Request password reset
+        meta:
+          id: req_02e7fb006cbd9a4fd487c4d580b9fbb1
+          created: 1791464439000
+          modified: 1791464439000
+          isPrivate: false
+          sortKey: 3
+          description: Writes the email under tmp/mails. The token is the part of its link after the #.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "slug": "{{ _.slug }}",
+              "email": "{{ _.email }}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/password_reset"
+        name: Complete password reset
+        meta:
+          id: req_f477ed3a7f50c7beb95b1f0370927413
+          created: 1791464439000
+          modified: 1791464439000
+          isPrivate: false
+          sortKey: 4
+          description: Signs in like Log in. The new password replaces the base environment one.
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "slug": "{{ _.slug }}",
+              "token": "{% prompt 'Reset token', 'From the link in the reset email', '', '', false, false %}",
+              "password": "{% prompt 'New password', '', '', '', true, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Platform admin
     meta:
       id: fld_ba69d648aad6a21677cbe1c17db315fb
