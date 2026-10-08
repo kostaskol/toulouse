@@ -8,6 +8,8 @@ class Staff < ApplicationRecord
   # Actions open to every role are declared as such and need no permission here.
   PERMISSIONS = { "owner" => [:manage_staff].freeze, "staff" => [].freeze }.freeze
 
+  INVITE_EXPIRY = 7.days
+
   has_many :sessions
   has_one :shopper
 
@@ -21,6 +23,12 @@ class Staff < ApplicationRecord
   validates :password, confirmation: { allow_nil: true }
   validate :password_set_unless_pending
   validate :password_fits_bcrypt
+
+  # Setting the password creates the salt, and a resend moves invited_at, so
+  # either one ends the link.
+  generates_token_for :invite, expires_in: INVITE_EXPIRY do
+    [password_salt&.last(10), invited_at]
+  end
 
   # @param name [Symbol]
   # @return [Boolean]

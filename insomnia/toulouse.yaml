@@ -151,6 +151,33 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/staff"
+        name: Invite staff
+        meta:
+          id: req_97068bbee339abe389a4a20879cd7500
+          created: 1791478941200
+          modified: 1791478941200
+          isPrivate: false
+          sortKey: 5
+          description: Owner only. Writes the email under tmp/mails. The token is the part of its link after the #.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "email": "{% prompt 'Email', 'The email to invite', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Platform admin
     meta:
       id: fld_ba69d648aad6a21677cbe1c17db315fb
