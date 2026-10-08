@@ -6,6 +6,7 @@ class PurgeExpiredLoginsJob < ApplicationJob
         LoginAttempt.expired.delete_all
         Staff::Session.expired.delete_all
         Shopper::Session.expired.delete_all
+        Shopper::SignupCode.expired.delete_all
       end
     end
   end
