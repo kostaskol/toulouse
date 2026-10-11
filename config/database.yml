@@ -30,10 +30,11 @@ default: &default
 
 # The app connects as a role that row-level security applies to. It owns
 # nothing, so it cannot switch RLS off. Every database task, including schema
-# loads and migrations, runs as the owner entry instead.
+# loads and migrations, runs as the owner entry instead. The schema dump grants
+# to these role names, so they are the same in every environment.
 app_role: &app_role
   <<: *default
-  username: <%= ENV.fetch("POSTGRES_APP_USER", nil) %>
+  username: toulouse_app
   password: <%= ENV.fetch("POSTGRES_APP_PASSWORD", nil) %>
   database_tasks: false
 
@@ -41,7 +42,7 @@ app_role: &app_role
 # role, and it alone can reach the platform_ tables.
 platform_role: &platform_role
   <<: *default
-  username: <%= ENV.fetch("POSTGRES_PLATFORM_USER", nil) %>
+  username: toulouse_platform
   password: <%= ENV.fetch("POSTGRES_PLATFORM_PASSWORD", nil) %>
   database_tasks: false
 
@@ -104,24 +105,26 @@ test:
 # for a full overview on how database connection configuration can be specified.
 #
 production:
-  primary: &primary_production
-    <<: *default
+  primary:
+    <<: *app_role
     database: toulouse_production
-    username: toulouse
-    password: <%= ENV["TOULOUSE_DATABASE_PASSWORD"] %>
-  # One role until production gets the split roles development and test have.
   platform:
-    <<: *primary_production
-    database_tasks: false
-  cache:
-    <<: *primary_production
+    <<: *platform_role
+    database: toulouse_production
+  owner:
+    <<: *owner_role
+    database: toulouse_production
+  # These hold no tenant rows, so the app role owns them and prepares them.
+  cache: &solid_production
+    <<: *app_role
     database: toulouse_production_cache
     migrations_paths: db/cache_migrate
+    database_tasks: true
   queue:
-    <<: *primary_production
+    <<: *solid_production
     database: toulouse_production_queue
     migrations_paths: db/queue_migrate
   cable:
-    <<: *primary_production
+    <<: *solid_production
     database: toulouse_production_cable
     migrations_paths: db/cable_migrate

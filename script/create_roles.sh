@@ -13,5 +13,7 @@ WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = :'user')
 SQL
 }
 
-create_role "$POSTGRES_APP_USER" "$POSTGRES_APP_PASSWORD"
-create_role "$POSTGRES_PLATFORM_USER" "$POSTGRES_PLATFORM_PASSWORD"
+# Already exists where it is the superuser, as in development.
+create_role "$POSTGRES_USER" "$POSTGRES_PASSWORD"
+create_role toulouse_app "$POSTGRES_APP_PASSWORD"
+create_role toulouse_platform "$POSTGRES_PLATFORM_PASSWORD"

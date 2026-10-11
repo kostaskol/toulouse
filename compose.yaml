@@ -14,9 +14,7 @@ services:
       POSTGRES_PORT: 5432
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_APP_USER: toulouse_app
       POSTGRES_APP_PASSWORD: toulouse_app
-      POSTGRES_PLATFORM_USER: toulouse_platform
       POSTGRES_PLATFORM_PASSWORD: toulouse_platform
       REDIS_URL: redis://redis:6379/0
       # OrbStack gives every container a routable IP and a .orb.local name;
@@ -43,9 +41,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: toulouse_development
-      POSTGRES_APP_USER: toulouse_app
       POSTGRES_APP_PASSWORD: toulouse_app
-      POSTGRES_PLATFORM_USER: toulouse_platform
       POSTGRES_PLATFORM_PASSWORD: toulouse_platform
     ports:
       - "5432:5432"
