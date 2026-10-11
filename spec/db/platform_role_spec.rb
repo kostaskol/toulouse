@@ -30,18 +30,8 @@ RSpec.describe "Platform database role" do
       expect(connection.select_value("SELECT current_user")).to eq(Platform::DatabaseRole.username)
     end
 
-    it "is neither superuser nor able to bypass row-level security" do
-      role = connection.select_one("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
-
-      expect(role).to eq("rolsuper" => false, "rolbypassrls" => false)
-    end
-
-    it "owns nothing, so it cannot disable a policy" do
-      owned = connection.select_value(
-        "SELECT count(*) FROM pg_class WHERE relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)"
-      )
-
-      expect(owned).to eq(0)
+    it "has nothing that would let it skip row-level security" do
+      expect(Tenancy::IsolationCheck.role_failures(connection)).to be_empty
     end
 
     it "finds the platform tables" do
