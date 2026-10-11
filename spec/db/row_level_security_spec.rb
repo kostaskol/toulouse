@@ -4,50 +4,21 @@ RSpec.describe "Row-level security" do
   let(:connection) { ActiveRecord::Base.lease_connection }
   let(:tenant) { create(:tenant) }
   let(:other_tenant) { create(:tenant) }
-
-  # pg_catalog rather than information_schema, which hides tables the role
-  # holds no privilege on.
-  def tenant_tables
-    connection.select_values(<<~SQL)
-      SELECT c.relname FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-      JOIN pg_attribute a ON a.attrelid = c.oid
-      WHERE n.nspname = 'public' AND c.relkind = 'r'
-        AND a.attname = 'tenant_id' AND NOT a.attisdropped
-    SQL
-  end
-
-  def count_rows(table)
-    connection.select_value("SELECT count(*) FROM #{connection.quote_table_name(table)}")
-  end
+  let(:check) { Tenancy::IsolationCheck }
 
   describe "policies" do
     it "finds the tenant tables" do
-      expect(tenant_tables).to include(Tenant::ApiKey.table_name, Tenant::Domain.table_name, Tenant::Setting.table_name)
+      expect(check.tenant_tables(connection)).to include(Tenant::ApiKey.table_name, Tenant::Domain.table_name, Tenant::Setting.table_name)
     end
 
     it "enables a tenant isolation policy on every table with a tenant_id" do
-      protected_tables = connection.select_values(<<~SQL)
-        SELECT c.relname FROM pg_class c
-        JOIN pg_policies p ON p.tablename = c.relname AND p.schemaname = 'public'
-        WHERE c.relrowsecurity AND p.policyname = 'tenant_isolation'
-      SQL
-
-      expect(tenant_tables - protected_tables).to be_empty
+      expect(check.unprotected_tables(connection)).to be_empty
     end
   end
 
   describe "the app role" do
-    it "is neither superuser nor able to bypass row-level security" do
-      role = connection.select_one("SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user")
-
-      expect(role).to eq("rolsuper" => false, "rolbypassrls" => false)
-    end
-
-    it "owns no table, so it cannot disable a policy" do
-      owned = connection.select_value("SELECT count(*) FROM pg_class WHERE relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)")
-
-      expect(owned).to eq(0)
+    it "has nothing that would let it skip row-level security" do
+      expect(check.role_failures(connection)).to be_empty
     end
 
     it "is not the role migrations run as" do
@@ -69,15 +40,13 @@ RSpec.describe "Row-level security" do
     end
 
     it "sees the rows as their tenant" do
-      counts = as_tenant(tenant) { tenant_tables.map { |table| count_rows(table) } }
-
-      expect(counts).to all(be_positive)
+      expect(as_tenant(tenant) { check.row_counts(connection).values }).to all(be_positive)
     end
 
     # The factories above set and cleared the tenant on this connection, which
     # is what leaves the setting as '' rather than null.
     it "returns zero rows from every tenant table on a connection that held a tenant" do
-      expect(tenant_tables.map { |table| count_rows(table) }).to all(eq(0))
+      expect(check.row_counts(connection).values).to all(eq(0))
     end
   end
 

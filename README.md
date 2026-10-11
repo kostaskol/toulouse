@@ -33,9 +33,10 @@ are baked into the image, so adding one needs `docker compose build api`.
 and `POSTGRES_PASSWORD`, defaulting to `localhost` when unset. Compose points
 them at the `postgres` service. Redis is at `REDIS_URL`.
 
-The app connects as `POSTGRES_APP_USER`, a role that row-level security applies
-to. Platform admin connects as `POSTGRES_PLATFORM_USER`, which row-level
-security also applies to and which alone can reach the `platform` schema.
+The app connects as `toulouse_app`, a role that row-level security applies
+to. Platform admin connects as `toulouse_platform`, which row-level security
+also applies to and which alone can reach the `platform` schema. Their
+passwords are in `POSTGRES_APP_PASSWORD` and `POSTGRES_PLATFORM_PASSWORD`.
 `POSTGRES_USER` owns the tables and runs every database task. Compose creates
 both roles when the Postgres volume is first initialised. On a volume that
 predates either, create them once:
@@ -80,3 +81,45 @@ The default target runs as a non-root user and starts Thruster in front of
 Puma on port 80. Thruster handles HTTP/2, TLS, compression and X-Sendfile, so
 a separate nginx layer is generally not needed. `config/deploy.yml` holds the
 generated Kamal configuration if you want to deploy that way.
+
+## Production database
+
+Production uses the same three roles as development:
+
+| Role | Password variable | Use |
+|---|---|---|
+| `toulouse` | `POSTGRES_PASSWORD` | Owns the tables. Runs `db:prepare` when the server starts. |
+| `toulouse_app` | `POSTGRES_APP_PASSWORD` | The API. Row-level security applies. Owns the Solid databases. |
+| `toulouse_platform` | `POSTGRES_PLATFORM_PASSWORD` | Platform admin. Row-level security applies. |
+
+`config/deploy.yml` sets the owner name in `POSTGRES_USER`. `.kamal/secrets`
+reads the three passwords from your environment.
+
+The app cannot create roles or databases. Before the first deploy, do these
+steps as a Postgres superuser:
+
+1. Create the roles. Set `PGHOST` and `PGUSER` to the server and the superuser.
+   Set `POSTGRES_USER` and the password variables from the table above. Then run:
+
+   ```sh
+   script/create_roles.sh
+   ```
+
+2. Create the databases:
+
+   ```sql
+   CREATE DATABASE toulouse_production OWNER toulouse;
+   CREATE DATABASE toulouse_production_cache OWNER toulouse_app;
+   CREATE DATABASE toulouse_production_queue OWNER toulouse_app;
+   CREATE DATABASE toulouse_production_cable OWNER toulouse_app;
+   ```
+
+After a deploy, make sure that the API cannot see past row-level security:
+
+```sh
+bin/kamal app exec "bin/rails tenancy:verify"
+```
+
+The task fails if a role can bypass row-level security, owns a table or sees
+tenant rows with no tenant set, or if the app role can reach the `platform`
+schema.

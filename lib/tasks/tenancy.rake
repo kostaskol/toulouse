@@ -19,3 +19,15 @@ Rake::Task["db:load_config"].enhance do
   owner = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: "owner")
   ApplicationRecord.establish_connection(owner) if owner
 end
+
+namespace :tenancy do
+  desc "Check that the app and platform roles cannot see past row-level security"
+  task verify: :environment do
+    failures = ApplicationRecord.connected_to(role: :platform) do
+      Tenancy::IsolationCheck.failures(ActiveRecord::Base.lease_connection, ApplicationRecord.lease_connection)
+    end
+
+    abort(failures.join("\n")) if failures.any?
+    puts "No role can see past row-level security."
+  end
+end

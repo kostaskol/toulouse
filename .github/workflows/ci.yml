@@ -89,9 +89,7 @@ jobs:
           POSTGRES_HOST: localhost
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_APP_USER: toulouse_app
           POSTGRES_APP_PASSWORD: toulouse_app
-          POSTGRES_PLATFORM_USER: toulouse_platform
           POSTGRES_PLATFORM_PASSWORD: toulouse_platform
           PGHOST: localhost
           PGPASSWORD: postgres
