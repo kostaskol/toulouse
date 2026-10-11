@@ -3,8 +3,6 @@ require "rails_helper"
 RSpec.describe Shopper::EmailCode, :as_tenant, type: :model do
   let(:email) { build(:shopper).email }
 
-  def wrong_code(code) = ((code.to_i + 1) % (10**described_class::DIGITS)).to_s.rjust(described_class::DIGITS, "0")
-
   it "uses the shopper_email_codes table" do
     expect(described_class.table_name).to eq("shopper_email_codes")
   end
@@ -50,6 +48,26 @@ RSpec.describe Shopper::EmailCode, :as_tenant, type: :model do
 
       expect(described_class.signup.sole.refusal(signup)).to be_nil
       expect(described_class.password_reset.sole.refusal(reset)).to be_nil
+    end
+  end
+
+  describe ".matching" do
+    let!(:code) { described_class.issue(email, purpose: :signup) }
+
+    it "returns the stored code when it matches" do
+      expect(described_class.matching(email, code, purpose: :signup)).to eq(described_class.sole)
+    end
+
+    it "returns nothing for a wrong code" do
+      expect(described_class.matching(email, wrong_code(code), purpose: :signup)).to be_nil
+    end
+
+    it "returns nothing for an email with no code" do
+      expect(described_class.matching(build(:shopper).email, code, purpose: :signup)).to be_nil
+    end
+
+    it "returns nothing for a code issued for another purpose" do
+      expect(described_class.matching(email, code, purpose: :password_reset)).to be_nil
     end
   end
 

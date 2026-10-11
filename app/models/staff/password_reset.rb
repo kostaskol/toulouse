@@ -60,9 +60,8 @@ class Staff::PasswordReset
     staff = Staff.find_by_password_reset_token(token)
     return refuse(staff ? :not_active : :bad_token) unless staff&.active?
 
-    # A blank password leaves the digest as it was rather than failing validation.
     staff.password = password
-    return Result.failure(:invalid_password) if password.empty? || !staff.valid?
+    return Result.failure(:invalid_password) unless staff.valid?
 
     Staff.transaction do
       staff.save!

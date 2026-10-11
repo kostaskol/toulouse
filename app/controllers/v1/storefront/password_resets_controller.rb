@@ -4,23 +4,7 @@ module V1
       # Resetting is how a shopper who cannot sign in gets back in.
       skip_before_action :authenticate_shopper
 
-      FAILURES = {
-        invalid_email: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_email",
-          message: "The email is blank or malformed."
-        ),
-        invalid_code: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_code",
-          message: "The code is wrong or has expired. Request a new one."
-        ),
-        invalid_password: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_password",
-          message: "The password is blank or too long."
-        )
-      }.freeze
+      FAILURES = EMAIL_CODE_FAILURES
 
       # Answers alike whether or not a shopper was mailed.
       def create
@@ -36,7 +20,7 @@ module V1
                                                  password: details[:password])
 
         if result.session
-          render status: :created, json: { token: result.session.token, **session_body(result.session) }
+          render_new_session(result.session)
         else
           render_failure(FAILURES.fetch(result.failure))
         end

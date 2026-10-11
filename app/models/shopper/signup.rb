@@ -37,11 +37,8 @@ class Shopper::Signup
   end
 
   def complete(code, password)
-    signup_code = Shopper::EmailCode.signup.find_by(email: @email)
-    return refuse(:no_code) if signup_code.nil?
-
-    reason = signup_code.refusal(code)
-    return refuse(reason) if reason
+    signup_code = Shopper::EmailCode.matching(@email, code, purpose: :signup)
+    return Result.failure(:invalid_code) if signup_code.nil?
 
     if taken?
       signup_code.destroy!
@@ -74,11 +71,5 @@ class Shopper::Signup
   rescue ActiveRecord::RecordNotUnique
     # A parallel signup for the same email committed first.
     Result.failure(:email_taken)
-  end
-
-  # Code refusals answer alike, so this log is the only place the reason survives.
-  def refuse(reason)
-    Rails.logger.warn { "Shopper signup refused: #{reason} tenant=#{Current.tenant.slug}" }
-    Result.failure(:invalid_code)
   end
 end

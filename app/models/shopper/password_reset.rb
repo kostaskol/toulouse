@@ -45,21 +45,18 @@ class Shopper::PasswordReset
   end
 
   def complete(code, password)
-    email_code = Shopper::EmailCode.password_reset.find_by(email: @email)
-    return refuse(:no_code) if email_code.nil?
-
-    reason = email_code.refusal(code)
-    return refuse(reason) if reason
+    email_code = Shopper::EmailCode.matching(@email, code, purpose: :password_reset)
+    return Result.failure(:invalid_code) if email_code.nil?
 
     shopper = Shopper.find_by(email: @email)
     if shopper.nil? || shopper.staff_id
       email_code.destroy!
-      return refuse(shopper ? :linked_to_staff : :unknown_email)
+      log_refusal(shopper ? :linked_to_staff : :unknown_email)
+      return Result.failure(:invalid_code)
     end
 
-    # A blank password leaves the digest as it was rather than failing validation.
     shopper.password = password
-    return Result.failure(:invalid_password) if password.empty? || !shopper.valid?
+    return Result.failure(:invalid_password) unless shopper.valid?
 
     reset(shopper, email_code)
   end
@@ -75,11 +72,6 @@ class Shopper::PasswordReset
       LoginAttempt.clear(@email)
       Result.success(shopper.sessions.create!)
     end
-  end
-
-  def refuse(reason)
-    log_refusal(reason)
-    Result.failure(:invalid_code)
   end
 
   # Refusals answer alike, so this log is the only place the reason survives.

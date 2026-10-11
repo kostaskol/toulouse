@@ -25,12 +25,6 @@ RSpec.describe "Storefront shopper signup", type: :request do
     put "/v1/storefront/signup", params: { email:, code:, password: }, headers:, as: :json
   end
 
-  def mailed_code
-    ActionMailer::Base.deliveries.last.text_part.body.to_s[/\b\d{#{Shopper::EmailCode::DIGITS}}\b/o]
-  end
-
-  def wrong(code) = ((code.to_i + 1) % (10**Shopper::EmailCode::DIGITS)).to_s.rjust(Shopper::EmailCode::DIGITS, "0")
-
   describe "POST /v1/storefront/signup" do
     it "accepts with no body" do
       request_code
@@ -185,7 +179,7 @@ RSpec.describe "Storefront shopper signup", type: :request do
     end
 
     it "refuses a wrong code" do
-      complete(code: wrong(code))
+      complete(code: wrong_code(code))
 
       expect_failure(failure(:invalid_code))
     end
@@ -206,7 +200,7 @@ RSpec.describe "Storefront shopper signup", type: :request do
     end
 
     it "refuses the right code once the tries are used up" do
-      Shopper::EmailCode::MAX_ATTEMPTS.times { complete(code: wrong(code)) }
+      Shopper::EmailCode::MAX_ATTEMPTS.times { complete(code: wrong_code(code)) }
 
       complete(code:)
 

@@ -23,7 +23,7 @@ module V1
         result = Shopper::Login.call(email: credentials[:email], password: credentials[:password])
 
         if result.session
-          render status: :created, json: { token: result.session.token, **session_body(result.session) }
+          render_new_session(result.session)
         elsif result.failure == :too_many_attempts
           retry_after = (result.locked_until - Time.current).ceil
           render_failure(FAILURES.fetch(:too_many_attempts), headers: { "Retry-After" => retry_after.to_s })

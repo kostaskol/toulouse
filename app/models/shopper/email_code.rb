@@ -37,6 +37,22 @@ class Shopper::EmailCode < ApplicationRecord
     OpenSSL::HMAC.hexdigest("SHA256", Rails.application.key_generator.generate_key("shopper email code"), code)
   end
 
+  # Finds the code for the email and uses up a try on it. Callers answer every
+  # refusal alike, so this log is the only place the reason survives.
+  #
+  # @param email [String]
+  # @param code [String]
+  # @param purpose [Symbol]
+  # @return [Shopper::EmailCode, nil] the stored code when it matches
+  def self.matching(email, code, purpose:)
+    email_code = where(purpose:).find_by(email:)
+    reason = email_code ? email_code.refusal(code) : :no_code
+    return email_code unless reason
+
+    Rails.logger.warn { "Shopper email code refused: #{reason} purpose=#{purpose} tenant=#{Current.tenant.slug}" }
+    nil
+  end
+
   # Uses up a try, then compares.
   #
   # @param code [String]
