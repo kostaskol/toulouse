@@ -11,6 +11,11 @@ module Admin
         code: "invalid_credentials",
         message: "The store, email or password is incorrect."
       ),
+      invite_pending: Failure.new(
+        status: :unauthorized,
+        code: "invite_pending",
+        message: "The invite is not accepted yet. Use the invite email link, or ask the store owner for a new one."
+      ),
       too_many_attempts: Failure.new(
         status: :too_many_requests,
         code: "too_many_attempts",
@@ -31,7 +36,7 @@ module Admin
         retry_after = (result.locked_until - Time.current).ceil
         render_failure(FAILURES.fetch(:too_many_attempts), headers: { "Retry-After" => retry_after.to_s })
       else
-        render_failure(FAILURES.fetch(:invalid_credentials))
+        render_failure(FAILURES.fetch(result.failure))
       end
     end
 

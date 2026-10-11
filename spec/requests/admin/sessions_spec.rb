@@ -53,6 +53,14 @@ RSpec.describe "Tenant admin sessions", type: :request do
       expect(session_set_cookie).to be_nil
     end
 
+    it "says when the member has not accepted their invite" do
+      as_tenant(tenant) { staff.update!(status: "pending", password: nil) }
+      log_in
+
+      expect_failure(Admin::SessionsController::FAILURES.fetch(:invite_pending))
+      expect(session_set_cookie).to be_nil
+    end
+
     it "says when the email is locked, and for how long" do
       LoginAttempt::MAX_FAILURES.times { log_in(password: SecureRandom.alphanumeric(16)) }
 

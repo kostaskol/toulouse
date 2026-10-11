@@ -35,16 +35,19 @@ class Staff::Login
       return refuse(:locked, locked_until:)
     end
 
+    # Answered whatever the password, since only the invite link can set one. Not
+    # counted as a failure, as nothing was guessed.
+    return Result.failure(:invite_pending) if Staff.pending.exists?(email: @email)
+
     staff = Staff.authenticate_by(email: @email, password: @password)
 
-    # A pending member can hold a password before accepting the invite.
-    if staff&.active?
+    if staff
       LoginAttempt.clear(@email)
       return Result.success(staff.sessions.create!)
     end
 
     locked_until = LoginAttempt.record_failure(@email)
-    refuse(staff ? :pending : :bad_credentials, locked_until:)
+    refuse(:bad_credentials, locked_until:)
   end
 
   # Every reason but a lock answers alike, so this log is the only place the

@@ -58,18 +58,6 @@ RSpec.describe Staff::Login do
       expect(log_in(email: other.email).failure).to eq(:invalid_credentials)
     end
 
-    it "refuses pending staff" do
-      pending = create(:staff, :pending, tenant:)
-
-      expect(log_in(email: pending.email).failure).to eq(:invalid_credentials)
-    end
-
-    it "refuses pending staff even with a password set" do
-      as_tenant(tenant) { staff.update!(status: "pending") }
-
-      expect(log_in.failure).to eq(:invalid_credentials)
-    end
-
     it "refuses blank credentials" do
       expect(log_in(email: nil, password: nil).failure).to eq(:invalid_credentials)
     end
@@ -81,6 +69,30 @@ RSpec.describe Staff::Login do
       log_in(email: "missing-#{staff.email}")
 
       expect(BCrypt::Password).to have_received(:create)
+    end
+  end
+
+  describe "pending staff" do
+    let(:pending) { create(:staff, :pending, tenant:) }
+
+    it "says the invite is pending" do
+      expect(log_in(email: pending.email).failure).to eq(:invite_pending)
+    end
+
+    it "says so even when a password is set" do
+      as_tenant(tenant) { staff.update!(status: "pending") }
+
+      expect(log_in.failure).to eq(:invite_pending)
+    end
+
+    it "opens no session for the email in another tenant" do
+      expect(log_in(slug: create(:tenant).slug, email: pending.email).failure).to eq(:invalid_credentials)
+    end
+
+    it "does not count towards a lock" do
+      LoginAttempt::MAX_FAILURES.times { log_in(email: pending.email) }
+
+      expect(log_in(email: pending.email).failure).to eq(:invite_pending)
     end
   end
 
