@@ -52,6 +52,13 @@ RSpec.describe Staff, :as_tenant, type: :model do
       expect(build(:staff, :pending)).to be_valid
     end
 
+    it "refuses a blank password over an existing one" do
+      staff = create(:staff)
+      staff.password = ""
+
+      expect(staff).not_to be_valid
+    end
+
     it "cannot be removed by activating a pending member without one" do
       staff = create(:staff, :pending)
 

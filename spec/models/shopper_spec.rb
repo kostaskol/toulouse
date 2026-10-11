@@ -55,6 +55,13 @@ RSpec.describe Shopper, :as_tenant, type: :model do
       expect(build(:shopper, password: too_long)).not_to be_valid
     end
 
+    it "refuses a blank password over an existing one" do
+      shopper = create(:shopper)
+      shopper.password = ""
+
+      expect(shopper).not_to be_valid
+    end
+
     it "authenticates by email and password within the tenant" do
       shopper = create(:shopper, password:)
 

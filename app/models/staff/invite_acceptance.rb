@@ -35,10 +35,9 @@ class Staff::InviteAcceptance
     # Checked after the token, so only someone holding a valid link learns the status.
     return Result.failure(:tenant_suspended) if tenant.suspended?
 
-    # A blank password leaves the digest as it was rather than failing validation.
     staff.password = @password
     staff.status = :active
-    return Result.failure(:invalid_password) if @password.empty? || !staff.valid?
+    return Result.failure(:invalid_password) unless staff.valid?
 
     Staff.transaction do
       staff.save!

@@ -1,9 +1,6 @@
 class Staff < ApplicationRecord
   include Tenancy::Scoped
-
-  # Rails' own validations require a password on every row, and pending staff
-  # have none until they accept their invite.
-  has_secure_password validations: false
+  include HasPassword
 
   # Actions open to every role are declared as such and need no permission here.
   PERMISSIONS = { "owner" => [:manage_staff].freeze, "staff" => [].freeze }.freeze
@@ -20,9 +17,7 @@ class Staff < ApplicationRecord
 
   validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP },
                     uniqueness: { scope: :tenant_id }
-  validates :password, confirmation: { allow_nil: true }
   validate :password_set_unless_pending
-  validate :password_fits_bcrypt
 
   # Setting the password creates the salt, and a resend moves invited_at, so
   # either one ends the link.
@@ -51,11 +46,5 @@ class Staff < ApplicationRecord
 
   def password_set_unless_pending
     errors.add(:password, :blank) if password_digest.blank? && !pending?
-  end
-
-  def password_fits_bcrypt
-    return unless password.present? && password.bytesize > ActiveModel::SecurePassword::MAX_PASSWORD_LENGTH_ALLOWED
-
-    errors.add(:password, :password_too_long)
   end
 end

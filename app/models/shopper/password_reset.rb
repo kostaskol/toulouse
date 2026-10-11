@@ -55,9 +55,8 @@ class Shopper::PasswordReset
       return Result.failure(:invalid_code)
     end
 
-    # A blank password leaves the digest as it was rather than failing validation.
     shopper.password = password
-    return Result.failure(:invalid_password) if password.empty? || !shopper.valid?
+    return Result.failure(:invalid_password) unless shopper.valid?
 
     reset(shopper, email_code)
   end
