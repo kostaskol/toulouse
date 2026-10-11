@@ -5,8 +5,8 @@ RSpec.describe "Tenant admin sessions", type: :request do
   let(:password) { SecureRandom.alphanumeric(16) }
   let!(:staff) { create(:staff, tenant:, password:) }
 
-  def log_in(password: self.password)
-    post "/admin/session", params: { slug: tenant.slug, email: staff.email, password: }, as: :json
+  def log_in(email: staff.email, password: self.password)
+    post "/admin/session", params: { slug: tenant.slug, email:, password: }, as: :json
   end
 
   describe "POST /admin/session" do
@@ -50,6 +50,13 @@ RSpec.describe "Tenant admin sessions", type: :request do
       log_in(password: SecureRandom.alphanumeric(16))
 
       expect_failure(Admin::SessionsController::FAILURES.fetch(:invalid_credentials))
+      expect(session_set_cookie).to be_nil
+    end
+
+    it "says when the member has not accepted their invite" do
+      log_in(email: create(:staff, :pending, tenant:).email)
+
+      expect_failure(Admin::SessionsController::FAILURES.fetch(:invite_pending))
       expect(session_set_cookie).to be_nil
     end
 
