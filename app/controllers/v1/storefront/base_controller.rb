@@ -6,7 +6,29 @@ module V1
       include Tenancy::RequiresTenant
       include RequiresShopperSession
 
+      EMAIL_CODE_FAILURES = {
+        invalid_email: Failure.new(
+          status: :unprocessable_content,
+          code: "invalid_email",
+          message: "The email is blank or malformed."
+        ),
+        invalid_code: Failure.new(
+          status: :unprocessable_content,
+          code: "invalid_code",
+          message: "The code is wrong or has expired. Request a new one."
+        ),
+        invalid_password: Failure.new(
+          status: :unprocessable_content,
+          code: "invalid_password",
+          message: "The password is blank or too long."
+        )
+      }.freeze
+
       private
+
+      def render_new_session(session)
+        render status: :created, json: { token: session.token, **session_body(session) }
+      end
 
       def session_body(session)
         shopper = session.shopper

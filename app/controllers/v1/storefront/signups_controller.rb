@@ -4,28 +4,13 @@ module V1
       # Signing up is open to anyone, whatever session the BFF still holds.
       skip_before_action :authenticate_shopper
 
-      FAILURES = {
-        invalid_email: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_email",
-          message: "The email is blank or malformed."
-        ),
+      FAILURES = EMAIL_CODE_FAILURES.merge(
         email_taken: Failure.new(
           status: :unprocessable_content,
           code: "email_taken",
           message: "An account with this email already exists. Log in instead."
-        ),
-        invalid_code: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_code",
-          message: "The code is wrong or has expired. Request a new one."
-        ),
-        invalid_password: Failure.new(
-          status: :unprocessable_content,
-          code: "invalid_password",
-          message: "The password is blank or too long."
         )
-      }.freeze
+      ).freeze
 
       def create
         failure = Shopper::Signup.request(email: params.permit(:email)[:email])
@@ -39,7 +24,7 @@ module V1
         result = Shopper::Signup.complete(email: details[:email], code: details[:code], password: details[:password])
 
         if result.session
-          render status: :created, json: { token: result.session.token, **session_body(result.session) }
+          render_new_session(result.session)
         else
           render_failure(FAILURES.fetch(result.failure))
         end
