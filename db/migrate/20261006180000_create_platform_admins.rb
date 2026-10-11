@@ -24,14 +24,7 @@ class CreatePlatformAdmins < ActiveRecord::Migration[8.1]
     end
 
     reversible do |direction|
-      # Production still connects every role as the owner, which needs no grants.
-      direction.up { execute Platform::DatabaseRole.grants_sql unless platform_role_is_owner? }
+      direction.up { execute Platform::DatabaseRole.grants_sql }
     end
-  end
-
-  private
-
-  def platform_role_is_owner?
-    Platform::DatabaseRole.username == select_value("SELECT current_user")
   end
 end
