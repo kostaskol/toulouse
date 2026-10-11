@@ -58,18 +58,6 @@ RSpec.describe Staff::Login do
       expect(log_in(email: other.email).failure).to eq(:invalid_credentials)
     end
 
-    it "refuses pending staff" do
-      pending = create(:staff, :pending, tenant:)
-
-      expect(log_in(email: pending.email).failure).to eq(:invalid_credentials)
-    end
-
-    it "refuses pending staff even with a password set" do
-      as_tenant(tenant) { staff.update!(status: "pending") }
-
-      expect(log_in.failure).to eq(:invalid_credentials)
-    end
-
     it "refuses blank credentials" do
       expect(log_in(email: nil, password: nil).failure).to eq(:invalid_credentials)
     end
@@ -81,6 +69,50 @@ RSpec.describe Staff::Login do
       log_in(email: "missing-#{staff.email}")
 
       expect(BCrypt::Password).to have_received(:create)
+    end
+  end
+
+  describe "pending staff" do
+    let!(:staff) { create(:staff, :pending, tenant:) }
+
+    it "says the invite is pending" do
+      expect(log_in.failure).to eq(:invite_pending)
+    end
+
+    it "matches the email whatever its case" do
+      expect(log_in(email: staff.email.upcase).failure).to eq(:invite_pending)
+    end
+
+    it "says so for a blank password" do
+      expect(log_in(password: nil).failure).to eq(:invite_pending)
+    end
+
+    it "says so even for the right password" do
+      invited = create(:staff, :pending, tenant:, password:)
+
+      expect(log_in(email: invited.email).failure).to eq(:invite_pending)
+    end
+
+    it "says so while the email is locked" do
+      as_tenant(tenant) { LoginAttempt::MAX_FAILURES.times { LoginAttempt.record_failure(staff.email) } }
+
+      expect(as_tenant(tenant) { LoginAttempt.locked_until(staff.email) }).to be_present
+      expect(log_in.failure).to eq(:invite_pending)
+    end
+
+    it "does not count towards the lock" do
+      LoginAttempt::MAX_FAILURES.times { log_in }
+      as_tenant(tenant) { staff.update!(password:, status: "active") }
+
+      expect(log_in.session).to be_present
+    end
+
+    it "refuses an unknown slug alike" do
+      expect(log_in(slug: "#{tenant.slug}-missing").failure).to eq(:invalid_credentials)
+    end
+
+    it "refuses the email under another tenant's slug" do
+      expect(log_in(slug: create(:tenant).slug).failure).to eq(:invalid_credentials)
     end
   end
 

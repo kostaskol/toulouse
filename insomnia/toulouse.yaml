@@ -40,6 +40,7 @@ collection:
           modified: 1791313871000
           isPrivate: false
           sortKey: 0
+          description: A pending member gets 401 invite_pending, whatever the password.
         method: POST
         body:
           mimeType: application/json

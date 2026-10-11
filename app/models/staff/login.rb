@@ -20,7 +20,7 @@ class Staff::Login
   end
 
   def call
-    return refuse(:blank_credentials) if @slug.blank? || @email.blank? || @password.blank?
+    return refuse(:blank_credentials) if @slug.blank? || @email.blank?
 
     tenant = Tenant.find_by(slug: @slug)
     return refuse(:unknown_slug) if tenant.nil?
@@ -31,24 +31,27 @@ class Staff::Login
   private
 
   def authenticate
+    if Staff.pending.exists?(email: @email)
+      Rails.logger.warn { "Staff login refused: pending slug=#{@slug}" }
+      return Result.failure(:invite_pending)
+    end
+
+    return refuse(:blank_password) if @password.blank?
+
     if (locked_until = LoginAttempt.locked_until(@email))
       return refuse(:locked, locked_until:)
     end
 
-    staff = Staff.authenticate_by(email: @email, password: @password)
-
-    # A pending member can hold a password before accepting the invite.
-    if staff&.active?
+    if (staff = Staff.authenticate_by(email: @email, password: @password))
       LoginAttempt.clear(@email)
       return Result.success(staff.sessions.create!)
     end
 
-    locked_until = LoginAttempt.record_failure(@email)
-    refuse(staff ? :pending : :bad_credentials, locked_until:)
+    refuse(:bad_credentials, locked_until: LoginAttempt.record_failure(@email))
   end
 
-  # Every reason but a lock answers alike, so this log is the only place the
-  # difference survives.
+  # Bad credentials, unknown store and blank fields answer alike, so this log is
+  # the only place the difference survives.
   def refuse(reason, locked_until: nil)
     Rails.logger.warn { "Staff login refused: #{reason} slug=#{@slug}" }
     return Result.failure(:too_many_attempts, locked_until:) if locked_until
