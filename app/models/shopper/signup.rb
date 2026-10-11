@@ -37,7 +37,7 @@ class Shopper::Signup
   end
 
   def complete(code, password)
-    signup_code = Shopper::SignupCode.find_by(email: @email)
+    signup_code = Shopper::EmailCode.signup.find_by(email: @email)
     return refuse(:no_code) if signup_code.nil?
 
     reason = signup_code.refusal(code)

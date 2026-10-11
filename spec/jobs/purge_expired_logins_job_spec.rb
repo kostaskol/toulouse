@@ -61,21 +61,21 @@ RSpec.describe PurgeExpiredLoginsJob do
     expect(count_in(tenant, Shopper::Session)).to eq(1)
   end
 
-  it "removes expired signup codes in every tenant" do
-    tenants.each { |tenant| as_tenant(tenant) { Shopper::SignupCode.issue(build(:shopper).email) } }
-    travel Shopper::SignupCode::EXPIRY + 1.second
+  it "removes expired email codes in every tenant" do
+    tenants.each { |tenant| as_tenant(tenant) { Shopper::EmailCode.issue(build(:shopper).email, purpose: :signup) } }
+    travel Shopper::EmailCode::EXPIRY + 1.second
 
     described_class.perform_now
 
-    expect(tenants.map { |tenant| count_in(tenant, Shopper::SignupCode) }).to all(eq(0))
+    expect(tenants.map { |tenant| count_in(tenant, Shopper::EmailCode) }).to all(eq(0))
   end
 
-  it "keeps live signup codes" do
+  it "keeps live email codes" do
     tenant = tenants.first
-    as_tenant(tenant) { Shopper::SignupCode.issue(build(:shopper).email) }
+    as_tenant(tenant) { Shopper::EmailCode.issue(build(:shopper).email, purpose: :signup) }
 
     described_class.perform_now
 
-    expect(count_in(tenant, Shopper::SignupCode)).to eq(1)
+    expect(count_in(tenant, Shopper::EmailCode)).to eq(1)
   end
 end

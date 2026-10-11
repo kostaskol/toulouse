@@ -26,10 +26,10 @@ RSpec.describe "Storefront shopper signup", type: :request do
   end
 
   def mailed_code
-    ActionMailer::Base.deliveries.last.text_part.body.to_s[/\b\d{#{Shopper::SignupCode::DIGITS}}\b/o]
+    ActionMailer::Base.deliveries.last.text_part.body.to_s[/\b\d{#{Shopper::EmailCode::DIGITS}}\b/o]
   end
 
-  def wrong(code) = ((code.to_i + 1) % (10**Shopper::SignupCode::DIGITS)).to_s.rjust(Shopper::SignupCode::DIGITS, "0")
+  def wrong(code) = ((code.to_i + 1) % (10**Shopper::EmailCode::DIGITS)).to_s.rjust(Shopper::EmailCode::DIGITS, "0")
 
   describe "POST /v1/storefront/signup" do
     it "accepts with no body" do
@@ -167,7 +167,7 @@ RSpec.describe "Storefront shopper signup", type: :request do
     it "spends the code" do
       complete(code:)
 
-      expect(as_tenant(tenant) { Shopper::SignupCode.exists?(email:) }).to be(false)
+      expect(as_tenant(tenant) { Shopper::EmailCode.signup.exists?(email:) }).to be(false)
     end
 
     it "lifts a login lock on the email" do
@@ -192,7 +192,7 @@ RSpec.describe "Storefront shopper signup", type: :request do
 
     it "refuses an expired code" do
       code
-      travel Shopper::SignupCode::EXPIRY + 1.second
+      travel Shopper::EmailCode::EXPIRY + 1.second
 
       complete(code:)
 
@@ -200,13 +200,13 @@ RSpec.describe "Storefront shopper signup", type: :request do
     end
 
     it "refuses an email with no code" do
-      complete(code: "0" * Shopper::SignupCode::DIGITS)
+      complete(code: "0" * Shopper::EmailCode::DIGITS)
 
       expect_failure(failure(:invalid_code))
     end
 
     it "refuses the right code once the tries are used up" do
-      Shopper::SignupCode::MAX_ATTEMPTS.times { complete(code: wrong(code)) }
+      Shopper::EmailCode::MAX_ATTEMPTS.times { complete(code: wrong(code)) }
 
       complete(code:)
 
@@ -239,7 +239,7 @@ RSpec.describe "Storefront shopper signup", type: :request do
       complete(code:)
 
       expect_failure(failure(:email_taken))
-      expect(as_tenant(tenant) { Shopper::SignupCode.exists?(email:) }).to be(false)
+      expect(as_tenant(tenant) { Shopper::EmailCode.signup.exists?(email:) }).to be(false)
     end
 
     it "refuses a blank password and keeps the code" do

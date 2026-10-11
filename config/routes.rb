@@ -22,6 +22,7 @@ Rails.application.routes.draw do
     namespace :storefront do
       resource :session, only: [:create, :show, :destroy]
       resource :signup, only: [:create, :update]
+      resource :password_reset, only: [:create, :update]
     end
   end
 
