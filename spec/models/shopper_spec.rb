@@ -55,6 +55,18 @@ RSpec.describe Shopper, :as_tenant, type: :model do
       expect(build(:shopper, password: too_long)).not_to be_valid
     end
 
+    it "rejects a password shorter than the minimum" do
+      expect(build(:shopper, password: password.first(described_class::MINIMUM_PASSWORD_LENGTH - 1))).not_to be_valid
+    end
+
+    it "accepts a password of the minimum length" do
+      expect(build(:shopper, password: password.first(described_class::MINIMUM_PASSWORD_LENGTH))).to be_valid
+    end
+
+    it "rejects a password of only whitespace" do
+      expect(build(:shopper, password: " " * described_class::MINIMUM_PASSWORD_LENGTH)).not_to be_valid
+    end
+
     it "refuses a blank password over an existing one" do
       shopper = create(:shopper)
       shopper.password = ""

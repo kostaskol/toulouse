@@ -6,6 +6,8 @@ class Staff < ApplicationRecord
   PERMISSIONS = { "owner" => [:manage_staff].freeze, "staff" => [].freeze }.freeze
 
   INVITE_EXPIRY = 7.days
+  # Above the shopper minimum while tenant admin login has no second factor.
+  MINIMUM_PASSWORD_LENGTH = 12
 
   has_many :sessions
   has_one :shopper

@@ -7,14 +7,15 @@ module HasPassword
   included do
     has_secure_password validations: false
 
-    validates :password, confirmation: { allow_nil: true }
+    validates :password, confirmation: { allow_nil: true },
+                         length: { minimum: ->(record) { record.class::MINIMUM_PASSWORD_LENGTH }, allow_nil: true }
     validate :password_not_blank
     validate :password_fits_bcrypt
 
     # Defined on the class, so it runs before the setter has_secure_password adds.
-    # That setter ignores a blank password, which would let a reset keep the old one.
+    # That setter ignores an empty password, which would let a reset keep the old one.
     def password=(password)
-      @blank_password = password == ""
+      @blank_password = !password.nil? && password.blank?
       super
     end
   end

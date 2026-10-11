@@ -2,6 +2,8 @@ class Shopper < ApplicationRecord
   include Tenancy::Scoped
   include HasPassword
 
+  MINIMUM_PASSWORD_LENGTH = 8
+
   belongs_to :staff, optional: true
   has_many :sessions
 
