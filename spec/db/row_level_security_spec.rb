@@ -65,7 +65,7 @@ RSpec.describe "Row-level security" do
       create(:staff_session, tenant: tenant)
       create(:shopper_session, tenant: tenant)
       create(:login_attempt, tenant: tenant)
-      as_tenant(tenant) { Shopper::SignupCode.issue(build(:shopper).email) }
+      as_tenant(tenant) { Shopper::EmailCode.issue(build(:shopper).email, purpose: :signup) }
     end
 
     it "sees the rows as their tenant" do

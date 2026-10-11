@@ -105,6 +105,24 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: shopper_email_codes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shopper_email_codes (
+    id uuid DEFAULT uuidv7() CONSTRAINT shopper_signup_codes_id_not_null NOT NULL,
+    tenant_id uuid CONSTRAINT shopper_signup_codes_tenant_id_not_null NOT NULL,
+    email text CONSTRAINT shopper_signup_codes_email_not_null NOT NULL,
+    code_digest text CONSTRAINT shopper_signup_codes_code_digest_not_null NOT NULL,
+    expires_at timestamp(6) with time zone CONSTRAINT shopper_signup_codes_expires_at_not_null NOT NULL,
+    attempts integer DEFAULT 0 CONSTRAINT shopper_signup_codes_attempts_not_null NOT NULL,
+    created_at timestamp(6) with time zone CONSTRAINT shopper_signup_codes_created_at_not_null NOT NULL,
+    updated_at timestamp(6) with time zone CONSTRAINT shopper_signup_codes_updated_at_not_null NOT NULL,
+    purpose integer NOT NULL,
+    CONSTRAINT shopper_email_codes_email_lowercase CHECK ((email = lower(email)))
+);
+
+
+--
 -- Name: shopper_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -116,23 +134,6 @@ CREATE TABLE public.shopper_sessions (
     expires_at timestamp(6) with time zone NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
     updated_at timestamp(6) with time zone NOT NULL
-);
-
-
---
--- Name: shopper_signup_codes; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.shopper_signup_codes (
-    id uuid DEFAULT uuidv7() NOT NULL,
-    tenant_id uuid NOT NULL,
-    email text NOT NULL,
-    code_digest text NOT NULL,
-    expires_at timestamp(6) with time zone NOT NULL,
-    attempts integer DEFAULT 0 NOT NULL,
-    created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL,
-    CONSTRAINT shopper_signup_codes_email_lowercase CHECK ((email = lower(email)))
 );
 
 
@@ -300,10 +301,10 @@ ALTER TABLE ONLY public.shopper_sessions
 
 
 --
--- Name: shopper_signup_codes shopper_signup_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: shopper_email_codes shopper_signup_codes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shopper_signup_codes
+ALTER TABLE ONLY public.shopper_email_codes
     ADD CONSTRAINT shopper_signup_codes_pkey PRIMARY KEY (id);
 
 
@@ -399,6 +400,20 @@ CREATE UNIQUE INDEX index_login_attempts_on_tenant_id_and_email ON public.login_
 
 
 --
+-- Name: index_shopper_email_codes_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_shopper_email_codes_on_tenant_id ON public.shopper_email_codes USING btree (tenant_id);
+
+
+--
+-- Name: index_shopper_email_codes_on_tenant_id_and_purpose_and_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_shopper_email_codes_on_tenant_id_and_purpose_and_email ON public.shopper_email_codes USING btree (tenant_id, purpose, email);
+
+
+--
 -- Name: index_shopper_sessions_on_shopper_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -417,20 +432,6 @@ CREATE INDEX index_shopper_sessions_on_tenant_id ON public.shopper_sessions USIN
 --
 
 CREATE UNIQUE INDEX index_shopper_sessions_on_token_digest ON public.shopper_sessions USING btree (token_digest);
-
-
---
--- Name: index_shopper_signup_codes_on_tenant_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_shopper_signup_codes_on_tenant_id ON public.shopper_signup_codes USING btree (tenant_id);
-
-
---
--- Name: index_shopper_signup_codes_on_tenant_id_and_email; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_shopper_signup_codes_on_tenant_id_and_email ON public.shopper_signup_codes USING btree (tenant_id, email);
 
 
 --
@@ -616,10 +617,10 @@ ALTER TABLE ONLY public.staff
 
 
 --
--- Name: shopper_signup_codes fk_rails_8d2d640287; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: shopper_email_codes fk_rails_8d2d640287; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.shopper_signup_codes
+ALTER TABLE ONLY public.shopper_email_codes
     ADD CONSTRAINT fk_rails_8d2d640287 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
@@ -677,16 +678,16 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: shopper_email_codes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shopper_email_codes ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: shopper_sessions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.shopper_sessions ENABLE ROW LEVEL SECURITY;
-
---
--- Name: shopper_signup_codes; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.shopper_signup_codes ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: shoppers; Type: ROW SECURITY; Schema: public; Owner: -
@@ -733,17 +734,17 @@ CREATE POLICY tenant_isolation ON public.login_attempts USING ((tenant_id = (NUL
 
 
 --
+-- Name: shopper_email_codes tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.shopper_email_codes USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
 -- Name: shopper_sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.shopper_sessions USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
-
-
---
--- Name: shopper_signup_codes tenant_isolation; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY tenant_isolation ON public.shopper_signup_codes USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -814,6 +815,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011120000'),
 ('20261008200000'),
 ('20261008180000'),
 ('20261007180100'),

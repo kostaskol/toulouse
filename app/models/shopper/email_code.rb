@@ -1,27 +1,30 @@
-# An emailed code that proves a customer controls an inbox before their
-# account exists.
-class Shopper::SignupCode < ApplicationRecord
+# An emailed code that proves a customer controls an inbox, before their
+# account exists or when they cannot sign in to it.
+class Shopper::EmailCode < ApplicationRecord
   include Tenancy::Scoped
 
   DIGITS = 6
   EXPIRY = 15.minutes
   MAX_ATTEMPTS = 5
 
+  enum :purpose, { signup: 0, password_reset: 1 }, validate: true
+
   normalizes :email, with: ->(email) { email.strip.downcase }
 
   scope :expired, -> { where(expires_at: ..Time.current) }
 
-  # Writes a new code for the email, replacing any earlier one.
+  # Writes a new code for the email and purpose, replacing any earlier one.
   #
   # @param email [String]
+  # @param purpose [Symbol]
   # @return [String] the plain code, which nothing can recover later
-  def self.issue(email)
+  def self.issue(email, purpose:)
     code = SecureRandom.random_number(10**DIGITS).to_s.rjust(DIGITS, "0")
 
     upsert(
-      { tenant_id: Tenancy.current_tenant_id!, email: normalize_value_for(:email, email), code_digest: digest(code),
-        expires_at: EXPIRY.from_now, attempts: 0 },
-      unique_by: [:tenant_id, :email]
+      { tenant_id: Tenancy.current_tenant_id!, purpose:, email: normalize_value_for(:email, email),
+        code_digest: digest(code), expires_at: EXPIRY.from_now, attempts: 0 },
+      unique_by: [:tenant_id, :purpose, :email]
     )
     code
   end
@@ -31,7 +34,7 @@ class Shopper::SignupCode < ApplicationRecord
   # @param code [String]
   # @return [String]
   def self.digest(code)
-    OpenSSL::HMAC.hexdigest("SHA256", Rails.application.key_generator.generate_key("shopper signup code"), code)
+    OpenSSL::HMAC.hexdigest("SHA256", Rails.application.key_generator.generate_key("shopper email code"), code)
   end
 
   # Uses up a try, then compares.

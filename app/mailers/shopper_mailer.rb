@@ -4,9 +4,9 @@ class ShopperMailer < ApplicationMailer
   # @param email [String]
   def signup_code(email)
     # Made inside the delivery job, so the plain code never sits in the queue.
-    @code = Shopper::SignupCode.issue(email)
+    @code = Shopper::EmailCode.issue(email, purpose: :signup)
     @store_name = Current.tenant.name
-    @expires_in_minutes = Shopper::SignupCode::EXPIRY.in_minutes.to_i
+    @expires_in_minutes = Shopper::EmailCode::EXPIRY.in_minutes.to_i
 
     mail(to: email, subject: "Κωδικός επιβεβαίωσης για τον λογαριασμό σας")
   end
