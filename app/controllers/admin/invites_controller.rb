@@ -14,7 +14,7 @@ module Admin
       invalid_password: Failure.new(
         status: :unprocessable_content,
         code: "invalid_password",
-        message: "The password is blank or too long."
+        message: "The password is blank, under #{Staff::MINIMUM_PASSWORD_LENGTH} characters, or too long."
       ),
       tenant_suspended: RequiresStaffSession::FAILURES.fetch(:tenant_suspended)
     }.freeze
