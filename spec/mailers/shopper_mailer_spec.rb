@@ -8,7 +8,7 @@ RSpec.describe ShopperMailer do
 
   describe "#signup_code" do
     let(:mail) { as_tenant(tenant) { described_class.signup_code(email).deliver_now } }
-    let(:code) { mail.text_part.body.to_s[/\b\d{#{Shopper::EmailCode::DIGITS}}\b/o] }
+    let(:code) { mailed_code(mail) }
 
     it "goes to the email, from the store" do
       expect(mail.to).to eq([email])
@@ -32,7 +32,7 @@ RSpec.describe ShopperMailer do
 
   describe "#password_reset_code" do
     let(:mail) { as_tenant(tenant) { described_class.password_reset_code(email).deliver_now } }
-    let(:code) { mail.text_part.body.to_s[/\b\d{#{Shopper::EmailCode::DIGITS}}\b/o] }
+    let(:code) { mailed_code(mail) }
 
     it "goes to the email, from the store" do
       expect(mail.to).to eq([email])

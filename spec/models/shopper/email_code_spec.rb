@@ -3,8 +3,6 @@ require "rails_helper"
 RSpec.describe Shopper::EmailCode, :as_tenant, type: :model do
   let(:email) { build(:shopper).email }
 
-  def wrong_code(code) = ((code.to_i + 1) % (10**described_class::DIGITS)).to_s.rjust(described_class::DIGITS, "0")
-
   it "uses the shopper_email_codes table" do
     expect(described_class.table_name).to eq("shopper_email_codes")
   end
