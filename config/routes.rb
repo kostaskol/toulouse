@@ -19,7 +19,8 @@ Rails.application.routes.draw do
   end
 
   namespace :v1 do
-    namespace :storefront do
+    # The BFF matches session routes by exact path, so .json must not reach the same action.
+    namespace :storefront, format: false do
       resource :session, only: [:create, :show, :destroy]
       resource :signup, only: [:create, :update]
       resource :password_reset, only: [:create, :update]
