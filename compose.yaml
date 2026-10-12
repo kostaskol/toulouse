@@ -22,7 +22,8 @@ services:
       # Both forms are listed because Rails allows only one subdomain label
       # per pattern: .orb.local covers toulouse-api-1.orb.local, and
       # .toulouse.orb.local covers the compose-style api.toulouse.orb.local.
-      RAILS_DEVELOPMENT_HOSTS: .orb.local,.toulouse.orb.local
+      # api is the name the bff service calls.
+      RAILS_DEVELOPMENT_HOSTS: .orb.local,.toulouse.orb.local,api
     volumes:
       # Live reload: the working tree shadows the copy baked into the image.
       # Gems live in /usr/local/bundle and are not shadowed.
@@ -32,6 +33,27 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - toulouse
+
+  bff:
+    image: node:24-alpine
+    init: true
+    working_dir: /bff
+    command: ["node", "--watch", "main.ts"]
+    ports:
+      - "4000:4000"
+    environment:
+      TOULOUSE_URL: http://api:3000
+      TOULOUSE_API_VERSION: v1
+    # TOULOUSE_API_KEY and STOREFRONT_ORIGIN. See storefront/bff/README.md.
+    env_file:
+      - path: storefront/bff/.env
+        required: false
+    volumes:
+      - ./storefront/bff:/bff
+    depends_on:
+      - api
     networks:
       - toulouse
 

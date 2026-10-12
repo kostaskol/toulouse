@@ -29,6 +29,8 @@ seed_staff.call(demo, email: "owner@example.com", role: "owner")
 seed_staff.call(demo, email: "staff@example.com", role: "staff")
 seed_shopper.call(demo, email: "shopper@example.com")
 seed_linked_shopper.call(demo, email: "owner@example.com")
+# The storefront BFF reads this token from storefront/bff/.env.
+Tenancy.with_tenant(demo) { demo.api_keys.find_or_create_by!(name: "Demo storefront") }
 
 # Same owner email in a second store, so the slug decides which one logs in.
 suspended = seed_tenant.call(name: "Suspended Store", slug: "suspended-store", status: "suspended")
