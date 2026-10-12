@@ -3,6 +3,7 @@ module V1
     class PasswordResetsController < BaseController
       # Resetting is how a shopper who cannot sign in gets back in.
       skip_before_action :authenticate_shopper
+      include LimitsAccountEmail
 
       FAILURES = EMAIL_CODE_FAILURES
 
