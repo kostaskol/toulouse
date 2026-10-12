@@ -40,7 +40,8 @@ services:
     image: node:24-alpine
     init: true
     working_dir: /bff
-    command: ["node", "--watch", "main.ts"]
+    # The whole folder, since the library file is read rather than imported.
+    command: ["node", "--watch-path=.", "main.ts"]
     ports:
       - "4000:4000"
     environment:

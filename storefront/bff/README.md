@@ -6,6 +6,40 @@ API key and the shopper's session token, so the browser never sees either.
 Every request to `/<path>` goes to `/<version>/storefront/<path>` on the API.
 A new storefront endpoint works here with no change.
 
+## Browser library
+
+The BFF serves a browser library at `/client.js`. Storefront pages import it
+from the BFF. They do not install it.
+
+```js
+const shop = await import("https://api.<shop>.gr/client.js");
+```
+
+The library sends each request to the BFF it came from, so it needs no config.
+It is one ES module with no dependencies and no build step: `client.js`.
+
+- Each function calls one endpoint and resolves to the API's response body.
+- A failed request throws an `ApiError`. Use `error.code` to decide what to
+  show. `error.retryAfter` gives the seconds from `Retry-After`, or `null`.
+- If the BFF does not answer, the code is `bad_gateway`.
+- `currentSession()` resolves to `null` when the shopper is signed out.
+- `onSignedOut(listener)` calls the listener when a request finds the session
+  gone. It returns a function that removes the listener.
+
+| Function | Endpoint |
+| --- | --- |
+| `signIn({ email, password })` | `POST /session` |
+| `signOut()` | `DELETE /session` |
+| `currentSession()` | `GET /session` |
+| `requestSignupCode(email)` | `POST /signup` |
+| `completeSignup({ email, code, password })` | `PUT /signup` |
+| `requestPasswordResetCode(email)` | `POST /password_reset` |
+| `completePasswordReset({ email, code, password })` | `PUT /password_reset` |
+| `listProducts({ limit, after })` | `GET /products` |
+| `getProduct(slug)` | `GET /products/<slug>` |
+| `listCategories()` | `GET /categories` |
+| `listCategoryProducts(slug, { limit, after })` | `GET /categories/<slug>/products` |
+
 ## Config
 
 | Variable | Required | Use |
