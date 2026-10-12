@@ -29,3 +29,9 @@
 
 en:
   hello: "Hello world"
+  errors:
+    messages:
+      duplicate_combination: "repeat another variant's option values"
+      no_active_variant: "cannot be published without an active variant"
+      last_active_variant: "cannot be archived on the last active variant of a published product"
+      too_many_variants: "would exceed %{count} variants for the product"

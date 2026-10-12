@@ -46,6 +46,9 @@ gem "rack-cors"
 # Platform admin's second factor.
 gem "rotp", "~> 6.3"
 
+# Change history for catalog records.
+gem "paper_trail", "~> 17.0"
+
 group :development, :test do
   # See https://guides.rubyonrails.org/debugging_rails_applications.html#debugging-with-the-debug-gem
   gem "debug", platforms: %i[ mri windows ], require: "debug/prelude"
