@@ -29,3 +29,11 @@
 
 en:
   hello: "Hello world"
+  errors:
+    messages:
+      duplicate_combination: "repeat another variant's option values"
+      no_active_variant: "cannot be published without an active variant"
+      last_active_variant: "cannot be archived on the last active variant of a published product"
+      too_many_variants: "would exceed %{count} variants for the product"
+      invalid_parent: "cannot be the category itself or one below it"
+      insufficient_stock: "cannot go below zero unless the variant allows oversell"

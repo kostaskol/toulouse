@@ -23,6 +23,10 @@ Rails.application.routes.draw do
       resource :session, only: [:create, :show, :destroy]
       resource :signup, only: [:create, :update]
       resource :password_reset, only: [:create, :update]
+      resources :products, only: [:index, :show], param: :slug
+      resources :categories, only: :index, param: :slug do
+        resources :products, only: :index, controller: "category_products"
+      end
     end
   end
 
@@ -31,5 +35,14 @@ Rails.application.routes.draw do
     resource :password_reset, only: [:create, :update]
     resources :staff, only: :create
     resource :invite, only: :update
+
+    resources :brands, only: [:index, :create, :update, :destroy]
+    resources :categories, only: [:index, :create, :update, :destroy]
+    resources :products, only: [:index, :show, :create, :update] do
+      resource :options, only: :update
+      resources :variants, only: [:create, :update] do
+        resource :stock, only: :update
+      end
+    end
   end
 end

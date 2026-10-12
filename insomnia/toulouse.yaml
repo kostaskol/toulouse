@@ -208,6 +208,396 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products"
+        name: List products
+        meta:
+          id: req_448c13a52d272f4d1e66d3ba199355fa
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 7
+          description: Newest first. Filters by status, brand_id and category_id. Pass meta.next_cursor as after for the next page.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}"
+        name: Show product
+        meta:
+          id: req_b87bc0a217a0c96a20283a231c992eac
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 8
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products"
+        name: Create product
+        meta:
+          id: req_d4efd88dc02fa217deb49033727ef33f
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 9
+          description: Creates a draft. A product with options sends option_values on each variant.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "title": "{% prompt 'Title', '', '', '', false, false %}",
+              "option_names": [],
+              "variants": [
+                {
+                  "price_cents": {% prompt 'Price in cents', 'VAT included', '', '', false, false %},
+                  "vat_class": "standard"
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}"
+        name: Update product
+        meta:
+          id: req_827d53726f397aa0438dd1271cc3c897
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 10
+          description: Also takes title, slug, description, brand_id and category_ids.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "status": "{% prompt 'Status', 'draft, published or archived', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/options"
+        name: Update options
+        meta:
+          id: req_babb64565a659e5ecff2febf57b3a387
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 11
+          description: Lists every option to keep, in order. from keeps an option under name; value adds name to every variant. Options left out are removed.
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "option_names": [
+                {
+                  "name": "{% prompt 'New name', '', '', '', false, false %}",
+                  "from": "{% prompt 'Current name', '', '', '', false, false %}"
+                }
+              ]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/variants"
+        name: Add variant
+        meta:
+          id: req_bea50a504a6184fec5a31c61b4dc2607
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 12
+          description: option_values needs a value for each of the product's options.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "price_cents": {% prompt 'Price in cents', 'VAT included', '', '', false, false %},
+              "vat_class": "standard",
+              "option_values": {}
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/variants/{{ _.variant_id }}"
+        name: Update variant
+        meta:
+          id: req_024ed201773545766308005592904095
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 13
+          description: Also takes sku, barcode, mpn, prices, vat_class, option_values, track_stock and allow_oversell.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "status": "{% prompt 'Status', 'active or archived', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/variants/{{ _.variant_id }}/stock"
+        name: Change stock
+        meta:
+          id: req_085e9b6d115e4207e4a79c63b159a891
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 14
+          description: Send quantity instead of delta to set the counted stock.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "delta": {% prompt 'Delta', 'Added to the current stock', '', '', false, false %},
+              "reason": "{% prompt 'Reason', '', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/brands"
+        name: List brands
+        meta:
+          id: req_aafee59ae6e0d39a883c76a3b33ea01d
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 15
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/brands"
+        name: Create brand
+        meta:
+          id: req_7568b79c074876db89a352e9738b62a6
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 16
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "{% prompt 'Name', '', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/brands/{{ _.brand_id }}"
+        name: Update brand
+        meta:
+          id: req_e80cb2d46da6abb6746e24ef38c609e5
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 17
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "{% prompt 'Name', '', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/brands/{{ _.brand_id }}"
+        name: Delete brand
+        meta:
+          id: req_f0cdd1b23b40edfba3c7742dd69daa6d
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 18
+          description: Refused while products use the brand.
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/categories"
+        name: List categories
+        meta:
+          id: req_fcac4c85e3b7ec2832bc6d4c36f37044
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 19
+          description: The whole tree.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/categories"
+        name: Create category
+        meta:
+          id: req_3e5d04615d12d57ae0acf42f776ddc1e
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 20
+          description: Also takes slug and position.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "{% prompt 'Name', '', '', '', false, false %}",
+              "parent_id": null
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/categories/{{ _.category_id }}"
+        name: Update category
+        meta:
+          id: req_6b934ef4531f98d848676aaed60ba0f4
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 21
+          description: Also takes name, slug and position.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "parent_id": "{% prompt 'Parent id', 'The category to move under', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/categories/{{ _.category_id }}"
+        name: Delete category
+        meta:
+          id: req_7803f53bedd29b24d55ea0c842721ec8
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 22
+          description: Refused while categories sit below it. Products stay.
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Platform admin
     meta:
       id: fld_ba69d648aad6a21677cbe1c17db315fb
@@ -613,6 +1003,89 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/products"
+        name: Products
+        meta:
+          id: req_29088ee65e4513b15be5edce5a38c2c0
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 7
+          description: Published products, newest first.
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/products/{{ _.product_slug }}"
+        name: Product
+        meta:
+          id: req_6ad5c0ed60cf642b7a6e4433759f7735
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 8
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/categories"
+        name: Categories
+        meta:
+          id: req_4a464e716f1438c8221731984cfc5132
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 9
+          description: The whole tree.
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/categories/{{ _.category_slug }}/products"
+        name: Category products
+        meta:
+          id: req_06eb23274670093519ed1963e73b3bec
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 10
+          description: Published products in the category and every category below it.
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -642,3 +1115,9 @@ environments:
     platform_authenticity_token: ""
     platform_tenant_id: "{% prompt 'Tenant id', 'From Tenants', '', 'tenant_id', false, true %}"
     platform_api_key_id: "{% prompt 'Key id', 'From API keys', '', '', false, false %}"
+    product_id: "{% prompt 'Product id', 'From List products', '', 'product_id', false, true %}"
+    variant_id: "{% prompt 'Variant id', 'From Show product', '', '', false, false %}"
+    brand_id: "{% prompt 'Brand id', 'From List brands', '', '', false, false %}"
+    category_id: "{% prompt 'Category id', 'From List categories', '', '', false, false %}"
+    product_slug: "{% prompt 'Product slug', 'From Products', '', '', false, false %}"
+    category_slug: "{% prompt 'Category slug', 'From Categories', '', '', false, false %}"

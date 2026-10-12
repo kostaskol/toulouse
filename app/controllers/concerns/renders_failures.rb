@@ -9,4 +9,14 @@ module RendersFailures
     headers.each { |name, value| response.set_header(name, value) }
     render status: failure.status, json: { errors: [{ code: failure.code, message: failure.message }] }
   end
+
+  # @param record [ActiveRecord::Base]
+  def render_invalid(record)
+    errors = record.errors.map do |error|
+      field = error.attribute.to_s unless error.attribute == :base
+      { code: error.type.to_s, field:, message: error.full_message }.compact
+    end
+
+    render status: :unprocessable_content, json: { errors: }
+  end
 end
