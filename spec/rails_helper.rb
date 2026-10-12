@@ -67,6 +67,7 @@ RSpec.configure do |config|
 
   config.before do
     Current.reset
+    Rails.cache.clear
   end
 
   # For specs whose subject is a tenant owned table itself, which row-level

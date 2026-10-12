@@ -4,6 +4,7 @@ module Admin
     # Staff of a suspended store can still sign in, so they can still reset.
     skip_before_action :reject_writes_while_suspended!
     skip_before_action :authorize_staff!
+    include LimitsAccountEmail
 
     FAILURES = {
       invalid_token: Failure.new(
@@ -39,5 +40,12 @@ module Admin
         render_failure(FAILURES.fetch(result.failure))
       end
     end
+
+    private
+
+    # No session resolves the store here, and an unknown slug mails nothing.
+    def account_email_store = params[:slug].to_s
+
+    def account_email_ip = IPAddr.new(request.remote_ip)
   end
 end

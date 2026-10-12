@@ -417,7 +417,8 @@ collection:
         Called by a storefront's BFF. Every request sends the tenant API key,
         from Show API key in platform admin. Current session and Log out send
         the token that Log in returns. Complete signup and Complete password
-        reset take the code from the mail under tmp/mails.
+        reset take the code from the mail under tmp/mails. The requests that
+        mail a code send the shopper's IP in X-Shopper-Ip, as a BFF must.
     children:
       - url: "{{ _.base_url }}/v1/storefront/session"
         name: Log in
@@ -512,6 +513,8 @@ collection:
             value: application/json
           - name: X-Api-Key
             value: "{{ _.api_key }}"
+          - name: X-Shopper-Ip
+            value: "{{ _.shopper_ip }}"
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -570,6 +573,8 @@ collection:
             value: application/json
           - name: X-Api-Key
             value: "{{ _.api_key }}"
+          - name: X-Shopper-Ip
+            value: "{{ _.shopper_ip }}"
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -628,6 +633,7 @@ environments:
     password: toulouse-dev-password
     platform_email: admin@example.com
     shopper_email: shopper@example.com
+    shopper_ip: 127.0.0.1
     signup_email: "{% prompt 'Signup email', 'An email with no account in this store', '', 'signup_email', true, false %}"
     signup_code: "{% prompt 'Signup code', 'From the mail under tmp/mails', '', '', false, false %}"
     reset_code: "{% prompt 'Reset code', 'From the mail under tmp/mails', '', '', false, false %}"

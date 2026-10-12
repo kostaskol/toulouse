@@ -3,6 +3,7 @@ module V1
     class SignupsController < BaseController
       # Signing up is open to anyone, whatever session the BFF still holds.
       skip_before_action :authenticate_shopper
+      include LimitsAccountEmail
 
       FAILURES = EMAIL_CODE_FAILURES.merge(
         email_taken: Failure.new(
