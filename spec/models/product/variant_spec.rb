@@ -57,6 +57,30 @@ RSpec.describe Product::Variant, :as_tenant, type: :model do
     expect(build(:product_variant, product: product.reload)).not_to be_valid
   end
 
+  describe "#available?" do
+    it "is false for tracked stock at zero" do
+      expect(variant).not_to be_available
+    end
+
+    it "is true with stock" do
+      variant.stock_quantity = 1
+
+      expect(variant).to be_available
+    end
+
+    it "is true when stock is not tracked" do
+      variant.track_stock = false
+
+      expect(variant).to be_available
+    end
+
+    it "is true when oversell is allowed" do
+      variant.allow_oversell = true
+
+      expect(variant).to be_available
+    end
+  end
+
   describe "archiving" do
     let(:product) { create(:product, :published) }
 

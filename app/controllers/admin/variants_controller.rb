@@ -4,7 +4,10 @@ module Admin
 
     allow_any_staff
 
-    FIELDS = [:sku, :barcode, :mpn, :price_cents, :compare_at_price_cents, :vat_class, :status, { option_values: {} }].freeze
+    FIELDS = [
+      :sku, :barcode, :mpn, :price_cents, :compare_at_price_cents, :vat_class, :status, :track_stock, :allow_oversell,
+      { option_values: {} }
+    ].freeze
 
     def create
       variant = Product.find(params[:product_id]).variants.create!(variant_params)

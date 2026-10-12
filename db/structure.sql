@@ -157,6 +157,9 @@ CREATE TABLE public.product_variants (
     status integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
     updated_at timestamp(6) with time zone NOT NULL,
+    track_stock boolean DEFAULT true NOT NULL,
+    stock_quantity integer DEFAULT 0 NOT NULL,
+    allow_oversell boolean DEFAULT false NOT NULL,
     CONSTRAINT product_variants_compare_at_above_price CHECK ((compare_at_price_cents > price_cents)),
     CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0))
 );
@@ -351,7 +354,8 @@ CREATE TABLE public.versions (
     object jsonb,
     object_changes jsonb,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    reason text
 );
 
 
@@ -1252,6 +1256,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261012140000'),
 ('20261012130000'),
 ('20261012120300'),
 ('20261012120200'),

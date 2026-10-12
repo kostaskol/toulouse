@@ -40,7 +40,9 @@ Rails.application.routes.draw do
     resources :categories, only: [:index, :create, :update, :destroy]
     resources :products, only: [:index, :show, :create, :update] do
       resource :options, only: :update
-      resources :variants, only: [:create, :update]
+      resources :variants, only: [:create, :update] do
+        resource :stock, only: :update
+      end
     end
   end
 end

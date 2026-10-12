@@ -36,3 +36,4 @@ en:
       last_active_variant: "cannot be archived on the last active variant of a published product"
       too_many_variants: "would exceed %{count} variants for the product"
       invalid_parent: "cannot be the category itself or one below it"
+      insufficient_stock: "cannot go below zero unless the variant allows oversell"

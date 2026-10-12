@@ -17,6 +17,7 @@ module V1
 
       def variant_json(variant)
         variant.slice(:id, :option_values, :sku, :price_cents, :compare_at_price_cents)
+               .merge(available: variant.available?)
       end
     end
   end

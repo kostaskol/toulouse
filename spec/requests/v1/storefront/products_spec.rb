@@ -22,6 +22,13 @@ RSpec.describe "Storefront products", type: :request do
     expect(body["variants"].first.keys).not_to include("status", "vat_class", "mpn")
   end
 
+  it "tells whether each variant can be bought" do
+    as_tenant(tenant) { create(:product_variant, product:, track_stock: false) }
+    get "/v1/storefront/products/#{product.slug}", headers: headers
+
+    expect(response.parsed_body.dig("product", "variants").pluck("available")).to eq([false, true])
+  end
+
   it "hides archived variants" do
     archived = as_tenant(tenant) do
       create(:product_variant, product:)

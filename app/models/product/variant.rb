@@ -3,7 +3,9 @@ class Product::Variant < ApplicationRecord
 
   MAX_PER_PRODUCT = 100
 
-  has_paper_trail versions: { class_name: "Version" }
+  has_paper_trail versions: { class_name: "Version" }, meta: { reason: :stock_reason }
+
+  attr_accessor :stock_reason
 
   belongs_to :product, inverse_of: :variants
 
@@ -16,16 +18,42 @@ class Product::Variant < ApplicationRecord
   validates :compare_at_price_cents, numericality: { only_integer: true, greater_than: :price_cents },
                                      allow_nil: true, if: :price_cents
   validates :sku, uniqueness: { scope: :tenant_id }, allow_nil: true
+  validates :stock_quantity, numericality: { only_integer: true }
+  validate :stock_covered
   validate :option_values_match_product
   validate :combination_unique
   validate :within_limit, on: :create
   validate :keeps_published_product_sellable
+
+  def available?
+    !track_stock || allow_oversell || stock_quantity.positive?
+  end
+
+  # Sets the counted stock, or adds a delta to the current stock under a row
+  # lock, so a sale written in between is kept.
+  #
+  # @param quantity [Integer, nil] nil to apply the delta instead
+  # @param delta [Integer, nil]
+  # @param reason [String, nil]
+  def change_stock!(quantity: nil, delta: nil, reason: nil)
+    with_lock do
+      self.stock_quantity = quantity.nil? ? stock_quantity + delta : quantity
+      self.stock_reason = reason
+      save!
+    end
+  end
 
   private
 
   # Read from memory, so a product saved with its variants sees the unsaved ones.
   def siblings
     product.variants.reject { |variant| variant.equal?(self) || (persisted? && variant.id == id) }
+  end
+
+  def stock_covered
+    return unless track_stock && !allow_oversell && stock_quantity.is_a?(Integer) && stock_quantity.negative?
+
+    errors.add(:stock_quantity, :insufficient_stock)
   end
 
   def option_values_match_product
