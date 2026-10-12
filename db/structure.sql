@@ -93,6 +93,22 @@ CREATE TABLE public.brands (
 
 
 --
+-- Name: categories; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.categories (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    slug text NOT NULL,
+    parent_id uuid,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: login_attempts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -106,6 +122,20 @@ CREATE TABLE public.login_attempts (
     created_at timestamp(6) with time zone NOT NULL,
     updated_at timestamp(6) with time zone NOT NULL,
     CONSTRAINT login_attempts_email_lowercase CHECK ((email = lower(email)))
+);
+
+
+--
+-- Name: product_categorizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_categorizations (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    category_id uuid NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
 );
 
 
@@ -358,11 +388,27 @@ ALTER TABLE ONLY public.brands
 
 
 --
+-- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT categories_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: login_attempts login_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.login_attempts
     ADD CONSTRAINT login_attempts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_categorizations product_categorizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categorizations
+    ADD CONSTRAINT product_categorizations_pkey PRIMARY KEY (id);
 
 
 --
@@ -499,6 +545,13 @@ CREATE UNIQUE INDEX index_admins_on_email ON platform.admins USING btree (email)
 
 
 --
+-- Name: idx_on_tenant_id_category_id_product_id_2d20c5b4a1; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_tenant_id_category_id_product_id_2d20c5b4a1 ON public.product_categorizations USING btree (tenant_id, category_id, product_id);
+
+
+--
 -- Name: index_brands_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -520,6 +573,27 @@ CREATE UNIQUE INDEX index_brands_on_tenant_id_and_slug ON public.brands USING bt
 
 
 --
+-- Name: index_categories_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_categories_on_tenant_id ON public.categories USING btree (tenant_id);
+
+
+--
+-- Name: index_categories_on_tenant_id_and_parent_id_and_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_categories_on_tenant_id_and_parent_id_and_position ON public.categories USING btree (tenant_id, parent_id, "position");
+
+
+--
+-- Name: index_categories_on_tenant_id_and_slug; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_categories_on_tenant_id_and_slug ON public.categories USING btree (tenant_id, slug);
+
+
+--
 -- Name: index_login_attempts_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -531,6 +605,20 @@ CREATE INDEX index_login_attempts_on_tenant_id ON public.login_attempts USING bt
 --
 
 CREATE UNIQUE INDEX index_login_attempts_on_tenant_id_and_email ON public.login_attempts USING btree (tenant_id, email);
+
+
+--
+-- Name: index_product_categorizations_on_product_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categorizations_on_product_id ON public.product_categorizations USING btree (product_id);
+
+
+--
+-- Name: index_product_categorizations_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_categorizations_on_tenant_id ON public.product_categorizations USING btree (tenant_id);
 
 
 --
@@ -800,6 +888,14 @@ ALTER TABLE ONLY public.login_attempts
 
 
 --
+-- Name: product_categorizations fk_rails_52d3dc85fd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categorizations
+    ADD CONSTRAINT fk_rails_52d3dc85fd FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: shopper_sessions fk_rails_5315be07a5; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -824,6 +920,14 @@ ALTER TABLE ONLY public.product_variants
 
 
 --
+-- Name: categories fk_rails_82f48f7407; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT fk_rails_82f48f7407 FOREIGN KEY (parent_id) REFERENCES public.categories(id);
+
+
+--
 -- Name: shopper_email_codes fk_rails_8d2d640287; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -832,11 +936,35 @@ ALTER TABLE ONLY public.shopper_email_codes
 
 
 --
+-- Name: product_categorizations fk_rails_9399c1d791; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categorizations
+    ADD CONSTRAINT fk_rails_9399c1d791 FOREIGN KEY (category_id) REFERENCES public.categories(id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_categorizations fk_rails_9472f7aede; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_categorizations
+    ADD CONSTRAINT fk_rails_9472f7aede FOREIGN KEY (product_id) REFERENCES public.products(id) ON DELETE CASCADE;
+
+
+--
 -- Name: staff_sessions fk_rails_b69a960ef4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.staff_sessions
     ADD CONSTRAINT fk_rails_b69a960ef4 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE CASCADE;
+
+
+--
+-- Name: categories fk_rails_cf18d1e171; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.categories
+    ADD CONSTRAINT fk_rails_cf18d1e171 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -909,10 +1037,22 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: categories; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: login_attempts; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: product_categorizations; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.product_categorizations ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: product_variants; Type: ROW SECURITY; Schema: public; Owner: -
@@ -983,10 +1123,24 @@ CREATE POLICY tenant_isolation ON public.brands USING ((tenant_id = (NULLIF(curr
 
 
 --
+-- Name: categories tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.categories USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
 -- Name: login_attempts tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.login_attempts USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: product_categorizations tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.product_categorizations USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -1098,6 +1252,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261012130000'),
 ('20261012120300'),
 ('20261012120200'),
 ('20261012120100'),

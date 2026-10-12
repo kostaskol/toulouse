@@ -5,12 +5,15 @@ module Admin
 
     allow_any_staff
 
-    FIELDS = [:title, :slug, :description, :status, :brand_id].freeze
+    FIELDS = [:title, :slug, :description, :status, :brand_id, { category_ids: [] }].freeze
 
     def index
-      scope = Product.includes(:brand, :variants)
+      scope = Product.includes(:brand, :variants, :categories)
       scope = scope.where(status: params[:status]) if params[:status]
       scope = scope.where(brand: Brand.find(params[:brand_id])) if params[:brand_id]
+      if params[:category_id]
+        scope = scope.where(id: Category.find(params[:category_id]).categorizations.select(:product_id))
+      end
       products, next_cursor = paginate(scope)
       render json: { products: products.map { |product| product_json(product) }, meta: { next_cursor: } }
     end

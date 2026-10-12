@@ -11,6 +11,7 @@ module Admin
         status: product.status,
         option_names: product.option_names,
         brand: product.brand && brand_json(product.brand),
+        category_ids: product.category_ids,
         variants: product.variants.map { |variant| variant_json(variant) }
       }
     end
