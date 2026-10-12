@@ -32,6 +32,72 @@ seed_linked_shopper.call(demo, email: "owner@example.com")
 # The storefront BFF reads this token from storefront/bff/.env.
 Tenancy.with_tenant(demo) { demo.api_keys.find_or_create_by!(name: "Demo storefront") }
 
+# The demo storefront's catalog. Prices are in cents. A sold_out entry empties
+# every variant it matches.
+demo_categories = {
+  "Γυναικεία" => ["Φορέματα", "Μπλούζες"],
+  "Ανδρικά" => ["Πουκάμισα", "Παντελόνια"],
+  "Παπούτσια" => ["Σανδάλια", "Sneakers"],
+  "Αξεσουάρ" => []
+}
+demo_products = [
+  { title: "Ψάθινο καπέλο", brand: "Λινό", category: "Αξεσουάρ", price: 2500,
+    description: "Πλεκτό στο χέρι από φυσικό άχυρο. Γείσο 8 εκ., ελαφρύ και για όλη τη μέρα." },
+  { title: "Ψάθινη τσάντα ώμου", brand: "Λινό", category: "Αξεσουάρ", price: 4500,
+    description: "Χωράει πετσέτα, βιβλίο και αντηλιακό.\n\n- Δερμάτινα χερούλια\n- Βαμβακερή φόδρα" },
+  { title: "Λευκά δερμάτινα sneakers", brand: "Αιγαίο", category: "Sneakers", price: 8900, compare_at: 11_000,
+    options: { "Νούμερο" => ["40", "41", "42", "43", "44"] },
+    description: "Μαλακό δέρμα, λαστιχένια σόλα. Ταιριάζουν με όλα." },
+  { title: "Δερμάτινα σανδάλια", brand: "Πήλιο", category: "Σανδάλια", price: 7500, stock: 0,
+    options: { "Νούμερο" => ["37", "38", "39", "40"] },
+    description: "Χειροποίητα στο Πήλιο από φυτικά δεψασμένο δέρμα. Η σόλα παίρνει το σχήμα του ποδιού." },
+  { title: "Βαμβακερό chino παντελόνι", brand: "Πήλιο", category: "Παντελόνια", price: 6500,
+    options: { "Μέγεθος" => ["30", "32", "34", "36"], "Χρώμα" => ["Μπεζ", "Navy"] },
+    description: "Ίσια γραμμή, ελαφρύ βαμβάκι με λίγη ελαστικότητα." },
+  { title: "Λινό πουκάμισο", brand: "Λινό", category: "Πουκάμισα", price: 5900,
+    options: { "Μέγεθος" => ["M", "L", "XL"], "Χρώμα" => ["Λευκό", "Γαλάζιο"] },
+    sold_out: [{ "Μέγεθος" => "XL", "Χρώμα" => "Γαλάζιο" }],
+    description: "100% λινό, πλυμένο για πιο μαλακή αίσθηση.\n\n**Φροντίδα:** πλύσιμο στους 30°C." },
+  { title: "Βαμβακερή μπλούζα", brand: "Αιγαίο", category: "Μπλούζες", price: 2900,
+    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Μαύρο", "Τερακότα"] },
+    description: "Οργανικό βαμβάκι, φαρδιά γραμμή." },
+  { title: "Μάξι φόρεμα με τιράντες", brand: "Αιγαίο", category: "Φορέματα", price: 6900, compare_at: 9500,
+    options: { "Μέγεθος" => ["S", "M", "L"] }, sold_out: [{ "Μέγεθος" => "S" }],
+    description: "Ριχτό φόρεμα από βισκόζη, για το καλοκαίρι στο νησί." },
+  { title: "Λινό φόρεμα Σαντορίνη", brand: "Λινό", category: "Φορέματα", price: 8900,
+    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Άμμος"] },
+    description: "Το πιο αγαπημένο μας κομμάτι.\n\n- 100% λινό\n- Τσέπες στο πλάι\n- Ραμμένο στην Αθήνα" }
+]
+
+Tenancy.with_tenant(demo) do
+  categories = demo_categories.each_with_index.flat_map do |(name, children), position|
+    parent = Category.find_or_create_by!(name:, parent: nil) { |category| category.position = position }
+    children = children.each_with_index.map do |child, child_position|
+      Category.find_or_create_by!(name: child, parent:) { |category| category.position = child_position }
+    end
+    [parent, *children]
+  end.index_by(&:name)
+
+  # Created oldest first, since lists show the newest first.
+  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, compare_at: nil,
+                            stock: 10, sold_out: []|
+    next if Product.exists?(title:)
+
+    combinations = options.values.reduce([[]]) { |partial, values| partial.product(values).map(&:flatten) }
+    variants = combinations.map do |values|
+      option_values = options.keys.zip(values).to_h
+      quantity = sold_out.any? { |sold| sold <= option_values } ? 0 : stock
+      { option_values:, price_cents: price, compare_at_price_cents: compare_at, vat_class: "standard",
+        stock_quantity: quantity }
+    end
+
+    Product.create!(title:, description:, status: "published", option_names: options.keys,
+                    brand: Brand.find_or_create_by!(name: brand), categories: [categories.fetch(category)],
+                    variants_attributes: variants)
+  end
+  demo_products.each { |product| seed_product.call(**product) }
+end
+
 # Same owner email in a second store, so the slug decides which one logs in.
 suspended = seed_tenant.call(name: "Suspended Store", slug: "suspended-store", status: "suspended")
 seed_staff.call(suspended, email: "owner@example.com", role: "owner")
