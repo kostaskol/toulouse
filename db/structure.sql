@@ -209,7 +209,7 @@ CREATE TABLE public.product_variants (
     barcode text,
     mpn text,
     price_cents integer NOT NULL,
-    compare_at_price_cents integer,
+    pre_discount_price_cents integer,
     vat_class integer NOT NULL,
     status integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
@@ -218,7 +218,7 @@ CREATE TABLE public.product_variants (
     stock_quantity integer DEFAULT 0 NOT NULL,
     allow_oversell boolean DEFAULT false NOT NULL,
     image_id uuid,
-    CONSTRAINT product_variants_compare_at_above_price CHECK ((compare_at_price_cents > price_cents)),
+    CONSTRAINT product_variants_pre_discount_above_price CHECK ((pre_discount_price_cents > price_cents)),
     CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0))
 );
 
@@ -1441,6 +1441,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013130000'),
 ('20261013120100'),
 ('20261013120000'),
 ('20261012140000'),

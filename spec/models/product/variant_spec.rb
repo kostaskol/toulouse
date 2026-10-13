@@ -46,8 +46,8 @@ RSpec.describe Product::Variant, :as_tenant, type: :model do
     expect(other).to be_persisted
   end
 
-  it "needs a compare-at price above the price" do
-    expect(build(:product_variant, product:, compare_at_price_cents: variant.price_cents)).not_to be_valid
+  it "needs a pre-discount price above the price" do
+    expect(build(:product_variant, product:, pre_discount_price_cents: variant.price_cents)).not_to be_valid
   end
 
   it "stops at #{described_class::MAX_PER_PRODUCT} variants on a product" do
