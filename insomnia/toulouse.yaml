@@ -694,6 +694,84 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/product_imports?dry_run=true"
+        name: Upload product import
+        meta:
+          id: req_de4890ada228f56a2c79070104ac62de
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 23
+          description: Pick a canonical CSV as the body. Set dry_run=false to write.
+        method: POST
+        body:
+          mimeType: text/csv
+          fileName: ""
+        headers:
+          - name: Content-Type
+            value: text/csv
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/product_imports"
+        name: List product imports
+        meta:
+          id: req_23c2e8098e1c44b3f14df733c489d0eb
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 24
+          description: Newest first.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/product_imports/{{ _.product_import_id }}"
+        name: Show product import
+        meta:
+          id: req_b465e6b94054a26d5488f883242e5adb
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 25
+          description: Status and summary.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/product_imports/{{ _.product_import_id }}/entries"
+        name: List product import entries
+        meta:
+          id: req_4e5a0d3634aa1b8f83f36f029ad66bae
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 26
+          description: File order. Filter with result, warning or image_errors=true.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
   - name: Platform admin
     meta:
       id: fld_ba69d648aad6a21677cbe1c17db315fb
@@ -1218,3 +1296,4 @@ environments:
     category_id: "{% prompt 'Category id', 'From List categories', '', '', false, false %}"
     product_slug: "{% prompt 'Product slug', 'From Products', '', '', false, false %}"
     category_slug: "{% prompt 'Category slug', 'From Categories', '', '', false, false %}"
+    product_import_id: "{% prompt 'Import id', 'From List product imports', '', '', false, false %}"
