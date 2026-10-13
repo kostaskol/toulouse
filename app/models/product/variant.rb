@@ -28,6 +28,7 @@ class Product::Variant < ApplicationRecord
   validate :stock_covered
   validate :option_values_match_product
   validate :combination_unique
+  validate :sku_unique_among_siblings
   validate :within_limit, on: :create
   validate :keeps_published_product_sellable
   validate :image_of_product
@@ -74,6 +75,13 @@ class Product::Variant < ApplicationRecord
     return unless siblings.any? { |variant| variant.option_values == option_values }
 
     errors.add(:option_values, :duplicate_combination)
+  end
+
+  # A database lookup cannot see siblings that are saved in the same nested create.
+  def sku_unique_among_siblings
+    return if sku.nil? || errors.of_kind?(:sku, :taken) || siblings.none? { |variant| variant.sku == sku }
+
+    errors.add(:sku, :taken)
   end
 
   def within_limit
