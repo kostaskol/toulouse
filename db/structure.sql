@@ -197,6 +197,48 @@ CREATE TABLE public.product_images (
 
 
 --
+-- Name: product_import_entries; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_import_entries (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    product_import_id uuid NOT NULL,
+    product_id uuid,
+    "position" integer NOT NULL,
+    handle text NOT NULL,
+    rows integer[] DEFAULT '{}'::integer[] NOT NULL,
+    result integer NOT NULL,
+    error_details jsonb DEFAULT '[]'::jsonb NOT NULL,
+    warnings jsonb DEFAULT '[]'::jsonb NOT NULL,
+    image_errors jsonb DEFAULT '[]'::jsonb NOT NULL,
+    created_brands text[] DEFAULT '{}'::text[] NOT NULL,
+    created_categories text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
+-- Name: product_imports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_imports (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    staff_id uuid,
+    dry_run boolean DEFAULT false NOT NULL,
+    status integer DEFAULT 0 NOT NULL,
+    file text,
+    images_pending integer DEFAULT 0 NOT NULL,
+    error_details jsonb DEFAULT '[]'::jsonb NOT NULL,
+    finished_at timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: product_variants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -506,6 +548,22 @@ ALTER TABLE ONLY public.product_images
 
 
 --
+-- Name: product_import_entries product_import_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_import_entries
+    ADD CONSTRAINT product_import_entries_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_imports product_imports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_imports
+    ADD CONSTRAINT product_imports_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: product_variants product_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -646,6 +704,13 @@ CREATE UNIQUE INDEX idx_on_tenant_id_category_id_product_id_2d20c5b4a1 ON public
 
 
 --
+-- Name: idx_on_tenant_id_product_import_id_position_2f7e6c8cbb; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_tenant_id_product_import_id_position_2f7e6c8cbb ON public.product_import_entries USING btree (tenant_id, product_import_id, "position");
+
+
+--
 -- Name: index_active_storage_attachments_on_blob_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -755,6 +820,27 @@ CREATE INDEX index_product_images_on_tenant_id ON public.product_images USING bt
 --
 
 CREATE INDEX index_product_images_on_tenant_id_and_product_id_and_position ON public.product_images USING btree (tenant_id, product_id, "position");
+
+
+--
+-- Name: index_product_import_entries_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_import_entries_on_tenant_id ON public.product_import_entries USING btree (tenant_id);
+
+
+--
+-- Name: index_product_imports_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_imports_on_tenant_id ON public.product_imports USING btree (tenant_id);
+
+
+--
+-- Name: index_product_imports_one_active_per_tenant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_product_imports_one_active_per_tenant ON public.product_imports USING btree (tenant_id) WHERE (status = ANY (ARRAY[0, 1]));
 
 
 --
@@ -1008,6 +1094,14 @@ ALTER TABLE ONLY public.product_images
 
 
 --
+-- Name: product_import_entries fk_rails_202223b549; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_import_entries
+    ADD CONSTRAINT fk_rails_202223b549 FOREIGN KEY (product_import_id) REFERENCES public.product_imports(id) ON DELETE CASCADE;
+
+
+--
 -- Name: shoppers fk_rails_20ad1531ba; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1104,11 +1198,27 @@ ALTER TABLE ONLY public.product_categorizations
 
 
 --
+-- Name: product_import_entries fk_rails_975123a41e; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_import_entries
+    ADD CONSTRAINT fk_rails_975123a41e FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: active_storage_variant_records fk_rails_993965df05; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.active_storage_variant_records
     ADD CONSTRAINT fk_rails_993965df05 FOREIGN KEY (blob_id) REFERENCES public.active_storage_blobs(id);
+
+
+--
+-- Name: product_imports fk_rails_9c45ada6a5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_imports
+    ADD CONSTRAINT fk_rails_9c45ada6a5 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE SET NULL;
 
 
 --
@@ -1125,6 +1235,14 @@ ALTER TABLE ONLY public.product_variants
 
 ALTER TABLE ONLY public.staff_sessions
     ADD CONSTRAINT fk_rails_b69a960ef4 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_import_entries fk_rails_b8653e8514; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_import_entries
+    ADD CONSTRAINT fk_rails_b8653e8514 FOREIGN KEY (product_id) REFERENCES public.products(id);
 
 
 --
@@ -1192,6 +1310,14 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: product_imports fk_rails_f7e2dd6d8f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_imports
+    ADD CONSTRAINT fk_rails_f7e2dd6d8f FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: products fk_rails_fbc24595c9; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1235,6 +1361,18 @@ ALTER TABLE public.product_categorizations ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: product_import_entries; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.product_import_entries ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: product_imports; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.product_imports ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: product_variants; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1330,6 +1468,20 @@ CREATE POLICY tenant_isolation ON public.product_categorizations USING ((tenant_
 --
 
 CREATE POLICY tenant_isolation ON public.product_images USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: product_import_entries tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.product_import_entries USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: product_imports tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.product_imports USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -1441,6 +1593,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013130100'),
 ('20261013130000'),
 ('20261013120100'),
 ('20261013120000'),
