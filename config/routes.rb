@@ -5,6 +5,9 @@ Rails.application.routes.draw do
   # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
 
+  # Public: <img> tags cannot send credentials. The signed ids are the only key.
+  get "media/:signed_blob_id/:variation_key/*filename", to: "active_storage/representations/proxy#show", as: :media
+
   namespace :platform do
     root "home#show"
     resource :session, only: [:new, :create]
@@ -41,6 +44,9 @@ Rails.application.routes.draw do
     resources :categories, only: [:index, :create, :update, :destroy]
     resources :products, only: [:index, :show, :create, :update] do
       resource :options, only: :update
+      resources :images, only: [:create, :update, :destroy] do
+        put :order, on: :collection
+      end
       resources :variants, only: [:create, :update] do
         resource :stock, only: :update
       end

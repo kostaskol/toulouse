@@ -23,4 +23,9 @@ FactoryBot.define do
     vat_class { Product::Variant.vat_classes.keys.first }
     option_values { Array(product&.option_names).index_with { SecureRandom.hex(4) } }
   end
+
+  factory :product_image, class: "Product::Image", traits: [:tenant_scoped] do
+    product { association(:product, tenant:) }
+    file { Tenancy.with_tenant(tenant) { Product::Image.attachable(ImageFiles.image_file, product.slug) } }
+  end
 end

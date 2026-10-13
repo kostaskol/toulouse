@@ -31,6 +31,20 @@ RSpec.describe "Tenant admin product variants", type: :request do
     expect(response.parsed_body.dig("variant", "status")).to eq("archived")
   end
 
+  it "points a variant at one of its product's images" do
+    image = as_tenant(tenant) { create(:product_image, product:) }
+    patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { image_id: image.id }, headers:, as: :json
+
+    expect(response.parsed_body.dig("variant", "image_id")).to eq(image.id)
+  end
+
+  it "refuses an image of another product" do
+    image = as_tenant(tenant) { create(:product_image) }
+    patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { image_id: image.id }, headers:, as: :json
+
+    expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "invalid", "field" => "image_id"))
+  end
+
   it "answers not found for a variant of another product" do
     other = as_tenant(tenant) { create(:product) }
     patch "/admin/products/#{other.id}/variants/#{variant.id}", params: { status: "archived" }, headers:, as: :json

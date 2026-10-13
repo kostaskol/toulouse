@@ -373,7 +373,7 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 13
-          description: Also takes sku, barcode, mpn, prices, vat_class, option_values, track_stock and allow_oversell.
+          description: Also takes sku, barcode, mpn, prices, vat_class, option_values, stock settings and image_id.
         method: PATCH
         body:
           mimeType: application/json
@@ -412,6 +412,102 @@ collection:
         headers:
           - name: Content-Type
             value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/images"
+        name: Upload image
+        meta:
+          id: req_f96a3ef8eb98dfdd6dc4fe9b5862b3a5
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 14.1
+          description: Send a JPEG, PNG or WebP file. Set Content-Type to match it.
+        method: POST
+        body:
+          mimeType: application/octet-stream
+          fileName: ""
+        headers:
+          - name: Content-Type
+            value: image/jpeg
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/images/{{ _.image_id }}"
+        name: Update image
+        meta:
+          id: req_f71b719a923d20655c50ec11ff4286a6
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 14.2
+          description: Blank alt falls back to the product title.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "alt": "{% prompt 'Alt text', '', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/images/order"
+        name: Order images
+        meta:
+          id: req_85b25c45c787c9967996e829f9bb6139
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 14.3
+          description: List every image id of the product, in display order.
+        method: PUT
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "image_ids": [{% prompt 'Image ids', 'Quoted, comma separated', '', '', false, false %}]
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/images/{{ _.image_id }}"
+        name: Delete image
+        meta:
+          id: req_f97c0ac38369769965a42085c314b50d
+          created: 1791830772923
+          modified: 1791830772923
+          isPrivate: false
+          sortKey: 14.4
+          description: Also purges the file and every resized copy.
+        method: DELETE
         settings:
           renderRequestBody: true
           encodeUrl: true
@@ -1117,6 +1213,7 @@ environments:
     platform_api_key_id: "{% prompt 'Key id', 'From API keys', '', '', false, false %}"
     product_id: "{% prompt 'Product id', 'From List products', '', 'product_id', false, true %}"
     variant_id: "{% prompt 'Variant id', 'From Show product', '', '', false, false %}"
+    image_id: "{% prompt 'Image id', 'From Show product', '', '', false, false %}"
     brand_id: "{% prompt 'Brand id', 'From List brands', '', '', false, false %}"
     category_id: "{% prompt 'Category id', 'From List categories', '', '', false, false %}"
     product_slug: "{% prompt 'Product slug', 'From Products', '', '', false, false %}"

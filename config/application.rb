@@ -51,9 +51,10 @@ module Toulouse
     config.middleware.use config.session_store, config.session_options
 
     config.x.admin_origin = ENV["ADMIN_ORIGIN"]
+    config.x.media_origin = ENV["MEDIA_ORIGIN"]
 
     # Blob and upload routes take requests with no tenant, and blobs carry no
-    # tenant_id.
+    # tenant_id. The one public media route is drawn by hand.
     config.active_storage.draw_routes = false
 
     config.generators do |g|

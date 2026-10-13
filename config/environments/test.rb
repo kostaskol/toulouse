@@ -56,4 +56,5 @@ Rails.application.configure do
   config.active_record.encryption.key_derivation_salt = "zNRNlLD5VaualtWV6V3AJzWiPh998ujT"
 
   config.x.admin_origin = "https://admin.example.com"
+  config.x.media_origin = "https://media.example.com"
 end

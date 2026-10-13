@@ -37,7 +37,8 @@ RSpec.describe "Row-level security" do
       create(:shopper_session, tenant: tenant)
       create(:login_attempt, tenant: tenant)
       category = create(:category, tenant: tenant)
-      create(:product, tenant: tenant, brand: create(:brand, tenant: tenant), category_ids: [category.id])
+      product = create(:product, tenant: tenant, brand: create(:brand, tenant: tenant), category_ids: [category.id])
+      create(:product_image, tenant: tenant, product:)
       as_tenant(tenant) { Shopper::EmailCode.issue(build(:shopper).email, purpose: :signup) }
     end
 

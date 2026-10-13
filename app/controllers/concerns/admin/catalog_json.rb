@@ -1,5 +1,7 @@
 module Admin
   module CatalogJson
+    include ProductImageJson
+
     private
 
     def product_json(product)
@@ -12,6 +14,7 @@ module Admin
         option_names: product.option_names,
         brand: product.brand && brand_json(product.brand),
         category_ids: product.category_ids,
+        images: product.images.map { |image| image_json(image) },
         variants: product.variants.map { |variant| variant_json(variant) }
       }
     end
@@ -19,7 +22,7 @@ module Admin
     def variant_json(variant)
       variant.slice(
         :id, :option_values, :sku, :barcode, :mpn, :price_cents, :compare_at_price_cents, :vat_class, :status,
-        :track_stock, :stock_quantity, :allow_oversell
+        :track_stock, :stock_quantity, :allow_oversell, :image_id
       )
     end
 

@@ -37,3 +37,7 @@ en:
       too_many_variants: "would exceed %{count} variants for the product"
       invalid_parent: "cannot be the category itself or one below it"
       insufficient_stock: "cannot go below zero unless the variant allows oversell"
+      content_type: "must be a JPEG, PNG or WebP image"
+      too_large: "must be at most %{count} MB"
+      too_many_pixels: "must be at most %{count} megapixels"
+      too_many_images: "would exceed %{count} images for the product"
