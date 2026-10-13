@@ -46,7 +46,7 @@ try {
     <div class="product-details">
       <p class="product-brand">{{ product.brand?.name }}</p>
       <h1>{{ product.title }}</h1>
-      <ProductPrice v-if="variant" :price="variant.price_cents" :compare-at="variant.compare_at_price_cents" />
+      <ProductPrice v-if="variant" :price="variant.price_cents" :pre-discount="variant.pre_discount_price_cents" />
 
       <fieldset v-for="name in product.option_names" :key="name" class="option">
         <legend>{{ name }}: <strong>{{ selected[name] }}</strong></legend>

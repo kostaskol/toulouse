@@ -39,6 +39,8 @@ RSpec.describe "Row-level security" do
       category = create(:category, tenant: tenant)
       product = create(:product, tenant: tenant, brand: create(:brand, tenant: tenant), category_ids: [category.id])
       create(:product_image, tenant: tenant, product:)
+      import = create(:product_import, tenant: tenant)
+      as_tenant(tenant) { import.entries.create!(position: 0, handle: "a", result: :created) }
       as_tenant(tenant) { Shopper::EmailCode.issue(build(:shopper).email, purpose: :signup) }
     end
 

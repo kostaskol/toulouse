@@ -21,7 +21,7 @@ module Admin
 
     def variant_json(variant)
       variant.slice(
-        :id, :option_values, :sku, :barcode, :mpn, :price_cents, :compare_at_price_cents, :vat_class, :status,
+        :id, :option_values, :sku, :barcode, :mpn, :price_cents, :pre_discount_price_cents, :vat_class, :status,
         :track_stock, :stock_quantity, :allow_oversell, :image_id
       )
     end

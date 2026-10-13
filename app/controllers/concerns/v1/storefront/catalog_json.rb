@@ -19,7 +19,7 @@ module V1
       end
 
       def variant_json(variant)
-        variant.slice(:id, :option_values, :sku, :price_cents, :compare_at_price_cents, :image_id)
+        variant.slice(:id, :option_values, :sku, :price_cents, :pre_discount_price_cents, :image_id)
                .merge(available: variant.available?)
       end
     end

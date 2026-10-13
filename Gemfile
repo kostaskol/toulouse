@@ -49,6 +49,9 @@ gem "rack-cors"
 # Platform admin's second factor.
 gem "rotp", "~> 6.3"
 
+# A bundled gem from Ruby 3.4, so it is listed rather than assumed.
+gem "csv"
+
 # Change history for catalog records.
 gem "paper_trail", "~> 17.0"
 

@@ -16,9 +16,9 @@ const soldOut = computed(() => props.product.variants.every((variant) => !varian
   <RouterLink :to="`/products/${product.slug}`" class="product-card">
     <ProductImage :product="product" />
     <span v-if="soldOut" class="badge">Εξαντλήθηκε</span>
-    <span v-else-if="cheapest.compare_at_price_cents" class="badge badge-sale">Προσφορά</span>
+    <span v-else-if="cheapest.pre_discount_price_cents" class="badge badge-sale">Προσφορά</span>
     <span class="product-card-brand">{{ product.brand?.name }}</span>
     <span class="product-card-title">{{ product.title }}</span>
-    <ProductPrice :price="cheapest.price_cents" :compare-at="cheapest.compare_at_price_cents" :from="priceVaries" />
+    <ProductPrice :price="cheapest.price_cents" :pre-discount="cheapest.pre_discount_price_cents" :from="priceVaries" />
   </RouterLink>
 </template>

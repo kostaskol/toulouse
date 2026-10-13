@@ -2,6 +2,8 @@ class Product::Variant < ApplicationRecord
   include Tenancy::Scoped
 
   MAX_PER_PRODUCT = 100
+  # The price and stock columns are 4-byte integers.
+  MAX_INTEGER = (2**31) - 1
 
   has_paper_trail versions: { class_name: "Version" }, meta: { reason: :stock_reason }
 
@@ -15,14 +17,18 @@ class Product::Variant < ApplicationRecord
 
   normalizes :sku, with: ->(sku) { sku.strip.presence }
 
-  validates :price_cents, numericality: { only_integer: true, greater_than_or_equal_to: 0 }
-  validates :compare_at_price_cents, numericality: { only_integer: true, greater_than: :price_cents },
-                                     allow_nil: true, if: :price_cents
+  validates :price_cents, numericality: {
+    only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: MAX_INTEGER
+  }
+  validates :pre_discount_price_cents, numericality: {
+    only_integer: true, greater_than: :price_cents, less_than_or_equal_to: MAX_INTEGER
+  }, allow_nil: true, if: :price_cents
   validates :sku, uniqueness: { scope: :tenant_id }, allow_nil: true
-  validates :stock_quantity, numericality: { only_integer: true }
+  validates :stock_quantity, numericality: { only_integer: true, less_than_or_equal_to: MAX_INTEGER }
   validate :stock_covered
   validate :option_values_match_product
   validate :combination_unique
+  validate :sku_unique_among_siblings
   validate :within_limit, on: :create
   validate :keeps_published_product_sellable
   validate :image_of_product
@@ -69,6 +75,13 @@ class Product::Variant < ApplicationRecord
     return unless siblings.any? { |variant| variant.option_values == option_values }
 
     errors.add(:option_values, :duplicate_combination)
+  end
+
+  # A database lookup cannot see siblings that are saved in the same nested create.
+  def sku_unique_among_siblings
+    return if sku.nil? || errors.of_kind?(:sku, :taken) || siblings.none? { |variant| variant.sku == sku }
+
+    errors.add(:sku, :taken)
   end
 
   def within_limit

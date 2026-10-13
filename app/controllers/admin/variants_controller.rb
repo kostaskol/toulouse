@@ -5,7 +5,7 @@ module Admin
     allow_any_staff
 
     FIELDS = [
-      :sku, :barcode, :mpn, :price_cents, :compare_at_price_cents, :vat_class, :status, :track_stock, :allow_oversell,
+      :sku, :barcode, :mpn, :price_cents, :pre_discount_price_cents, :vat_class, :status, :track_stock, :allow_oversell,
       :image_id, { option_values: {} }
     ].freeze
 

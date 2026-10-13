@@ -45,7 +45,7 @@ demo_products = [
     description: "Πλεκτό στο χέρι από φυσικό άχυρο. Γείσο 8 εκ., ελαφρύ και για όλη τη μέρα." },
   { title: "Ψάθινη τσάντα ώμου", brand: "Λινό", category: "Αξεσουάρ", price: 4500,
     description: "Χωράει πετσέτα, βιβλίο και αντηλιακό.\n\n- Δερμάτινα χερούλια\n- Βαμβακερή φόδρα" },
-  { title: "Λευκά δερμάτινα sneakers", brand: "Αιγαίο", category: "Sneakers", price: 8900, compare_at: 11_000,
+  { title: "Λευκά δερμάτινα sneakers", brand: "Αιγαίο", category: "Sneakers", price: 8900, pre_discount: 11_000,
     options: { "Νούμερο" => ["40", "41", "42", "43", "44"] },
     description: "Μαλακό δέρμα, λαστιχένια σόλα. Ταιριάζουν με όλα." },
   { title: "Δερμάτινα σανδάλια", brand: "Πήλιο", category: "Σανδάλια", price: 7500, stock: 0,
@@ -61,7 +61,7 @@ demo_products = [
   { title: "Βαμβακερή μπλούζα", brand: "Αιγαίο", category: "Μπλούζες", price: 2900,
     options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Μαύρο", "Τερακότα"] },
     description: "Οργανικό βαμβάκι, φαρδιά γραμμή." },
-  { title: "Μάξι φόρεμα με τιράντες", brand: "Αιγαίο", category: "Φορέματα", price: 6900, compare_at: 9500,
+  { title: "Μάξι φόρεμα με τιράντες", brand: "Αιγαίο", category: "Φορέματα", price: 6900, pre_discount: 9500,
     options: { "Μέγεθος" => ["S", "M", "L"] }, sold_out: [{ "Μέγεθος" => "S" }],
     description: "Ριχτό φόρεμα από βισκόζη, για το καλοκαίρι στο νησί." },
   { title: "Λινό φόρεμα Σαντορίνη", brand: "Λινό", category: "Φορέματα", price: 8900,
@@ -79,7 +79,7 @@ Tenancy.with_tenant(demo) do
   end.index_by(&:name)
 
   # Created oldest first, since lists show the newest first.
-  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, compare_at: nil,
+  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, pre_discount: nil,
                             stock: 10, sold_out: []|
     next if Product.exists?(title:)
 
@@ -87,7 +87,7 @@ Tenancy.with_tenant(demo) do
     variants = combinations.map do |values|
       option_values = options.keys.zip(values).to_h
       quantity = sold_out.any? { |sold| sold <= option_values } ? 0 : stock
-      { option_values:, price_cents: price, compare_at_price_cents: compare_at, vat_class: "standard",
+      { option_values:, price_cents: price, pre_discount_price_cents: pre_discount, vat_class: "standard",
         stock_quantity: quantity }
     end
 

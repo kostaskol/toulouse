@@ -32,6 +32,16 @@ RSpec.describe Product::Variant, :as_tenant, type: :model do
     expect(build(:product_variant, product: create(:product), sku: variant.sku)).not_to be_valid
   end
 
+  it "refuses the SKU of an unsaved sibling" do
+    product = build(:product)
+    product.variants.first.sku = "#{product.title}-sku"
+    sibling = build(:product_variant, product:, sku: product.variants.first.sku)
+    product.variants << sibling
+
+    expect(sibling).not_to be_valid
+    expect(sibling.errors.details[:sku]).to eq([{ error: :taken }])
+  end
+
   it "lets two variants go without a SKU" do
     variant.update!(sku: " ")
 
@@ -46,8 +56,17 @@ RSpec.describe Product::Variant, :as_tenant, type: :model do
     expect(other).to be_persisted
   end
 
-  it "needs a compare-at price above the price" do
-    expect(build(:product_variant, product:, compare_at_price_cents: variant.price_cents)).not_to be_valid
+  ["price_cents", "pre_discount_price_cents", "stock_quantity"].each do |column|
+    it "refuses a #{column} past the column's limit" do
+      variant.assign_attributes(column => described_class::MAX_INTEGER + 1)
+
+      expect(variant).not_to be_valid
+      expect(variant.errors.details[column.to_sym]).to include(include(error: :less_than_or_equal_to))
+    end
+  end
+
+  it "needs a pre-discount price above the price" do
+    expect(build(:product_variant, product:, pre_discount_price_cents: variant.price_cents)).not_to be_valid
   end
 
   it "stops at #{described_class::MAX_PER_PRODUCT} variants on a product" do

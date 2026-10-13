@@ -51,5 +51,8 @@ Rails.application.routes.draw do
         resource :stock, only: :update
       end
     end
+    resources :product_imports, only: [:index, :show, :create] do
+      resources :entries, only: :index, controller: "product_import_entries"
+    end
   end
 end
