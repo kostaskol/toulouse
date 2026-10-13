@@ -39,6 +39,7 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :file
 
   config.x.admin_origin = ENV.fetch("ADMIN_ORIGIN", "http://localhost:3000")
+  config.x.media_origin = ENV.fetch("MEDIA_ORIGIN", "http://localhost:3000")
 
   # Print deprecation notices to the Rails logger.
   config.active_support.deprecation = :log

@@ -8,7 +8,7 @@ module Admin
     FIELDS = [:title, :slug, :description, :status, :brand_id, { category_ids: [] }].freeze
 
     def index
-      scope = Product.includes(:brand, :variants, :categories)
+      scope = Product.with_images.includes(:brand, :variants, :categories)
       scope = scope.where(status: params[:status]) if params[:status]
       scope = scope.where(brand: Brand.find(params[:brand_id])) if params[:brand_id]
       if params[:category_id]
@@ -19,7 +19,7 @@ module Admin
     end
 
     def show
-      render json: { product: product_json(Product.find(params[:id])) }
+      render json: { product: product_json(Product.with_images.find(params[:id])) }
     end
 
     def create

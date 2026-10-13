@@ -67,6 +67,48 @@ CREATE TABLE platform.admins (
 
 
 --
+-- Name: active_storage_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.active_storage_attachments (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    name character varying NOT NULL,
+    record_type character varying NOT NULL,
+    record_id uuid NOT NULL,
+    blob_id uuid NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
+-- Name: active_storage_blobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.active_storage_blobs (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    key character varying NOT NULL,
+    filename character varying NOT NULL,
+    content_type character varying,
+    metadata text,
+    service_name character varying NOT NULL,
+    byte_size bigint NOT NULL,
+    checksum character varying,
+    created_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
+-- Name: active_storage_variant_records; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.active_storage_variant_records (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    blob_id uuid NOT NULL,
+    variation_digest character varying NOT NULL
+);
+
+
+--
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -140,6 +182,21 @@ CREATE TABLE public.product_categorizations (
 
 
 --
+-- Name: product_images; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_images (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    alt text,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: product_variants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -160,6 +217,7 @@ CREATE TABLE public.product_variants (
     track_stock boolean DEFAULT true NOT NULL,
     stock_quantity integer DEFAULT 0 NOT NULL,
     allow_oversell boolean DEFAULT false NOT NULL,
+    image_id uuid,
     CONSTRAINT product_variants_compare_at_above_price CHECK ((compare_at_price_cents > price_cents)),
     CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0))
 );
@@ -376,6 +434,30 @@ ALTER TABLE ONLY platform.admins
 
 
 --
+-- Name: active_storage_attachments active_storage_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.active_storage_attachments
+    ADD CONSTRAINT active_storage_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: active_storage_blobs active_storage_blobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.active_storage_blobs
+    ADD CONSTRAINT active_storage_blobs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: active_storage_variant_records active_storage_variant_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.active_storage_variant_records
+    ADD CONSTRAINT active_storage_variant_records_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: ar_internal_metadata ar_internal_metadata_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -413,6 +495,14 @@ ALTER TABLE ONLY public.login_attempts
 
 ALTER TABLE ONLY public.product_categorizations
     ADD CONSTRAINT product_categorizations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: product_images product_images_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_images
+    ADD CONSTRAINT product_images_pkey PRIMARY KEY (id);
 
 
 --
@@ -556,6 +646,34 @@ CREATE UNIQUE INDEX idx_on_tenant_id_category_id_product_id_2d20c5b4a1 ON public
 
 
 --
+-- Name: index_active_storage_attachments_on_blob_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_active_storage_attachments_on_blob_id ON public.active_storage_attachments USING btree (blob_id);
+
+
+--
+-- Name: index_active_storage_attachments_uniqueness; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_active_storage_attachments_uniqueness ON public.active_storage_attachments USING btree (record_type, record_id, name, blob_id);
+
+
+--
+-- Name: index_active_storage_blobs_on_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_active_storage_blobs_on_key ON public.active_storage_blobs USING btree (key);
+
+
+--
+-- Name: index_active_storage_variant_records_uniqueness; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_active_storage_variant_records_uniqueness ON public.active_storage_variant_records USING btree (blob_id, variation_digest);
+
+
+--
 -- Name: index_brands_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -623,6 +741,20 @@ CREATE INDEX index_product_categorizations_on_product_id ON public.product_categ
 --
 
 CREATE INDEX index_product_categorizations_on_tenant_id ON public.product_categorizations USING btree (tenant_id);
+
+
+--
+-- Name: index_product_images_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_images_on_tenant_id ON public.product_images USING btree (tenant_id);
+
+
+--
+-- Name: index_product_images_on_tenant_id_and_product_id_and_position; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_images_on_tenant_id_and_product_id_and_position ON public.product_images USING btree (tenant_id, product_id, "position");
 
 
 --
@@ -868,6 +1000,14 @@ ALTER TABLE ONLY public.tenant_domains
 
 
 --
+-- Name: product_images fk_rails_1c991d3be6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_images
+    ADD CONSTRAINT fk_rails_1c991d3be6 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
 -- Name: shoppers fk_rails_20ad1531ba; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -905,6 +1045,14 @@ ALTER TABLE ONLY public.product_categorizations
 
 ALTER TABLE ONLY public.shopper_sessions
     ADD CONSTRAINT fk_rails_5315be07a5 FOREIGN KEY (shopper_id) REFERENCES public.shoppers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_images fk_rails_53ddd438fd; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_images
+    ADD CONSTRAINT fk_rails_53ddd438fd FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -956,11 +1104,35 @@ ALTER TABLE ONLY public.product_categorizations
 
 
 --
+-- Name: active_storage_variant_records fk_rails_993965df05; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.active_storage_variant_records
+    ADD CONSTRAINT fk_rails_993965df05 FOREIGN KEY (blob_id) REFERENCES public.active_storage_blobs(id);
+
+
+--
+-- Name: product_variants fk_rails_b17366ce08; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_variants
+    ADD CONSTRAINT fk_rails_b17366ce08 FOREIGN KEY (image_id) REFERENCES public.product_images(id) ON DELETE SET NULL;
+
+
+--
 -- Name: staff_sessions fk_rails_b69a960ef4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.staff_sessions
     ADD CONSTRAINT fk_rails_b69a960ef4 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE CASCADE;
+
+
+--
+-- Name: active_storage_attachments fk_rails_c3b3935057; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.active_storage_attachments
+    ADD CONSTRAINT fk_rails_c3b3935057 FOREIGN KEY (blob_id) REFERENCES public.active_storage_blobs(id);
 
 
 --
@@ -1059,6 +1231,12 @@ ALTER TABLE public.login_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_categorizations ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: product_images; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.product_images ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: product_variants; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1145,6 +1323,13 @@ CREATE POLICY tenant_isolation ON public.login_attempts USING ((tenant_id = (NUL
 --
 
 CREATE POLICY tenant_isolation ON public.product_categorizations USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: product_images tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.product_images USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -1256,6 +1441,8 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013120100'),
+('20261013120000'),
 ('20261012140000'),
 ('20261012130000'),
 ('20261012120300'),

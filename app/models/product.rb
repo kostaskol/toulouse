@@ -9,11 +9,14 @@ class Product < ApplicationRecord
   belongs_to :brand, optional: true
   has_many :variants, -> { order(:id) }, inverse_of: :product, index_errors: true
   has_many :active_variants, -> { active.order(:id) }, class_name: "Product::Variant"
+  has_many :images, -> { order(:position, :id) }, inverse_of: :product
   has_many :categorizations, dependent: :destroy
   # Destroys the links one by one, so the audit log records each removal.
   has_many :categories, through: :categorizations, dependent: :destroy
 
   accepts_nested_attributes_for :variants
+
+  scope :with_images, -> { includes(images: { file_attachment: :blob }) }
 
   enum :status, { draft: 0, published: 1, archived: 2 }, validate: true
 
@@ -42,6 +45,41 @@ class Product < ApplicationRecord
       variant.option_values = variant.option_values.slice(*renames.keys).transform_keys(renames).merge(added)
     end
     save!
+  end
+
+  # Stores an uploaded image as the product's last.
+  #
+  # @param io [IO] the raw upload
+  # @return [Product::Image]
+  def add_image!(io)
+    Tempfile.create(binmode: true) do |file|
+      # One byte over the cap is enough for validation to refuse it.
+      IO.copy_stream(io, file, Product::Image::MAX_BYTES + 1)
+      file.rewind
+      image = Product::Image.new(product: self, file: Product::Image.attachable(file, slug))
+      # Locked, so two uploads cannot both take the last slot.
+      with_lock { image.save! }
+      image
+    rescue StandardError
+      # The file goes to storage after commit. A failed upload must not leave a row with no file.
+      image.destroy! if image&.persisted?
+      raise
+    end
+  end
+
+  # Sets the display order of the product's images.
+  #
+  # @param ids [Array<String>] every image id, in display order
+  def order_images!(ids)
+    ids = Array(ids).map { |id| id.to_s.downcase }
+    unless ids.sort == images.map(&:id).sort
+      errors.add(:image_ids, :invalid)
+      raise ActiveRecord::RecordInvalid, self
+    end
+
+    transaction do
+      images.each { |image| image.update!(position: ids.index(image.id)) }
+    end
   end
 
   # Replaces the product's categories. An id outside the tenant fails validation.

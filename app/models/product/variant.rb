@@ -8,6 +8,7 @@ class Product::Variant < ApplicationRecord
   attr_accessor :stock_reason
 
   belongs_to :product, inverse_of: :variants
+  belongs_to :image, class_name: "Product::Image", optional: true
 
   enum :vat_class, { standard: 0, reduced: 1, super_reduced: 2 }, validate: true
   enum :status, { active: 0, archived: 1 }, validate: true
@@ -24,6 +25,7 @@ class Product::Variant < ApplicationRecord
   validate :combination_unique
   validate :within_limit, on: :create
   validate :keeps_published_product_sellable
+  validate :image_of_product
 
   def available?
     !track_stock || allow_oversell || stock_quantity.positive?
@@ -71,6 +73,13 @@ class Product::Variant < ApplicationRecord
 
   def within_limit
     errors.add(:base, :too_many_variants, count: MAX_PER_PRODUCT) if siblings.size >= MAX_PER_PRODUCT
+  end
+
+  # A malformed id casts to nil, so the raw value tells a bad id from no id.
+  def image_of_product
+    return if image_id_before_type_cast.blank? || image&.product_id == product_id
+
+    errors.add(:image_id, :invalid)
   end
 
   def keeps_published_product_sellable

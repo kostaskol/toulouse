@@ -22,6 +22,16 @@ RSpec.describe "Storefront products", type: :request do
     expect(body["variants"].first.keys).not_to include("status", "vat_class", "mpn")
   end
 
+  it "shows images in display order, and which one each variant uses" do
+    images = as_tenant(tenant) { create_list(:product_image, 2, product:) }
+    as_tenant(tenant) { product.variants.first.update!(image: images.last) }
+    get "/v1/storefront/products/#{product.slug}", headers: headers
+
+    body = response.parsed_body["product"]
+    expect(body["images"].pluck("id")).to eq(images.map(&:id))
+    expect(body["variants"].first["image_id"]).to eq(images.last.id)
+  end
+
   it "tells whether each variant can be bought" do
     as_tenant(tenant) { create(:product_variant, product:, track_stock: false) }
     get "/v1/storefront/products/#{product.slug}", headers: headers

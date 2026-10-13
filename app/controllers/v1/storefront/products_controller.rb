@@ -15,7 +15,7 @@ module V1
 
       private
 
-      def catalog = Product.published.includes(:brand, :active_variants)
+      def catalog = Product.published.with_images.includes(:brand, :active_variants)
     end
   end
 end

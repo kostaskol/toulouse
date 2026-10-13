@@ -1,7 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "Tenant resolution on every route", type: :request do
-  def self.tenantless = ["rails/health#show"]
+  # Media serves public product images to <img> tags, which send no credential.
+  def self.tenantless = ["rails/health#show", "active_storage/representations/proxy#show"]
   # Sign-in endpoints, which take credentials rather than a session.
   def self.sessionless = [
     "admin/sessions#create", "admin/password_resets#create", "admin/password_resets#update", "admin/invites#update",
