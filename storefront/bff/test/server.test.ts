@@ -1,5 +1,6 @@
 import { after, before, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { createBff, SESSION_COOKIE, type Config } from "../server.ts";
@@ -274,5 +275,18 @@ describe("origin", () => {
       assert.equal(JSON.parse(res.body).errors[0].code, "forbidden_origin");
       assert.equal(recorded, undefined);
     }
+  });
+});
+
+describe("browser library", () => {
+  test("serves the library to the storefront without calling the API", async () => {
+    const res = await call(port, "/client.js", { headers: { origin: STOREFRONT_ORIGIN } });
+
+    assert.equal(res.status, 200);
+    assert.equal(res.headers["content-type"], "text/javascript");
+    assert.equal(res.headers["cache-control"], "no-cache");
+    assert.equal(res.headers["access-control-allow-origin"], STOREFRONT_ORIGIN);
+    assert.equal(res.body, readFileSync(new URL("../client.js", import.meta.url), "utf8"));
+    assert.equal(recorded, undefined);
   });
 });

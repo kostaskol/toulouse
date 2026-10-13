@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import http from "node:http";
 
 export type Config = {
@@ -21,6 +22,8 @@ const SESSION_ROUTES: Record<string, SessionRoute> = {
   "DELETE /session": "clear"
 };
 
+const CLIENT_PATH = "/client.js";
+const CLIENT_SCRIPT = readFileSync(new URL("./client.js", import.meta.url));
 const COOKIE_ATTRIBUTES = "Path=/; Secure; HttpOnly; SameSite=Lax";
 const CLEARED_SESSION_COOKIE = `${SESSION_COOKIE}=; ${COOKIE_ATTRIBUTES}; Expires=${new Date(0).toUTCString()}`;
 const UPSTREAM_TIMEOUT_MS = 10_000;
@@ -74,6 +77,12 @@ async function handle(config: Config, req: http.IncomingMessage, res: http.Serve
   const url = new URL(req.url ?? "/", "http://bff");
   // Rails ignores a trailing slash, so it would otherwise reach a session route the table misses.
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
+
+  if (method === "GET" && pathname === CLIENT_PATH) {
+    // no-cache, so a BFF deploy reaches browsers on their next load.
+    res.writeHead(200, { "content-type": "text/javascript", "cache-control": "no-cache" }).end(CLIENT_SCRIPT);
+    return;
+  }
 
   let upstream: Upstream;
   try {

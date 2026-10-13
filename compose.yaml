@@ -40,7 +40,8 @@ services:
     image: node:24-alpine
     init: true
     working_dir: /bff
-    command: ["node", "--watch", "main.ts"]
+    # The whole folder, since the library file is read rather than imported.
+    command: ["node", "--watch-path=.", "main.ts"]
     ports:
       - "4000:4000"
     environment:
@@ -54,6 +55,22 @@ services:
       - ./storefront/bff:/bff
     depends_on:
       - api
+    networks:
+      - toulouse
+
+  storefront:
+    image: node:24-alpine
+    init: true
+    working_dir: /demo
+    command: ["sh", "-c", "npm ci && npm run dev"]
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./storefront/demo:/demo
+      # Kept apart from the host's install, whose native packages are built for another OS.
+      - /demo/node_modules
+    depends_on:
+      - bff
     networks:
       - toulouse
 
