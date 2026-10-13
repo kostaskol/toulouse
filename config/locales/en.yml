@@ -41,3 +41,5 @@ en:
       too_large: "must be at most %{count} MB"
       too_many_pixels: "must be at most %{count} megapixels"
       too_many_images: "would exceed %{count} images for the product"
+      product_cell_conflict: "differs from the first row of this handle"
+      option_names_mismatch: "differ from the existing product's options"

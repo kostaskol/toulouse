@@ -16,6 +16,15 @@ RSpec.describe "Tenant admin product variants", type: :request do
     expect(response.parsed_body.dig("variant", "option_values")).to eq(values)
   end
 
+  it "refuses a price past the column's limit" do
+    patch "/admin/products/#{product.id}/variants/#{variant.id}",
+          params: { price_cents: Product::Variant::MAX_INTEGER + 1 }, headers:, as: :json
+
+    expect(response).to have_http_status(:unprocessable_content)
+    expect(response.parsed_body["errors"])
+      .to include(include("code" => "less_than_or_equal_to", "field" => "price_cents"))
+  end
+
   it "refuses to archive the last active variant of a published product" do
     patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { status: "archived" }, headers:, as: :json
 

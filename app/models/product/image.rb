@@ -35,6 +35,12 @@ class Product::Image < ApplicationRecord
 
   before_create { self.position = product.images.maximum(:position).to_i + 1 }
 
+  # Old shops keep Greek letters and spaces in file names, which URI refuses unless encoded.
+  #
+  # @param url [String]
+  # @return [String]
+  def self.encode_url(url) = url.gsub(/[^\x21-\x7E]+/) { |part| ERB::Util.url_encode(part) }
+
   # Builds the attachable for an uploaded file. libvips reads the type and size
   # from the header alone, so nothing decodes before validation checks the
   # limits.
