@@ -2,7 +2,11 @@
 import { computed } from "vue";
 import { can, session } from "../session.js";
 
-const SECTIONS = [];
+const SECTIONS = [
+  { to: "/brands", label: "Μάρκες", text: "Οι μάρκες των προϊόντων." },
+  { to: "/categories", label: "Κατηγορίες", text: "Το δέντρο κατηγοριών του καταστήματος." },
+  { to: "/specifications", label: "Προδιαγραφές", text: "Χαρακτηριστικά προϊόντων και φίλτρα." }
+];
 
 const sections = computed(() => SECTIONS.filter((section) => !section.permission || can(section.permission)));
 </script>

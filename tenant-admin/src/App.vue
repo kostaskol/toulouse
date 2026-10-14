@@ -7,7 +7,10 @@ import { notice } from "./notice.js";
 import { can, session, signOut } from "./session.js";
 
 const NAV = [
-  { to: "/", label: "Αρχική" }
+  { to: "/", label: "Αρχική" },
+  { to: "/brands", label: "Μάρκες" },
+  { to: "/categories", label: "Κατηγορίες" },
+  { to: "/specifications", label: "Προδιαγραφές" }
 ];
 
 const route = useRoute();
