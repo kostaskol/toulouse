@@ -26,11 +26,17 @@ class Category < ApplicationRecord
   end
 
   # @return [Array<String>] this category's id and the ids of every category below it
-  def subtree_ids
+  def subtree_ids = self.class.subtree_ids([id])
+
+  # @param ids [Array<String>]
+  # @return [Array<String>] these ids and the ids of every category below them
+  def self.subtree_ids(ids)
+    return [] if ids.empty?
+
     # UNION rather than UNION ALL, so two concurrent moves that form a loop still end.
-    self.class.connection.select_values(self.class.sanitize_sql([<<~SQL, id]))
+    connection.select_values(sanitize_sql([<<~SQL, ids]))
       WITH RECURSIVE subtree(id) AS (
-        SELECT ?::uuid
+        SELECT unnest(ARRAY[?]::uuid[])
         UNION
         SELECT categories.id FROM categories JOIN subtree ON categories.parent_id = subtree.id
       )

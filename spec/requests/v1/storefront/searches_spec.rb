@@ -44,6 +44,58 @@ RSpec.describe "Storefront search", type: :request do
     expect(response.parsed_body["products"].pluck("id")).to eq([product.id])
   end
 
+  describe "filters and facets" do
+    it "narrows the result and counts facets over the whole match" do
+      brand = as_tenant(tenant) { create(:brand) }
+      branded = as_tenant(tenant) { create(:product, :published, title: "Παπούτσια", brand:) }
+      as_tenant(tenant) { create(:product, :published, title: "Παπούτσια") }
+      search("παπούτσια", filter: { brands: [brand.slug] })
+
+      expect(response.parsed_body["products"].pluck("id")).to eq([branded.id])
+      expect(response.parsed_body["facets"]).to include("brands" => [brand.slice(:name, :slug).merge("count" => 1)])
+      expect(response.parsed_body["facets"]["price"]).to include("min", "max", "ranges")
+    end
+
+    it "counts facets for a query that holds a question mark" do
+      product = as_tenant(tenant) { create(:product, :published) }
+      as_tenant(tenant) { product.variants.first.update!(sku: "#{product.slug}?") }
+      search(product.variants.first.sku)
+
+      expect(response.parsed_body["facets"]["price"]["min"]).to eq(product.variants.first.price_cents)
+    end
+
+    it "leaves facets off a later page" do
+      as_tenant(tenant) { create_list(:product, 2, :published, title: "Παπούτσια") }
+      search("παπούτσια", limit: 1)
+      search("παπούτσια", limit: 1, after: response.parsed_body.dig("meta", "next_cursor"))
+
+      expect(response.parsed_body.keys).to eq(["products", "meta"])
+    end
+
+    it "stays exact when a filter empties the result" do
+      as_tenant(tenant) { create(:product, :published, title: "Παπούτσια") }
+      search("παπούτσια", filter: { brands: [SecureRandom.hex(4)] })
+
+      expect(response.parsed_body["products"]).to be_empty
+      expect(response.parsed_body.dig("meta", "match")).to eq("exact")
+    end
+
+    it "searches products rather than answering with a category when filtered" do
+      as_tenant(tenant) { create(:category, name: "Παπούτσια") }
+      search("παπούτσια", filter: { available: "true" })
+
+      expect(response.parsed_body).to include("products" => [])
+    end
+
+    it "refuses a malformed filter" do
+      search("παπούτσια", filter: "all")
+
+      expect(response.parsed_body["errors"]).to eq([{
+        "code" => "invalid_filter", "field" => "filter", "message" => V1::Storefront::FiltersProducts::FAILURE.message
+      }])
+    end
+  end
+
   describe "category redirect" do
     let!(:category) { as_tenant(tenant) { create(:category, name: "Παπούτσια") } }
 

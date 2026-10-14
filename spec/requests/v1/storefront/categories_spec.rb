@@ -33,6 +33,34 @@ RSpec.describe "Storefront categories", type: :request do
       expect(response.parsed_body["products"].pluck("id")).to eq([product.id])
     end
 
+    it "narrows by filter and counts facets below the category" do
+      branded = as_tenant(tenant) { create(:product, :published, brand: create(:brand), category_ids: [child.id]) }
+      as_tenant(tenant) { create(:product, :published, category_ids: [root.id]) }
+      get "/v1/storefront/categories/#{root.slug}/products",
+          params: { filter: { brands: [branded.brand.slug] }, limit: 1 }, headers: headers
+
+      expect(response.parsed_body["products"].pluck("id")).to eq([branded.id])
+      expect(response.parsed_body["facets"]["categories"].pluck("id")).to eq([child.id])
+      expect(response.parsed_body["facets"]["brands"].pluck("count")).to eq([1])
+    end
+
+    it "leaves facets off a later page" do
+      product = as_tenant(tenant) { create(:product, :published, category_ids: [root.id]) }
+      get "/v1/storefront/categories/#{root.slug}/products", params: { after: product.id }, headers: headers
+
+      expect(response.parsed_body.keys).to eq(["products", "meta"])
+    end
+
+    it "refuses a malformed filter" do
+      get "/v1/storefront/categories/#{root.slug}/products", params: { filter: { price_min: "-1" } }, headers: headers
+
+      expect(response).to have_http_status(:unprocessable_content)
+      expect(response.parsed_body["errors"]).to eq([{
+        "code" => "invalid_filter", "field" => "filter[price_min]",
+        "message" => V1::Storefront::FiltersProducts::FAILURE.message
+      }])
+    end
+
     it "answers not found for an unknown category" do
       get "/v1/storefront/categories/#{root.slug}-missing/products", headers: headers
 

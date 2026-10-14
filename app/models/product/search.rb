@@ -59,25 +59,36 @@ class Product::Search
 
   # @param after [String, nil] a next_cursor from an earlier page
   # @param limit [Integer]
+  # @param filter [Product::Filter, nil]
   # @return [Array(Array<Product>, String, nil, String)] the page, the next cursor and the match
-  def page(after:, limit:)
-    match, *key = after ? decode(after) : ["exact"]
-    products, next_cursor = page_of(match, key.presence, limit)
-    if products.empty? && after.nil?
-      match = "fuzzy"
-      products, next_cursor = page_of(match, nil, limit)
-    end
-
+  def page(after:, limit:, filter: nil)
+    match, *key = after ? decode(after) : [self.match]
+    products, next_cursor = page_of(match, key.presence, limit, filter)
     [products, next_cursor, match]
+  end
+
+  # Full text, unless it finds nothing. Filters play no part, so ticking one never swaps in fuzzy results.
+  #
+  # @return [String]
+  def match
+    @match ||= terms.any? && @products.where(exact.last).exists? ? "exact" : "fuzzy"
+  end
+
+  # @return [ActiveRecord::Relation<Product>] every product the query matches, before filters
+  def matches
+    return @products.none if terms.empty?
+
+    @products.where(condition(match).last)
   end
 
   private
 
-  def page_of(match, key, limit)
+  def page_of(match, key, limit, filter)
     return [[], nil] if terms.empty?
 
-    code, rank, condition = match == "exact" ? exact : fuzzy
-    scope = @products.where(condition).select("products.*", "#{code} AS search_code", "#{rank} AS search_rank")
+    code, rank, matched = condition(match)
+    scope = @products.where(matched).select("products.*", "#{code} AS search_code", "#{rank} AS search_rank")
+    scope = filter.apply(scope) if filter
     # Bound apart, because the query quoted inside code and rank may hold a ? of its own.
     if key
       bound = Product.sanitize_sql(["?, ?::real, ?::uuid", *key])
@@ -88,6 +99,12 @@ class Product::Search
     last = records[limit - 1]
     [records.first(limit), (encode(match, last) if records.size > limit)]
   end
+
+  # Picks the SQL for one way of matching.
+  #
+  # @param match [String]
+  # @return [Array(String, String, String)] the code hit flag, the rank and the match condition
+  def condition(match) = match == "exact" ? exact : fuzzy
 
   def exact
     hits = @variants.where(sku: @query).or(@variants.where(barcode: @query)).or(@variants.where(mpn: @query))
