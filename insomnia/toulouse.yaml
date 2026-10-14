@@ -271,7 +271,9 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 9
-          description: Creates a draft. A product with options sends option_values on each variant.
+          description: >-
+            Creates a draft. A product with options sends option_values on each variant. specifications maps a
+            name to its values, on the product and on a variant as an override.
         method: POST
         body:
           mimeType: application/json
@@ -279,6 +281,7 @@ collection:
             {
               "title": "{% prompt 'Title', '', '', '', false, false %}",
               "option_names": [],
+              "specifications": {},
               "variants": [
                 {
                   "price_cents": {% prompt 'Price in cents', 'VAT included', '', '', false, false %},
@@ -305,7 +308,7 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 10
-          description: Also takes title, slug, description, brand_id and category_ids.
+          description: Also takes title, slug, description, brand_id, category_ids and specifications.
         method: PATCH
         body:
           mimeType: application/json
@@ -393,7 +396,9 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 13
-          description: Also takes sku, barcode, mpn, prices, vat_class, option_values, stock settings and image_id.
+          description: >-
+            Also takes sku, barcode, mpn, prices, vat_class, option_values, stock settings, image_id and
+            specifications, which override the product's.
         method: PATCH
         body:
           mimeType: application/json
@@ -705,6 +710,97 @@ collection:
           isPrivate: false
           sortKey: 22
           description: Refused while categories sit below it. Products stay.
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/specifications"
+        name: List specifications
+        meta:
+          id: req_eab859135aee5b4f828cc3bd1fb16f9d
+          created: 1792000000000
+          modified: 1792000000000
+          isPrivate: false
+          sortKey: 22.1
+          description: In display order.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/specifications"
+        name: Create specification
+        meta:
+          id: req_8b0b9e81381923cd673e55acf5bd681f
+          created: 1792000000000
+          modified: 1792000000000
+          isPrivate: false
+          sortKey: 22.2
+          description: Also takes position, facet and mode. Products create missing ones by name too.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "name": "{% prompt 'Name', '', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/specifications/{{ _.specification_id }}"
+        name: Update specification
+        meta:
+          id: req_52d7fe5f4a7ad2a08a606d7eb9877886
+          created: 1792000000000
+          modified: 1792000000000
+          isPrivate: false
+          sortKey: 22.3
+          description: Also takes name and position. mode is any or all.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "facet": true,
+              "mode": "{% prompt 'Mode', 'any or all', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/specifications/{{ _.specification_id }}"
+        name: Delete specification
+        meta:
+          id: req_15e7a6504fda98c6cd9bf57639b9cef7
+          created: 1792000000000
+          modified: 1792000000000
+          isPrivate: false
+          sortKey: 22.4
+          description: Strips the spec from every product and variant.
         method: DELETE
         settings:
           renderRequestBody: true
@@ -1284,8 +1380,8 @@ collection:
           - name: filter[price_max]
             value: "{{ _.filter_price_max }}"
             disabled: true
-          - name: filter[options][{{ _.filter_option_key }}][]
-            value: "{{ _.filter_option_value }}"
+          - name: filter[attributes][{{ _.filter_attribute_key }}][]
+            value: "{{ _.filter_attribute_value }}"
             disabled: true
           - name: filter[available]
             value: "true"
@@ -1327,8 +1423,8 @@ collection:
           - name: filter[price_max]
             value: "{{ _.filter_price_max }}"
             disabled: true
-          - name: filter[options][{{ _.filter_option_key }}][]
-            value: "{{ _.filter_option_value }}"
+          - name: filter[attributes][{{ _.filter_attribute_key }}][]
+            value: "{{ _.filter_attribute_value }}"
             disabled: true
           - name: filter[available]
             value: "true"
@@ -1378,6 +1474,7 @@ environments:
     image_id: "{% prompt 'Image id', 'From Show product', '', '', false, false %}"
     brand_id: "{% prompt 'Brand id', 'From List brands', '', '', false, false %}"
     category_id: "{% prompt 'Category id', 'From List categories', '', '', false, false %}"
+    specification_id: "{% prompt 'Specification id', 'From List specifications', '', '', false, false %}"
     product_slug: "{% prompt 'Product slug', 'From Products', '', '', false, false %}"
     category_slug: "{% prompt 'Category slug', 'From Categories', '', '', false, false %}"
     product_import_id: "{% prompt 'Import id', 'From List product imports', '', '', false, false %}"
@@ -1386,5 +1483,5 @@ environments:
     filter_brand_slug: "{% prompt 'Brand slug', 'From facets.brands', '', '', false, false %}"
     filter_price_min: "{% prompt 'Lowest price in cents', 'From facets.price', '', '', false, false %}"
     filter_price_max: "{% prompt 'Highest price in cents', 'From facets.price', '', '', false, false %}"
-    filter_option_key: "{% prompt 'Option key', 'A group key from facets.options', '', '', false, false %}"
-    filter_option_value: "{% prompt 'Option value key', 'A value key from that group', '', '', false, false %}"
+    filter_attribute_key: "{% prompt 'Attribute key', 'A group key from facets.attributes', '', '', false, false %}"
+    filter_attribute_value: "{% prompt 'Attribute value key', 'A value key from that group', '', '', false, false %}"
