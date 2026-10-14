@@ -94,7 +94,7 @@ main.container { min-height: 70vh; padding-bottom: 64px; }
   border-radius: var(--radius); background: #fff; font: inherit; cursor: pointer;
 }
 .option-value.selected { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
-.option-value.unavailable { color: var(--muted); text-decoration: line-through; }
+.option-value:disabled { color: var(--muted); text-decoration: line-through; cursor: not-allowed; }
 .stock-out { color: var(--sale); font-weight: 500; }
 .description { margin-top: 32px; border-top: 1px solid var(--line); padding-top: 16px; }
 .specifications { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; margin: 0; }
