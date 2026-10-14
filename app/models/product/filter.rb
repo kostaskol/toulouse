@@ -206,7 +206,8 @@ class Product::Filter
     end
     counts = Product.connection.select_rows("SELECT #{counts.join(", ")} FROM (#{prices}) AS prices").first
     ranges = ranges.zip(counts).filter_map { |(low, high), count| { min: low, max: high, count: } if count.positive? }
-    ranges.size > 1 ? ranges : []
+    # A range of one product only repeats a price the shopper already sees.
+    ranges.size > 1 && ranges.none? { |range| range[:count] == 1 } ? ranges : []
   end
 
   # Rounds to a 1, 2 or 5 step in whole euros, about a fifth of the amount.
