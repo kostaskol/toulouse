@@ -1,16 +1,30 @@
 <script setup>
 import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { shop } from "../shop.js";
 import { findCategory, SHOP_NAME } from "../store.js";
+import { filteredPath, routeFilter } from "../filters.js";
+import FilterSidebar from "../components/FilterSidebar.vue";
 import ProductGrid from "../components/ProductGrid.vue";
 import NotFoundPage from "./NotFoundPage.vue";
 
 const props = defineProps({ slug: { type: String, required: true } });
 
+const router = useRouter();
+const filter = routeFilter(useRoute());
 const notFound = ref(false);
+const facets = ref(null);
 const category = computed(() => findCategory(props.slug));
 
 document.title = category.value ? `${category.value.name} · ${SHOP_NAME}` : SHOP_NAME;
+
+async function load(after) {
+  const body = await shop.listCategoryProducts(props.slug, { after, filter });
+  if (!after) facets.value = body.facets;
+  return body;
+}
+
+const applyFilter = (next) => router.push(filteredPath(`/categories/${props.slug}`, next));
 </script>
 
 <template>
@@ -22,6 +36,11 @@ document.title = category.value ? `${category.value.name} · ${SHOP_NAME}` : SHO
         {{ child.name }}
       </RouterLink>
     </nav>
-    <ProductGrid :load="(after) => shop.listCategoryProducts(slug, { after })" @not-found="notFound = true" />
+    <div class="filtered">
+      <FilterSidebar v-if="facets" :facets="facets" :filter="filter" @change="applyFilter" />
+      <div>
+        <ProductGrid :load="load" @not-found="notFound = true" />
+      </div>
+    </div>
   </template>
 </template>
