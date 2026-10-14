@@ -8,6 +8,8 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
     resource "/admin/*",
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head],
+      # The login form reads it to say how long an account stays locked.
+      expose: ["Retry-After"],
       credentials: true
   end
 end

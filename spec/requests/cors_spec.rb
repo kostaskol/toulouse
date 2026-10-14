@@ -18,6 +18,13 @@ RSpec.describe "CORS", type: :request do
     expect(response.headers["Access-Control-Allow-Credentials"]).to eq("true")
   end
 
+  it "lets the tenant admin origin read Retry-After" do
+    post "/admin/session", params: {}.to_json,
+                           headers: { "Origin" => admin_origin, "Content-Type" => "application/json" }
+
+    expect(response.headers["Access-Control-Expose-Headers"]).to include("Retry-After")
+  end
+
   it "admits no other origin" do
     preflight("/admin/session", "#{admin_origin}.evil")
 
