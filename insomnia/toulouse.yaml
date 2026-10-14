@@ -1267,8 +1267,29 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 10
-          description: Published products in the category and every category below it.
+          description: >-
+            Published products in the category and every category below it. The first page
+            carries facets. Enable a filter parameter to narrow the list; send the same filters with after.
         method: GET
+        parameters:
+          - name: filter[categories][]
+            value: "{{ _.filter_category_slug }}"
+            disabled: true
+          - name: filter[brands][]
+            value: "{{ _.filter_brand_slug }}"
+            disabled: true
+          - name: filter[price_min]
+            value: "{{ _.filter_price_min }}"
+            disabled: true
+          - name: filter[price_max]
+            value: "{{ _.filter_price_max }}"
+            disabled: true
+          - name: filter[options][{{ _.filter_option_key }}][]
+            value: "{{ _.filter_option_value }}"
+            disabled: true
+          - name: filter[available]
+            value: "true"
+            disabled: true
         headers:
           - name: X-Api-Key
             value: "{{ _.api_key }}"
@@ -1289,9 +1310,29 @@ collection:
           isPrivate: false
           sortKey: 11
           description: >-
-            Published products by relevance, or the category when the query names exactly one.
-            meta.match is fuzzy when only close matches were found.
+            Published products by relevance, or the category when an unfiltered query names exactly one.
+            meta.match is fuzzy when only close matches were found. The first page carries facets.
+            Enable a filter parameter to narrow the list; send the same filters with after.
         method: GET
+        parameters:
+          - name: filter[categories][]
+            value: "{{ _.filter_category_slug }}"
+            disabled: true
+          - name: filter[brands][]
+            value: "{{ _.filter_brand_slug }}"
+            disabled: true
+          - name: filter[price_min]
+            value: "{{ _.filter_price_min }}"
+            disabled: true
+          - name: filter[price_max]
+            value: "{{ _.filter_price_max }}"
+            disabled: true
+          - name: filter[options][{{ _.filter_option_key }}][]
+            value: "{{ _.filter_option_value }}"
+            disabled: true
+          - name: filter[available]
+            value: "true"
+            disabled: true
         headers:
           - name: X-Api-Key
             value: "{{ _.api_key }}"
@@ -1341,3 +1382,9 @@ environments:
     category_slug: "{% prompt 'Category slug', 'From Categories', '', '', false, false %}"
     product_import_id: "{% prompt 'Import id', 'From List product imports', '', '', false, false %}"
     search_query: "{% prompt 'Search query', 'Words, a SKU, a barcode or an MPN', '', 'search_query', false, true %}"
+    filter_category_slug: "{% prompt 'Category slug', 'From facets.categories', '', '', false, false %}"
+    filter_brand_slug: "{% prompt 'Brand slug', 'From facets.brands', '', '', false, false %}"
+    filter_price_min: "{% prompt 'Lowest price in cents', 'From facets.price', '', '', false, false %}"
+    filter_price_max: "{% prompt 'Highest price in cents', 'From facets.price', '', '', false, false %}"
+    filter_option_key: "{% prompt 'Option key', 'A group key from facets.options', '', '', false, false %}"
+    filter_option_value: "{% prompt 'Option value key', 'A value key from that group', '', '', false, false %}"

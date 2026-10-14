@@ -38,8 +38,16 @@ It is one ES module with no dependencies and no build step: `client.js`.
 | `listProducts({ limit, after })` | `GET /products` |
 | `getProduct(slug)` | `GET /products/<slug>` |
 | `listCategories()` | `GET /categories` |
-| `listCategoryProducts(slug, { limit, after })` | `GET /categories/<slug>/products` |
-| `search(query, { limit, after })` | `GET /search/<query>` |
+| `listCategoryProducts(slug, { limit, after, filter })` | `GET /categories/<slug>/products` |
+| `search(query, { limit, after, filter })` | `GET /search/<query>` |
+
+Helpers that make no request:
+
+| Function | Use |
+| --- | --- |
+| `filterPath(filter)` | Turns a filter into one URL path segment. The same filter always gives the same segment. |
+| `parseFilterPath(segment)` | Reads a filter back from a segment. Give it the segment as it is in the URL. |
+| `categoryLeaves(categories)` | Returns the categories with no children from `facets.categories`. |
 
 ## Config
 

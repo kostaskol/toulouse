@@ -35,6 +35,8 @@ class Product::Variant < ApplicationRecord
 
   after_save :refresh_product_search, if: -> { saved_change_to_option_values? || saved_change_to_status? }
 
+  scope :available, -> { where(track_stock: false).or(where(allow_oversell: true)).or(where(stock_quantity: 1..)) }
+
   def available?
     !track_stock || allow_oversell || stock_quantity.positive?
   end

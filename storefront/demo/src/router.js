@@ -13,9 +13,9 @@ export const router = createRouter({
   scrollBehavior: () => ({ top: 0 }),
   routes: [
     { path: "/", component: HomePage },
-    { path: "/categories/:slug", component: CategoryPage, props: true },
+    { path: "/categories/:slug/:filters?", component: CategoryPage, props: ({ params }) => ({ slug: params.slug }) },
     { path: "/products/:slug", component: ProductPage, props: true },
-    { path: "/search/:query", component: SearchPage, props: true },
+    { path: "/search/:query/:filters?", component: SearchPage, props: ({ params }) => ({ query: params.query }) },
     { path: "/login", component: LoginPage },
     { path: "/signup", component: SignupPage },
     { path: "/forgot-password", component: ForgotPasswordPage },
