@@ -12,10 +12,6 @@ module V1
       def show
         render json: { product: product_json(catalog.find_by!(slug: params[:slug])) }
       end
-
-      private
-
-      def catalog = Product.published.with_images.includes(:brand, :active_variants)
     end
   end
 end

@@ -33,6 +33,8 @@ class Product::Variant < ApplicationRecord
   validate :keeps_published_product_sellable
   validate :image_of_product
 
+  after_save :refresh_product_search, if: -> { saved_change_to_option_values? || saved_change_to_status? }
+
   def available?
     !track_stock || allow_oversell || stock_quantity.positive?
   end
@@ -52,6 +54,10 @@ class Product::Variant < ApplicationRecord
   end
 
   private
+
+  def refresh_product_search
+    Product::Search.refresh(product) unless product.saving?
+  end
 
   # Read from memory, so a product saved with its variants sees the unsaved ones.
   def siblings

@@ -31,11 +31,14 @@ module Paginates
     after = params[:after]
     raise InvalidCursor if after && !UUID.match?(after.to_s)
 
-    limit = Integer(params[:limit], exception: false)&.clamp(1, MAX_LIMIT) || DEFAULT_LIMIT
     scope = order == :desc ? scope.where(id: ...after) : scope.where.not(id: ..after) if after
     # One row past the page tells whether another page exists.
-    records = scope.reorder(id: order).limit(limit + 1).to_a
+    records = scope.reorder(id: order).limit(page_limit + 1).to_a
 
-    [records.first(limit), (records[limit - 1].id if records.size > limit)]
+    [records.first(page_limit), (records[page_limit - 1].id if records.size > page_limit)]
+  end
+
+  def page_limit
+    Integer(params[:limit], exception: false)&.clamp(1, MAX_LIMIT) || DEFAULT_LIMIT
   end
 end

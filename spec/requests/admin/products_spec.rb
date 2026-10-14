@@ -95,6 +95,41 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response.parsed_body["products"].size).to eq(products.size)
     end
+
+    it "searches every status, within the other filters" do
+      as_tenant(tenant) { products.first.update!(status: "archived") }
+      get "/admin/products", params: { q: products.first.title, status: "archived" }, headers: headers
+
+      expect(response.parsed_body["products"].pluck("id")).to eq([products.first.id])
+      expect(response.parsed_body["meta"]).to eq("next_cursor" => nil, "match" => "exact")
+    end
+
+    it "finds a product by the SKU of an archived variant" do
+      as_tenant(tenant) do
+        create(:product_variant, product: products.first).update!(sku: products.first.id, status: "archived")
+      end
+      get "/admin/products", params: { q: products.first.id }, headers: headers
+
+      expect(response.parsed_body["products"].pluck("id")).to eq([products.first.id])
+    end
+
+    it "lists every product when the query is blank" do
+      get "/admin/products", params: { q: " " }, headers: headers
+
+      expect(response.parsed_body["products"].size).to eq(products.size)
+    end
+
+    it "refuses a q sent as an array" do
+      get "/admin/products", params: { q: ["π"] }, headers: headers
+
+      expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "blank", "field" => "q"))
+    end
+
+    it "refuses a query that is too short" do
+      get "/admin/products", params: { q: "π" }, headers: headers
+
+      expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "query_too_short", "field" => "q"))
+    end
   end
 
   describe "GET /admin/products/:id" do

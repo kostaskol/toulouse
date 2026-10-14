@@ -15,6 +15,11 @@ class Category < ApplicationRecord
   validate :parent_in_tenant
   validate :parent_outside_subtree, if: -> { persisted? && parent_id_changed? }
 
+  # Before the links go, so their products are known.
+  before_destroy(prepend: true) { @product_ids = categorizations.pluck(:product_id) }
+  after_update_commit :refresh_product_search, if: -> { saved_change_to_name? || saved_change_to_parent_id? }
+  after_destroy_commit { ProductSearchRefreshJob.perform_later(@product_ids) if @product_ids.any? }
+
   # @return [Hash{String, nil => Array<Category>}] siblings in menu order, keyed by parent id
   def self.by_parent
     order(:position, :id).group_by(&:parent_id)
@@ -33,9 +38,41 @@ class Category < ApplicationRecord
     SQL
   end
 
+  # The one category whose name means the same words, ignoring accents, case and inflection.
+  #
+  # @param terms [Array<String>]
+  # @return [Category, nil] nil when none or several match
+  def self.named(terms)
+    return if terms.empty?
+
+    same_words = "strip(to_tsvector('search', name)) = strip(to_tsvector('search', ?))"
+    matches = where(same_words, terms.join(" ")).limit(2).to_a
+    matches.first if matches.size == 1
+  end
+
+  # @param ids [Array<String>]
+  # @return [Array<String>] the names of these categories and of every category above them
+  def self.names_with_ancestors(ids)
+    connection.select_values(sanitize_sql([<<~SQL, ids]))
+      WITH RECURSIVE ancestors(id, parent_id, name) AS (
+        SELECT id, parent_id, name FROM categories WHERE id IN (?)
+        UNION
+        SELECT categories.id, categories.parent_id, categories.name
+        FROM categories JOIN ancestors ON categories.id = ancestors.parent_id
+      )
+      SELECT name FROM ancestors
+    SQL
+  end
+
   private
 
   def slug_source = name
+
+  # A product's document holds the names of its categories' ancestors too, so the whole subtree changes.
+  def refresh_product_search
+    ids = Product::Categorization.where(category_id: subtree_ids).distinct.pluck(:product_id)
+    ProductSearchRefreshJob.perform_later(ids) if ids.any?
+  end
 
   # Read before the uuid cast, which turns a malformed id into nil.
   def parent_in_tenant

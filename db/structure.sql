@@ -18,6 +18,48 @@ CREATE SCHEMA platform;
 
 
 --
+-- Name: btree_gin; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS btree_gin WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION btree_gin; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION btree_gin IS 'support for indexing common datatypes in GIN';
+
+
+--
+-- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pg_trgm; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION pg_trgm IS 'text similarity measurement and index searching based on trigrams';
+
+
+--
+-- Name: unaccent; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION unaccent; Type: COMMENT; Schema: -; Owner: -
+--
+
+COMMENT ON EXTENSION unaccent IS 'text search dictionary that removes accents';
+
+
+--
 -- Name: tenant_api_keys_reject_token_change(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -28,6 +70,71 @@ BEGIN
   RAISE EXCEPTION 'tenant_api_keys.token_digest and token_prefix cannot change';
 END;
 $$;
+
+
+--
+-- Name: search; Type: TEXT SEARCH CONFIGURATION; Schema: public; Owner: -
+--
+
+CREATE TEXT SEARCH CONFIGURATION public.search (
+    PARSER = pg_catalog."default" );
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR asciiword WITH greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR word WITH public.unaccent, greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR numword WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR email WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR url WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR host WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR sfloat WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR version WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR hword_numpart WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR hword_part WITH public.unaccent, greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR hword_asciipart WITH greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR numhword WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR asciihword WITH greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR hword WITH public.unaccent, greek_stem;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR url_path WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR file WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR "float" WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR "int" WITH simple;
+
+ALTER TEXT SEARCH CONFIGURATION public.search
+    ADD MAPPING FOR uint WITH simple;
 
 
 SET default_tablespace = '';
@@ -279,7 +386,9 @@ CREATE TABLE public.products (
     option_names jsonb DEFAULT '[]'::jsonb NOT NULL,
     brand_id uuid,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    search_document tsvector DEFAULT ''::tsvector NOT NULL,
+    search_text text DEFAULT ''::text NOT NULL
 );
 
 
@@ -869,6 +978,20 @@ CREATE INDEX index_products_on_brand_id ON public.products USING btree (brand_id
 --
 
 CREATE INDEX index_products_on_tenant_id ON public.products USING btree (tenant_id);
+
+
+--
+-- Name: index_products_on_tenant_id_and_search_document; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_products_on_tenant_id_and_search_document ON public.products USING gin (tenant_id, search_document);
+
+
+--
+-- Name: index_products_on_tenant_id_and_search_text; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_products_on_tenant_id_and_search_text ON public.products USING gin (tenant_id, search_text public.gin_trgm_ops);
 
 
 --
@@ -1593,6 +1716,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014120000'),
 ('20261013130100'),
 ('20261013130000'),
 ('20261013120100'),
