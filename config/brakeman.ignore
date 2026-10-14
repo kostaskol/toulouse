@@ -1,7 +1,7 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "01c5585a89c0f0ec791bcafae7be3b3c7b4beb51f5372a5352b9ca1ea88bf6c3",
+      "fingerprint": "fc7cb2b0ca1d8c78b287db1600e2022c630ceeeea0838e5df83a38d69e59711e",
       "note": "The interpolated SQL is a fixed fragment repeated per weight. Every value is a bind."
     },
     {

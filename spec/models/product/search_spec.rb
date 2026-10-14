@@ -38,6 +38,25 @@ RSpec.describe Product::Search, :as_tenant do
       expect(found(option)).to be_empty
     end
 
+    it "takes spec values of the product and of its active variants' overrides" do
+      product = create(:product, specifications: { "Υλικό" => ["Βαμβάκι"] })
+      variant = create(:product_variant, product:, specifications: { "Υλικό" => ["Μετάξι"] })
+
+      expect(found("βαμβάκι")).to eq([product])
+      expect(found("μετάξι")).to eq([product])
+
+      variant.update!(status: "archived")
+
+      expect(found("μετάξι")).to be_empty
+    end
+
+    it "follows a variant's spec override" do
+      product = create(:product)
+      product.variants.first.update!(specifications: { "Υλικό" => ["Μετάξι"] })
+
+      expect(found("μετάξι")).to eq([product])
+    end
+
     it "refreshes once when a product saves with its variants" do
       allow(described_class).to receive(:refresh).and_call_original
       product = build(:product)

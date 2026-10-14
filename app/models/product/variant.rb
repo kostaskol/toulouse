@@ -1,5 +1,6 @@
 class Product::Variant < ApplicationRecord
   include Tenancy::Scoped
+  include HasSpecifications
 
   MAX_PER_PRODUCT = 100
   # The price and stock columns are 4-byte integers.
@@ -11,6 +12,8 @@ class Product::Variant < ApplicationRecord
 
   belongs_to :product, inverse_of: :variants
   belongs_to :image, class_name: "Product::Image", optional: true
+  # Overrides only. The product states the rest.
+  has_many :specification_values, class_name: "Product::SpecificationValue", inverse_of: :variant, autosave: true
 
   enum :vat_class, { standard: 0, reduced: 1, super_reduced: 2 }, validate: true
   enum :status, { active: 0, archived: 1 }, validate: true
@@ -33,7 +36,9 @@ class Product::Variant < ApplicationRecord
   validate :keeps_published_product_sellable
   validate :image_of_product
 
-  after_save :refresh_product_search, if: -> { saved_change_to_option_values? || saved_change_to_status? }
+  after_save :refresh_product_search, if: lambda {
+    saved_change_to_option_values? || saved_change_to_status? || saved_change_to_specifications?
+  }
 
   scope :available, -> { where(track_stock: false).or(where(allow_oversell: true)).or(where(stock_quantity: 1..)) }
 

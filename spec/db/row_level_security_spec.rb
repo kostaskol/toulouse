@@ -37,7 +37,8 @@ RSpec.describe "Row-level security" do
       create(:shopper_session, tenant: tenant)
       create(:login_attempt, tenant: tenant)
       category = create(:category, tenant: tenant)
-      product = create(:product, tenant: tenant, brand: create(:brand, tenant: tenant), category_ids: [category.id])
+      product = create(:product, tenant: tenant, brand: create(:brand, tenant: tenant), category_ids: [category.id],
+                                 specifications: { "Spec" => ["Value"] })
       create(:product_image, tenant: tenant, product:)
       import = create(:product_import, tenant: tenant)
       as_tenant(tenant) { import.entries.create!(position: 0, handle: "a", result: :created) }
