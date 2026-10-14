@@ -113,27 +113,100 @@ export const listCategories = () => request("GET", "categories");
  * Lists the products of a category and of every category below it.
  *
  * @param slug [String]
- * @param page [Object] optional `limit` and `after`
- * @return [Object] `products` and `meta.next_cursor`
+ * @param page [Object] optional `limit`, `after` and `filter`. Send the same filter with `after`.
+ * @return [Object] `products`, `meta.next_cursor`, and `facets` on the first page
  */
-export const listCategoryProducts = (slug, { limit, after } = {}) =>
-  request("GET", `categories/${encodeURIComponent(slug)}/products`, { query: { limit, after } });
+export const listCategoryProducts = (slug, { limit, after, filter } = {}) =>
+  request("GET", `categories/${encodeURIComponent(slug)}/products`, {
+    query: { limit, after, ...filterQuery(filter) }
+  });
 
 /**
- * Searches products. A query that names one category answers with that category instead, so the storefront can
- * open its page.
+ * Searches products. An unfiltered query that names one category answers with that category instead, so the
+ * storefront can open its page.
  *
  * @param query [String]
- * @param page [Object] optional `limit` and `after`
- * @return [Object] `category`, or `products` with `meta.next_cursor` and `meta.match` (`exact` or `fuzzy`)
+ * @param page [Object] optional `limit`, `after` and `filter`. Send the same filter with `after`.
+ * @return [Object] `category`, or `products` with `meta.next_cursor`, `meta.match` (`exact` or `fuzzy`), and
+ *   `facets` on the first page
  */
-export const search = (query, { limit, after } = {}) =>
-  request("GET", `search/${encodeURIComponent(query)}`, { query: { limit, after } });
+export const search = (query, { limit, after, filter } = {}) =>
+  request("GET", `search/${encodeURIComponent(query)}`, { query: { limit, after, ...filterQuery(filter) } });
+
+/**
+ * Turns a filter into one URL path segment. The same filter gives the same segment whatever order it was picked
+ * in, so each filtered page has one address for search engines.
+ *
+ * @param filter [Object] `categories`, `brands`, `price_min`, `price_max`, `options` and `available`, as the
+ *   facets name them
+ * @return [String] already percent-encoded
+ */
+export function filterPath(filter = {}) {
+  const entries = [
+    ...(filter.categories ?? []).map((slug) => ["category", slug]),
+    ...(filter.brands ?? []).map((slug) => ["brand", slug]),
+    ...Object.entries(filter.options ?? {}).flatMap(([key, values]) => values.map((value) => [`option.${key}`, value])),
+    ...["price_min", "price_max"].filter((name) => filter[name] != null).map((name) => [name, String(filter[name])])
+  ];
+  if (filter.available) entries.push(["available", "true"]);
+  const text = ([name, value]) => `${name}=${value}`;
+  const sorted = entries.sort((a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0));
+  // A value picked twice must not give the same filter a second address.
+  const unique = sorted.filter((entry, index) => index === 0 || text(entry) !== text(sorted[index - 1]));
+  return new URLSearchParams(unique).toString();
+}
+
+/**
+ * Reads a filter back from a segment that filterPath made.
+ *
+ * @param segment [String] as it appears in the URL, still percent-encoded
+ * @return [Object]
+ */
+export function parseFilterPath(segment) {
+  const filter = {};
+  // A Map, so a key such as __proto__ stays a plain option key.
+  const options = new Map();
+  const add = (list, value) => [...(list ?? []), value];
+  for (const [name, value] of new URLSearchParams(segment)) {
+    if (name === "category") filter.categories = add(filter.categories, value);
+    else if (name === "brand") filter.brands = add(filter.brands, value);
+    else if (name === "price_min" || name === "price_max") filter[name] = Number(value);
+    else if (name === "available") filter.available = value === "true";
+    else if (name.startsWith("option.")) {
+      const key = name.slice("option.".length);
+      options.set(key, add(options.get(key), value));
+    }
+  }
+  if (options.size) filter.options = Object.fromEntries(options);
+  return filter;
+}
+
+/**
+ * Flattens the category facet for a shop that shows only the categories with no children.
+ *
+ * @param categories [Array<Object>] the `facets.categories` tree
+ * @return [Array<Object>]
+ */
+export const categoryLeaves = (categories) =>
+  categories.flatMap((category) => (category.children.length ? categoryLeaves(category.children) : [category]));
+
+function filterQuery(filter) {
+  const { categories, brands, price_min, price_max, options = {}, available } = filter ?? {};
+  const query = {
+    "filter[categories][]": categories,
+    "filter[brands][]": brands,
+    "filter[price_min]": price_min,
+    "filter[price_max]": price_max,
+    "filter[available]": available ? "true" : null
+  };
+  for (const [key, values] of Object.entries(options ?? {})) query[`filter[options][${key}][]`] = values;
+  return query;
+}
 
 async function request(method, path, { query = {}, body } = {}) {
   const url = new URL(path, BFF_URL);
   for (const [name, value] of Object.entries(query)) {
-    if (value != null) url.searchParams.set(name, value);
+    for (const each of [value].flat()) if (each != null) url.searchParams.append(name, each);
   }
 
   const headers = { accept: "application/json" };

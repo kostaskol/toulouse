@@ -73,6 +73,66 @@ describe("requests", () => {
   });
 });
 
+describe("filters", () => {
+  const filter = {
+    categories: ["b", "a"],
+    brands: ["c"],
+    price_min: 100,
+    price_max: 200,
+    options: { "χρωμα": ["μαυρο", "a&b/c"] },
+    available: true
+  };
+
+  test("sends a filter in the query", async () => {
+    await client.search("q", { filter });
+
+    const query = [...new URL(calls[0].url).searchParams];
+    assert.deepEqual(query, [
+      ["filter[categories][]", "b"],
+      ["filter[categories][]", "a"],
+      ["filter[brands][]", "c"],
+      ["filter[price_min]", "100"],
+      ["filter[price_max]", "200"],
+      ["filter[available]", "true"],
+      ["filter[options][χρωμα][]", "μαυρο"],
+      ["filter[options][χρωμα][]", "a&b/c"]
+    ]);
+  });
+
+  test("takes a null filter as none", async () => {
+    await client.search("q", { filter: null });
+
+    assert.equal(calls[0].url, new URL("search/q", BFF_URL).toString());
+  });
+
+  test("gives one path segment per filter, whatever the order", () => {
+    const reordered = { ...filter, categories: ["a", "b"], options: { "χρωμα": ["a&b/c", "μαυρο"] } };
+
+    assert.equal(client.filterPath(filter), client.filterPath(reordered));
+    assert.equal(client.filterPath(filter), client.filterPath({ ...filter, brands: ["c", "c"] }));
+    assert.doesNotMatch(client.filterPath(filter), /\//);
+  });
+
+  test("reads back the filter its path segment holds", () => {
+    const read = client.parseFilterPath(client.filterPath(filter));
+
+    assert.deepEqual(read, { ...filter, categories: ["a", "b"], options: { "χρωμα": ["a&b/c", "μαυρο"] } });
+  });
+
+  test("keeps an option key named like an object property", () => {
+    const read = client.parseFilterPath("option.__proto__=a&option.constructor=b");
+
+    assert.deepEqual(Object.entries(read.options), [["__proto__", ["a"]], ["constructor", ["b"]]]);
+  });
+
+  test("gives the leaves of the category facet", () => {
+    const leaf = (slug) => ({ slug, children: [] });
+    const tree = [{ slug: "a", children: [leaf("b"), { slug: "c", children: [leaf("d")] }] }, leaf("e")];
+
+    assert.deepEqual(client.categoryLeaves(tree).map((category) => category.slug), ["b", "d", "e"]);
+  });
+});
+
 describe("errors", () => {
   test("throws the first error's code with the status and Retry-After", async () => {
     replies = [failure(429, "too_many_attempts", { "retry-after": "30" })];
