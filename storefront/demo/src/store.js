@@ -17,15 +17,18 @@ export async function loadStore() {
 }
 
 /**
+ * Lists the category and its ancestors, the top level first.
+ *
  * @param slug [String]
  * @param categories [Array<Object>]
- * @return [Object, undefined]
+ * @return [Array<Object>] empty when no category has the slug
  */
-export function findCategory(slug, categories = store.categories) {
+export function categoryTrail(slug, categories = store.categories) {
   for (const category of categories) {
-    if (category.slug === slug) return category;
+    if (category.slug === slug) return [category];
 
-    const child = findCategory(slug, category.children);
-    if (child) return child;
+    const trail = categoryTrail(slug, category.children);
+    if (trail.length) return [category, ...trail];
   }
+  return [];
 }
