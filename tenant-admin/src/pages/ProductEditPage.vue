@@ -10,6 +10,9 @@ import { notify } from "../notice.js";
 import { specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
+import ProductImages from "../components/ProductImages.vue";
+import ProductOptions from "../components/ProductOptions.vue";
+import ProductVariants from "../components/ProductVariants.vue";
 import SpecificationRows from "../components/SpecificationRows.vue";
 
 const FIELDS = ["title", "slug", "description", "status", "brand_id", "category_ids", "specifications"];
@@ -41,6 +44,11 @@ function show(loaded) {
     brand_id: loaded.brand?.id ?? "", category_ids: [...loaded.category_ids],
     specifications: specificationRows(loaded.specifications)
   };
+}
+
+// Keeps unsaved edits in the details form.
+async function refresh() {
+  await loading.run(async () => (product.value = (await get(path)).product));
 }
 
 async function save() {
@@ -109,5 +117,8 @@ async function save() {
         </div>
       </form>
     </section>
+    <ProductImages :product="product" @changed="refresh" />
+    <ProductOptions :product="product" @changed="refresh" />
+    <ProductVariants :product="product" :definitions="options.specifications" @changed="refresh" />
   </template>
 </template>
