@@ -74,6 +74,22 @@ services:
     networks:
       - toulouse
 
+  tenant-admin:
+    image: node:24-alpine
+    init: true
+    working_dir: /tenant-admin
+    command: ["sh", "-c", "npm ci && npm run dev"]
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./tenant-admin:/tenant-admin
+      # Kept apart from the host's install, whose native packages are built for another OS.
+      - /tenant-admin/node_modules
+    depends_on:
+      - api
+    networks:
+      - toulouse
+
   postgres:
     image: postgres:18-alpine
     environment:

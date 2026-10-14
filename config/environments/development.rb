@@ -38,7 +38,7 @@ Rails.application.configure do
   # Writes each email to tmp/mails instead of sending it.
   config.action_mailer.delivery_method = :file
 
-  config.x.admin_origin = ENV.fetch("ADMIN_ORIGIN", "http://localhost:3000")
+  config.x.admin_origin = ENV.fetch("ADMIN_ORIGIN", "http://localhost:5174")
   config.x.media_origin = ENV.fetch("MEDIA_ORIGIN", "http://localhost:3000")
 
   # Print deprecation notices to the Rails logger.
