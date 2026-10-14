@@ -8,6 +8,8 @@ import NotFoundPage from "./pages/NotFoundPage.vue";
 import ProductsPage from "./pages/ProductsPage.vue";
 import ProductNewPage from "./pages/ProductNewPage.vue";
 import ProductEditPage from "./pages/ProductEditPage.vue";
+import ImportsPage from "./pages/ImportsPage.vue";
+import ImportPage from "./pages/ImportPage.vue";
 import StaffPage from "./pages/StaffPage.vue";
 import BrandsPage from "./pages/BrandsPage.vue";
 import CategoriesPage from "./pages/CategoriesPage.vue";
@@ -28,6 +30,8 @@ export const router = createRouter({
     { path: "/products", component: ProductsPage },
     { path: "/products/new", component: ProductNewPage },
     { path: "/products/:id", component: ProductEditPage, props: encodedId },
+    { path: "/imports", component: ImportsPage },
+    { path: "/imports/:id", component: ImportPage, props: encodedId },
     { path: "/brands", component: BrandsPage },
     { path: "/categories", component: CategoriesPage },
     { path: "/specifications", component: SpecificationsPage },

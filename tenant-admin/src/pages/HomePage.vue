@@ -4,6 +4,7 @@ import { can, session } from "../session.js";
 
 const SECTIONS = [
   { to: "/products", label: "Προϊόντα", text: "Τίτλοι, τιμές, παραλλαγές, απόθεμα και φωτογραφίες." },
+  { to: "/imports", label: "Εισαγωγή προϊόντων", text: "Μαζική εισαγωγή και ενημέρωση από αρχείο CSV." },
   { to: "/brands", label: "Μάρκες", text: "Οι μάρκες των προϊόντων." },
   { to: "/categories", label: "Κατηγορίες", text: "Το δέντρο κατηγοριών του καταστήματος." },
   { to: "/specifications", label: "Προδιαγραφές", text: "Χαρακτηριστικά προϊόντων και φίλτρα." },

@@ -6,3 +6,13 @@ export const VAT_CLASSES = { standard: "Κανονικός", reduced: "Μειω�
 export const VARIANT_STATUSES = { active: "Ενεργή", archived: "Αρχειοθετημένη" };
 
 export const STAFF_STATUSES = { pending: "Σε αναμονή", active: "Ενεργό" };
+export const IMPORT_STATUSES = { queued: "Σε αναμονή", running: "Σε εξέλιξη", done: "Ολοκληρώθηκε", failed: "Απέτυχε" };
+export const IMPORT_STATUS_BADGES = {
+  queued: "badge-yellow", running: "badge-blue", done: "badge-green", failed: "badge-red"
+};
+export const IMPORT_RESULTS = { created: "Νέα", updated: "Ενημερώθηκαν", skipped: "Χωρίς αλλαγή", failed: "Απέτυχαν" };
+export const IMPORT_WARNINGS = {
+  product_cell_ignored: "Αγνοήθηκαν κελιά προϊόντος",
+  variant_cell_ignored: "Αγνοήθηκαν κελιά παραλλαγής",
+  image_urls_ignored: "Αγνοήθηκαν φωτογραφίες"
+};

@@ -9,6 +9,7 @@ import { can, session, signOut } from "./session.js";
 const NAV = [
   { to: "/", label: "Αρχική" },
   { to: "/products", label: "Προϊόντα" },
+  { to: "/imports", label: "Εισαγωγή προϊόντων" },
   { to: "/brands", label: "Μάρκες" },
   { to: "/categories", label: "Κατηγορίες" },
   { to: "/specifications", label: "Προδιαγραφές" },
