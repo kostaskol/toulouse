@@ -5,6 +5,7 @@ import { shop } from "./shop.js";
 import { store, SHOP_NAME } from "./store.js";
 import { errorMessage } from "./messages.js";
 import CategoryMenu from "./components/CategoryMenu.vue";
+import SearchBox from "./components/SearchBox.vue";
 
 const router = useRouter();
 const signOutError = ref(null);
@@ -27,6 +28,7 @@ async function signOut() {
     <div class="container header-row">
       <RouterLink to="/" class="logo">{{ SHOP_NAME }}</RouterLink>
       <CategoryMenu :categories="store.categories" />
+      <SearchBox />
       <div class="account">
         <template v-if="store.session">
           <span class="account-email">{{ store.session.shopper.email }}</span>

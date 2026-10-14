@@ -31,6 +31,8 @@ Rails.application.routes.draw do
       resources :categories, only: :index, param: :slug do
         resources :products, only: :index, controller: "category_products"
       end
+      # Any character but a slash, so a query with a dot is not cut short.
+      get "search/:query", to: "searches#show", constraints: { query: %r{[^/]+} }
     end
   end
 

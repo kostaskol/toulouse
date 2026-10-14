@@ -54,6 +54,12 @@ describe("requests", () => {
     assert.equal(calls[0].url, new URL("categories/a%2Fb/products?after=cursor", BFF_URL).toString());
   });
 
+  test("keeps a slash in a search query inside one path segment", async () => {
+    await client.search("a/b");
+
+    assert.equal(calls[0].url, new URL("search/a%2Fb", BFF_URL).toString());
+  });
+
   test("answers null for an empty body", async () => {
     replies = [{ status: 202 }];
 

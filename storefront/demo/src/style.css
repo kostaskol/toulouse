@@ -24,6 +24,9 @@ main.container { min-height: 70vh; padding-bottom: 64px; }
 .site-header { border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0; z-index: 10; }
 .header-row { display: flex; align-items: center; gap: 32px; min-height: 64px; flex-wrap: wrap; }
 .logo { font-size: 28px; text-decoration: none; letter-spacing: 0.04em; }
+.search-box input {
+  font: inherit; font-size: 14px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+}
 .account { margin-left: auto; display: flex; gap: 12px; align-items: center; font-size: 14px; }
 .account-email { color: var(--muted); }
 

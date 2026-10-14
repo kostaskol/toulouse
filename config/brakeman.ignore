@@ -1,0 +1,13 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "01c5585a89c0f0ec791bcafae7be3b3c7b4beb51f5372a5352b9ca1ea88bf6c3",
+      "note": "The interpolated SQL is a fixed fragment repeated per weight. Every value is a bind."
+    },
+    {
+      "fingerprint": "01a6f5520f3c90accd878c40275852b91e88916c92c4593cc7f54284935591c3",
+      "note": "The interpolated SQL comes from sanitize_sql and connection.quote. The query never reaches it raw."
+    }
+  ],
+  "brakeman_version": "7"
+}

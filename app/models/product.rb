@@ -4,7 +4,8 @@ class Product < ApplicationRecord
 
   MAX_OPTIONS = 3
 
-  has_paper_trail versions: { class_name: "Version" }
+  # The search columns are derived, so versions leave them out.
+  has_paper_trail versions: { class_name: "Version" }, skip: [:search_document, :search_text]
 
   belongs_to :brand, optional: true
   has_many :variants, -> { order(:id) }, inverse_of: :product, index_errors: true
@@ -27,6 +28,8 @@ class Product < ApplicationRecord
   validate :brand_in_tenant
   validate :active_variant_when_published
   validate :categories_in_tenant
+
+  around_save :refresh_search
 
   # Renames, reorders, adds and removes options, and rewrites every variant to match.
   #
@@ -92,9 +95,20 @@ class Product < ApplicationRecord
     @unknown_category_ids = true
   end
 
+  # True while the product saves, variants included.
+  def saving? = @saving
+
   private
 
   def slug_source = title
+
+  def refresh_search
+    @saving = true
+    yield
+    Product::Search.refresh(self)
+  ensure
+    @saving = false
+  end
 
   def option_names_distinct
     named = option_names.all? { |name| name.is_a?(String) && name.present? }

@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage.vue";
 import SignupPage from "./pages/SignupPage.vue";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.vue";
 import NotFoundPage from "./pages/NotFoundPage.vue";
+import SearchPage from "./pages/SearchPage.vue";
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -14,6 +15,7 @@ export const router = createRouter({
     { path: "/", component: HomePage },
     { path: "/categories/:slug", component: CategoryPage, props: true },
     { path: "/products/:slug", component: ProductPage, props: true },
+    { path: "/search/:query", component: SearchPage, props: true },
     { path: "/login", component: LoginPage },
     { path: "/signup", component: SignupPage },
     { path: "/forgot-password", component: ForgotPasswordPage },

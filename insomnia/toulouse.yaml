@@ -226,6 +226,26 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/products?q={{ _.search_query }}"
+        name: Search products
+        meta:
+          id: req_eab8ab80ab3188051b7fb1cc36840a3c
+          created: 1791967334000
+          modified: 1791967334000
+          isPrivate: false
+          sortKey: 7.5
+          description: >-
+            Every status, by relevance, with the List products filters. A SKU, barcode or MPN match
+            comes first. meta.match is fuzzy when only close matches were found.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
       - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}"
         name: Show product
         meta:
@@ -1260,6 +1280,29 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/search/{{ _.search_query }}"
+        name: Search
+        meta:
+          id: req_bb3810d4d5cc11aa9e9cad66f88ebcdb
+          created: 1791967334000
+          modified: 1791967334000
+          isPrivate: false
+          sortKey: 11
+          description: >-
+            Published products by relevance, or the category when the query names exactly one.
+            meta.match is fuzzy when only close matches were found.
+        method: GET
+        headers:
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
 cookieJar:
   name: Default Jar
   meta:
@@ -1297,3 +1340,4 @@ environments:
     product_slug: "{% prompt 'Product slug', 'From Products', '', '', false, false %}"
     category_slug: "{% prompt 'Category slug', 'From Categories', '', '', false, false %}"
     product_import_id: "{% prompt 'Import id', 'From List product imports', '', '', false, false %}"
+    search_query: "{% prompt 'Search query', 'Words, a SKU, a barcode or an MPN', '', 'search_query', false, true %}"

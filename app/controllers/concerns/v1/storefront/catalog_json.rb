@@ -5,6 +5,9 @@ module V1
 
       private
 
+      # What the storefront may show, with what its JSON reads.
+      def catalog = Product.published.with_images.includes(:brand, :active_variants)
+
       def product_json(product)
         {
           id: product.id,

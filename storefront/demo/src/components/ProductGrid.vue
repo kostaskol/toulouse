@@ -4,7 +4,10 @@ import ProductCard from "./ProductCard.vue";
 import { errorMessage } from "../messages.js";
 
 // Resolves to the API's list body for the page after the given cursor.
-const props = defineProps({ load: { type: Function, required: true } });
+const props = defineProps({
+  load: { type: Function, required: true },
+  empty: { type: String, default: "Δεν υπάρχουν προϊόντα εδώ ακόμα." }
+});
 const emit = defineEmits(["not-found"]);
 
 const products = ref([]);
@@ -35,7 +38,7 @@ loadPage(null);
 
 <template>
   <p v-if="error" class="form-error">{{ error }}</p>
-  <p v-else-if="loaded && !products.length" class="muted">Δεν υπάρχουν προϊόντα εδώ ακόμα.</p>
+  <p v-else-if="loaded && !products.length" class="muted">{{ empty }}</p>
   <div class="product-grid">
     <ProductCard v-for="product in products" :key="product.id" :product="product" />
   </div>
