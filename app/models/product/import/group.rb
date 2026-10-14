@@ -11,7 +11,7 @@ class Product::Import::Group
   LIST = "|".freeze
   LEVEL = ">".freeze
 
-  Variant = Data.define(:row, :option_values, :filled) do
+  Variant = Data.define(:row, :option_values, :filled, :specifications) do
     # A blank VAT class means standard and a blank stock means zero. Other blank cells keep the model's defaults.
     #
     # @return [Hash] model attributes
@@ -21,24 +21,28 @@ class Product::Import::Group
     end
   end
 
-  attr_reader :handle, :errors, :variants, :option_names, :category_paths, :image_urls
+  attr_reader :handle, :errors, :variants, :option_names, :category_paths, :image_urls, :specifications
 
   # @param handle [String]
   # @param rows [Array<Array(CSV::Row, Integer)>] each row with its number in the file
   # @param option_count [Integer]
-  def initialize(handle, rows, option_count)
+  # @param spec_keys [Hash{String => String}] each spec column's definition key
+  def initialize(handle, rows, option_count, spec_keys)
     @handle = handle
     @rows = rows
     @errors = []
     @first, @first_number = rows.first
     @option_slots = (1..option_count).select { |n| cell(@first, "option#{n}_name").present? }
     @option_names = @option_slots.map { |n| cell(@first, "option#{n}_name") }
+    @spec_columns = spec_keys.keys
+    @spec_keys = spec_keys.transform_keys { |column| spec_name(column) }
 
     check_handle
     check_conflicts(option_count)
     @status = parse_status
     @category_paths = parse_categories
     @image_urls = parse_image_urls
+    @specifications = parse_specifications(@first, @first_number)
     @variants = rows.map { |row, number| variant(row, number, option_count) }
   end
 
@@ -51,9 +55,25 @@ class Product::Import::Group
   def product_attributes
     {
       slug: handle, title: cell(@first, "title"), description: cell(@first, "description").presence,
-      status: @status, option_names:
+      status: @status, option_names:, specifications:
     }
   end
+
+  # @param variant [Variant]
+  # @param inherited [Hash{String => Array<String>}] the product's spec values by definition key
+  # @return [Hash] model attributes, with the spec cells that differ from the product's as overrides
+  def variant_attributes(variant, inherited)
+    overrides = variant.specifications.reject { |name, values| inherited[key(name)] == values }
+    variant.attributes.merge(specifications: overrides)
+  end
+
+  # @param specifications [Hash{String => Array<String>}] keyed by the file's spec names
+  # @return [Hash{String => Array<String>}] keyed by definition key
+  def keyed(specifications) = specifications.transform_keys { |name| key(name) }
+
+  # @param name [String] a spec name as the file spells it
+  # @return [String]
+  def key(name) = @spec_keys.fetch(name)
 
   # @return [Hash{String => String}] the product cells the file fills, keyed by column
   def filled_product_cells
@@ -66,7 +86,8 @@ class Product::Import::Group
   def cell(row, column) = row[column].to_s.strip
 
   def add_error(code, field, row = @first_number)
-    @errors << { code:, field:, row:, message: "#{field.humanize} #{I18n.t("errors.messages.#{code}")}" }
+    message = "#{Product::Import::Sheet.label(field)} #{I18n.t("errors.messages.#{code}")}"
+    @errors << { code:, field:, row:, message: }
   end
 
   def check_handle
@@ -107,6 +128,19 @@ class Product::Import::Group
     urls
   end
 
+  # @return [Hash{String => Array<String>}] the row's filled spec cells, keyed by spec name
+  def parse_specifications(row, number)
+    @spec_columns.filter_map do |column|
+      next if cell(row, column).empty?
+
+      values = cell(row, column).split(LIST).map(&:strip).compact_blank.uniq
+      add_error("invalid", column, number) if values.empty?
+      [spec_name(column), values]
+    end.to_h
+  end
+
+  def spec_name(column) = column[Product::Import::Sheet::SPEC_COLUMN, 1].strip
+
   def http_url?(url)
     uri = URI.parse(url)
     uri.is_a?(URI::HTTP) && uri.hostname.present?
@@ -125,7 +159,8 @@ class Product::Import::Group
     option_values = @option_slots.to_h { |n| [cell(@first, "option#{n}_name"), cell(row, "option#{n}_value")] }
     filled = VARIANT_ATTRIBUTES.keys.to_h { |column| [column, cell(row, column)] }.compact_blank
     parsed = filled.to_h { |column, value| [column, parse(column, value, number)] }
-    Variant.new(row: number, option_values:, filled: parsed)
+    specifications = number == @first_number ? @specifications : parse_specifications(row, number)
+    Variant.new(row: number, option_values:, filled: parsed, specifications:)
   end
 
   def parse(column, value, number)

@@ -52,6 +52,38 @@ RSpec.describe Product::Import::Writer, :as_tenant do
     )
   end
 
+  it "writes specs on the product and overrides on its variants" do
+    write(small.merge("spec:Υλικό" => "Λινό"), medium.merge("spec:Υλικό" => "Μετάξι"))
+    product = Product.find_by!(slug: "first")
+
+    expect(product.specifications).to eq("Υλικό" => ["Λινό"])
+    expect(product.variants.map(&:specifications)).to eq([{}, { "Υλικό" => ["Μετάξι"] }])
+  end
+
+  it "warns once about a spec cell of an existing variant, and overrides the stored spec on a new variant" do
+    product = create(:product, slug: "first", option_names: ["Size"], specifications: { "Υλικό" => ["Λινό"] })
+    known = product.variants.first.option_values["Size"]
+    entry = write(base.merge("option1_name" => "Size", "option1_value" => known, "spec:Υλικό" => "Μετάξι"),
+                  base.merge("option1_value" => "New", "spec:Υλικό" => "Βαμβάκι"))
+
+    expect(entry[:warnings].select { |warning| warning[:field].start_with?("spec:") }.pluck(:code, :field, :stored))
+      .to contain_exactly(
+        ["variant_cell_ignored", "spec:Υλικό", "Λινό"]
+      )
+    added = product.variants.reload.find { |variant| variant.option_values["Size"] == "New" }
+    expect(added.specifications).to eq("Υλικό" => ["Βαμβάκι"])
+  end
+
+  it "lets a new first row override the stored spec and a blank row inherit it" do
+    product = create(:product, slug: "first", option_names: ["Size"], specifications: { "Υλικό" => ["Λινό"] })
+    first = base.merge("title" => product.title, "option1_name" => "Size", "option1_value" => "New")
+    entry = write(first.merge("spec:Υλικό" => "Μετάξι"), first.merge("option1_value" => "Newer"))
+
+    expect(entry).to include(result: "updated", warnings: [])
+    added = product.variants.reload.to_h { |variant| [variant.option_values["Size"], variant.specifications] }
+    expect(added.values_at("New", "Newer")).to eq([{ "Υλικό" => ["Μετάξι"] }, {}])
+  end
+
   it "fails an existing product whose option names differ" do
     create(:product, slug: "first", option_names: ["Size"])
     entry = write(base.merge("option1_name" => "Colour", "option1_value" => "Red"))

@@ -12,10 +12,10 @@ const emit = defineEmits(["change"]);
 const toggled = (list = [], value) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
 const change = (patch) => emit("change", { ...props.filter, ...patch });
 
-function toggleOption(key, value) {
-  const options = { ...props.filter.options, [key]: toggled(props.filter.options?.[key], value) };
-  if (!options[key].length) delete options[key];
-  change({ options });
+function toggleAttribute(key, value) {
+  const attributes = { ...props.filter.attributes, [key]: toggled(props.filter.attributes?.[key], value) };
+  if (!attributes[key].length) delete attributes[key];
+  change({ attributes });
 }
 
 const rangePicked = (range) =>
@@ -69,13 +69,13 @@ function rangeLabel(range) {
       </label>
     </section>
 
-    <section v-for="group in facets.options" :key="group.key">
+    <section v-for="group in facets.attributes" :key="group.key">
       <h2>{{ group.label }}</h2>
       <label v-for="value in group.values" :key="value.key" class="facet-check">
         <input
           type="checkbox"
-          :checked="filter.options?.[group.key]?.includes(value.key)"
-          @change="toggleOption(group.key, value.key)"
+          :checked="filter.attributes?.[group.key]?.includes(value.key)"
+          @change="toggleAttribute(group.key, value.key)"
         />
         {{ value.label }} <span class="muted">({{ value.count }})</span>
       </label>

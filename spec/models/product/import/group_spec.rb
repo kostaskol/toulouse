@@ -38,6 +38,24 @@ RSpec.describe Product::Import::Group, :as_tenant do
     expect(variant.attributes).to include(track_stock: false, allow_oversell: true)
   end
 
+  it "reads specs from the first row, and a differing later row as that variant's override" do
+    rows = [base.merge("spec:Υλικό" => "Λινό | Μετάξι"), base.merge("spec:Υλικό" => ""),
+            base.merge("spec:Υλικό" => "Βαμβάκι")]
+    group = group(*rows)
+
+    expect(group.product_attributes[:specifications]).to eq("Υλικό" => ["Λινό", "Μετάξι"])
+    inherited = group.keyed(group.specifications)
+    expect(group.variants.map { |variant| group.variant_attributes(variant, inherited)[:specifications] })
+      .to eq([{}, {}, { "Υλικό" => ["Βαμβάκι"] }])
+  end
+
+  it "refuses a spec cell with no value, naming the column as the file spells it" do
+    error = group(base.merge("spec:Υλικό" => "|")).errors.sole
+
+    expect(error).to include(code: "invalid", field: "spec:Υλικό")
+    expect(error[:message]).to start_with("spec:Υλικό ")
+  end
+
   it "reads options from the first row's names" do
     rows = [base.merge("option1_name" => "Size", "option1_value" => "S"), base.merge("option1_value" => "M")]
 

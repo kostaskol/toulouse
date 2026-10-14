@@ -60,7 +60,9 @@ class Product::Import::Writer
   def create_product
     product = Product.create!(
       **@group.product_attributes, brand:, category_ids: @group.category_paths.map { |path| category(path).id }.uniq,
-      variants_attributes: @group.variants.map(&:attributes)
+      variants_attributes: @group.variants.map do |variant|
+        @group.variant_attributes(variant, @group.keyed(@group.specifications))
+      end
     )
     entry("created", product)
   end
@@ -72,21 +74,22 @@ class Product::Import::Writer
     end
 
     warn_product_cells(product)
+    inherited = stored_by_key(product)
     stored = product.variants.index_by(&:option_values)
     added = 0
     @group.variants.each do |variant|
       if stored.key?(variant.option_values)
-        warn_variant_cells(variant, stored[variant.option_values])
+        warn_variant_cells(variant, stored[variant.option_values], inherited)
       else
-        create_variant(product, variant)
+        create_variant(product, variant, inherited)
         added += 1
       end
     end
     entry(added.zero? ? "skipped" : "updated", product)
   end
 
-  def create_variant(product, variant)
-    product.variants.create!(variant.attributes)
+  def create_variant(product, variant, inherited)
+    product.variants.create!(@group.variant_attributes(variant, inherited))
   rescue ActiveRecord::RecordInvalid => error
     raise RowInvalid.new(error.record, variant.row)
   end
@@ -122,20 +125,30 @@ class Product::Import::Writer
     end
   end
 
+  # @return [Hash{String => Array<String>}] the record's own spec values by definition key
+  def stored_by_key(record) = record.specification_entries.to_h { |specification, values| [specification.key, values] }
+
   def same_categories?(product)
     ids = @group.category_paths.map { |path| category(path, create: false)&.id }
     ids.all? && ids.uniq.sort == product.category_ids.sort
   end
 
-  def warn_variant_cells(variant, existing)
+  # On an existing product every spec cell is a variant cell, as a new variant's cell becomes its override.
+  def warn_variant_cells(variant, existing, inherited)
     variant.filled.each do |column, value|
       stored = existing.public_send(Product::Import::Group::VARIANT_ATTRIBUTES.fetch(column))
       add_warning("variant_cell_ignored", column, display(column, stored), row: variant.row) unless value == stored
     end
+    effective = inherited.merge(stored_by_key(existing))
+    variant.specifications.each do |name, values|
+      kept = effective[@group.key(name)]
+      add_warning("variant_cell_ignored", "spec:#{name}", kept.to_a.join(" | "), row: variant.row) unless values == kept
+    end
   end
 
   def add_warning(code, field, stored, row: @group.first_row)
-    @warnings << { code:, field:, row:, stored:, message: "#{field.humanize} #{WARNINGS.fetch(code)}" }.compact
+    message = "#{Product::Import::Sheet.label(field)} #{WARNINGS.fetch(code)}"
+    @warnings << { code:, field:, row:, stored:, message: }.compact
   end
 
   def display(column, value)

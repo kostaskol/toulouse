@@ -346,6 +346,23 @@ CREATE TABLE public.product_imports (
 
 
 --
+-- Name: product_specification_values; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.product_specification_values (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    variant_id uuid,
+    specification_id uuid NOT NULL,
+    value text NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: product_variants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -448,6 +465,23 @@ CREATE TABLE public.shoppers (
     updated_at timestamp(6) with time zone NOT NULL,
     CONSTRAINT shoppers_email_lowercase CHECK ((email = lower(email))),
     CONSTRAINT shoppers_password_unless_linked CHECK (((staff_id IS NULL) = (password_digest IS NOT NULL)))
+);
+
+
+--
+-- Name: specifications; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.specifications (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    name text NOT NULL,
+    key text NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    facet boolean DEFAULT false NOT NULL,
+    mode integer DEFAULT 0 NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
 );
 
 
@@ -673,6 +707,14 @@ ALTER TABLE ONLY public.product_imports
 
 
 --
+-- Name: product_specification_values product_specification_values_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_specification_values
+    ADD CONSTRAINT product_specification_values_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: product_variants product_variants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -726,6 +768,14 @@ ALTER TABLE ONLY public.shopper_email_codes
 
 ALTER TABLE ONLY public.shoppers
     ADD CONSTRAINT shoppers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: specifications specifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.specifications
+    ADD CONSTRAINT specifications_pkey PRIMARY KEY (id);
 
 
 --
@@ -953,6 +1003,34 @@ CREATE UNIQUE INDEX index_product_imports_one_active_per_tenant ON public.produc
 
 
 --
+-- Name: index_product_specification_values_on_specification; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_specification_values_on_specification ON public.product_specification_values USING btree (tenant_id, specification_id);
+
+
+--
+-- Name: index_product_specification_values_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_specification_values_on_tenant_id ON public.product_specification_values USING btree (tenant_id);
+
+
+--
+-- Name: index_product_specification_values_on_variant; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_specification_values_on_variant ON public.product_specification_values USING btree (tenant_id, variant_id) WHERE (variant_id IS NOT NULL);
+
+
+--
+-- Name: index_product_specification_values_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_product_specification_values_unique ON public.product_specification_values USING btree (tenant_id, product_id, variant_id, specification_id, value) NULLS NOT DISTINCT;
+
+
+--
 -- Name: index_product_variants_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1055,6 +1133,20 @@ CREATE INDEX index_shoppers_on_tenant_id ON public.shoppers USING btree (tenant_
 --
 
 CREATE UNIQUE INDEX index_shoppers_on_tenant_id_and_email ON public.shoppers USING btree (tenant_id, email);
+
+
+--
+-- Name: index_specifications_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_specifications_on_tenant_id ON public.specifications USING btree (tenant_id);
+
+
+--
+-- Name: index_specifications_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_specifications_on_tenant_id_and_key ON public.specifications USING btree (tenant_id, key);
 
 
 --
@@ -1201,6 +1293,14 @@ ALTER TABLE ONLY public.versions
 
 
 --
+-- Name: product_specification_values fk_rails_0d24d9db50; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_specification_values
+    ADD CONSTRAINT fk_rails_0d24d9db50 FOREIGN KEY (product_id) REFERENCES public.products(id);
+
+
+--
 -- Name: tenant_domains fk_rails_1987f42a92; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1230,6 +1330,14 @@ ALTER TABLE ONLY public.product_import_entries
 
 ALTER TABLE ONLY public.shoppers
     ADD CONSTRAINT fk_rails_20ad1531ba FOREIGN KEY (staff_id) REFERENCES public.staff(id);
+
+
+--
+-- Name: specifications fk_rails_3779b1666a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.specifications
+    ADD CONSTRAINT fk_rails_3779b1666a FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -1321,6 +1429,14 @@ ALTER TABLE ONLY public.product_categorizations
 
 
 --
+-- Name: product_specification_values fk_rails_966b9f9308; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_specification_values
+    ADD CONSTRAINT fk_rails_966b9f9308 FOREIGN KEY (specification_id) REFERENCES public.specifications(id);
+
+
+--
 -- Name: product_import_entries fk_rails_975123a41e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1377,6 +1493,14 @@ ALTER TABLE ONLY public.active_storage_attachments
 
 
 --
+-- Name: product_specification_values fk_rails_cb7019f9fe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_specification_values
+    ADD CONSTRAINT fk_rails_cb7019f9fe FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: categories fk_rails_cf18d1e171; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1398,6 +1522,14 @@ ALTER TABLE ONLY public.tenant_api_keys
 
 ALTER TABLE ONLY public.shopper_sessions
     ADD CONSTRAINT fk_rails_d23dfe0ae6 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: product_specification_values fk_rails_d9707dab29; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_specification_values
+    ADD CONSTRAINT fk_rails_d9707dab29 FOREIGN KEY (variant_id) REFERENCES public.product_variants(id);
 
 
 --
@@ -1498,6 +1630,12 @@ ALTER TABLE public.product_import_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.product_imports ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: product_specification_values; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.product_specification_values ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: product_variants; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1526,6 +1664,12 @@ ALTER TABLE public.shopper_sessions ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.shoppers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: specifications; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.specifications ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: staff; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1608,6 +1752,13 @@ CREATE POLICY tenant_isolation ON public.product_imports USING ((tenant_id = (NU
 
 
 --
+-- Name: product_specification_values tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.product_specification_values USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
 -- Name: product_variants tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1640,6 +1791,13 @@ CREATE POLICY tenant_isolation ON public.shopper_sessions USING ((tenant_id = (N
 --
 
 CREATE POLICY tenant_isolation ON public.shoppers USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: specifications tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.specifications USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -1716,6 +1874,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014150000'),
 ('20261014120000'),
 ('20261013130100'),
 ('20261013130000'),

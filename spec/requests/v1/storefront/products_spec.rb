@@ -22,6 +22,18 @@ RSpec.describe "Storefront products", type: :request do
     expect(body["variants"].first.keys).not_to include("status", "vat_class", "mpn")
   end
 
+  it "shows the product's specs and each variant's overrides" do
+    as_tenant(tenant) do
+      product.update!(specifications: { "Υλικό" => ["Μετάξι"] })
+      product.variants.first.update!(specifications: { "Υλικό" => ["Λινό"] })
+    end
+    get "/v1/storefront/products/#{product.slug}", headers: headers
+
+    body = response.parsed_body["product"]
+    expect(body["specifications"]).to eq([{ "name" => "Υλικό", "values" => ["Μετάξι"] }])
+    expect(body["variants"].first["specifications"]).to eq([{ "name" => "Υλικό", "values" => ["Λινό"] }])
+  end
+
   it "shows images in display order, and which one each variant uses" do
     images = as_tenant(tenant) { create_list(:product_image, 2, product:) }
     as_tenant(tenant) { product.variants.first.update!(image: images.last) }

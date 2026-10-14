@@ -23,6 +23,13 @@ const variant = computed(() => product.value.variants.find((candidate) => matche
 // The merchant writes the Markdown, so it is sanitized before it becomes HTML.
 const description = computed(() => DOMPurify.sanitize(marked.parse(product.value.description ?? "")));
 
+// A variant's specs replace the product's of the same name.
+const specifications = computed(() => {
+  const merged = new Map(product.value.specifications.map((spec) => [spec.name, spec.values]));
+  for (const spec of variant.value?.specifications ?? []) merged.set(spec.name, spec.values);
+  return [...merged];
+});
+
 const valuesOf = (name) => [...new Set(product.value.variants.map((candidate) => candidate.option_values[name]))];
 const valueAvailable = (name, value) =>
   product.value.variants.some((candidate) => candidate.available && matches(candidate, { ...selected, [name]: value }));
@@ -65,6 +72,16 @@ try {
       <p v-if="cartNote" class="muted">Το καλάθι έρχεται σύντομα.</p>
 
       <div class="description" v-html="description" />
+
+      <section v-if="specifications.length">
+        <h2>Χαρακτηριστικά</h2>
+        <dl class="specifications">
+          <template v-for="[name, values] in specifications" :key="name">
+            <dt>{{ name }}</dt>
+            <dd>{{ values.join(", ") }}</dd>
+          </template>
+        </dl>
+      </section>
     </div>
   </article>
 </template>

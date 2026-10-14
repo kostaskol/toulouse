@@ -1,6 +1,7 @@
 class Product < ApplicationRecord
   include Tenancy::Scoped
   include Sluggable
+  include HasSpecifications
 
   MAX_OPTIONS = 3
 
@@ -11,6 +12,9 @@ class Product < ApplicationRecord
   has_many :variants, -> { order(:id) }, inverse_of: :product, index_errors: true
   has_many :active_variants, -> { active.order(:id) }, class_name: "Product::Variant"
   has_many :images, -> { order(:position, :id) }, inverse_of: :product
+  # The product's own values. A variant's overrides sit on the variant.
+  has_many :specification_values, -> { where(variant_id: nil) }, class_name: "Product::SpecificationValue",
+           autosave: true
   has_many :categorizations, dependent: :destroy
   # Destroys the links one by one, so the audit log records each removal.
   has_many :categories, through: :categorizations, dependent: :destroy
@@ -18,6 +22,9 @@ class Product < ApplicationRecord
   accepts_nested_attributes_for :variants
 
   scope :with_images, -> { includes(images: { file_attachment: :blob }) }
+  scope :with_specifications, lambda { |variants: :variants|
+    includes(specification_values: :specification, variants => { specification_values: :specification })
+  }
 
   enum :status, { draft: 0, published: 1, archived: 2 }, validate: true
 

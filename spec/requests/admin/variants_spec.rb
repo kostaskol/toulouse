@@ -16,6 +16,13 @@ RSpec.describe "Tenant admin product variants", type: :request do
     expect(response.parsed_body.dig("variant", "option_values")).to eq(values)
   end
 
+  it "overrides the product's spec" do
+    patch "/admin/products/#{product.id}/variants/#{variant.id}",
+          params: { specifications: { "Υλικό" => ["Λινό"] } }, headers:, as: :json
+
+    expect(response.parsed_body.dig("variant", "specifications")).to contain_exactly(include("values" => ["Λινό"]))
+  end
+
   it "refuses a price past the column's limit" do
     patch "/admin/products/#{product.id}/variants/#{variant.id}",
           params: { price_cents: Product::Variant::MAX_INTEGER + 1 }, headers:, as: :json

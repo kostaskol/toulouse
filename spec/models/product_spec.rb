@@ -52,6 +52,55 @@ RSpec.describe Product, :as_tenant, type: :model do
     end
   end
 
+  describe "specifications" do
+    def stored(record) = record.class.find(record.id).specifications
+
+    it "replaces the whole set, values in the given order" do
+      product.update!(specifications: { "Υλικό" => ["Μετάξι", "Βαμβάκι"], "Χώρα" => ["Ελλάδα"] })
+      product.update!(specifications: { "υλικο" => ["Βαμβάκι", "Λινό"] })
+
+      expect(stored(product)).to eq("Υλικό" => ["Βαμβάκι", "Λινό"])
+    end
+
+    it "keeps values that stay, so the audit log shows only changes" do
+      product.update!(specifications: { "Υλικό" => ["Μετάξι"] })
+
+      expect { product.update!(specifications: { "Υλικό" => ["Μετάξι", "Λινό"] }) }
+        .to change { Version.where(item_type: "Product::SpecificationValue").count }.by(1)
+    end
+
+    it "lists specs in definition order" do
+      product.update!(specifications: { "Υλικό" => ["Μετάξι"], "Χώρα" => ["Ελλάδα"] })
+      Specification.find_by!(name: "Χώρα").update!(position: -1)
+
+      expect(stored(product).keys).to eq(["Χώρα", "Υλικό"])
+    end
+
+    it "keeps a variant's overrides apart from the product's own" do
+      product.update!(specifications: { "Υλικό" => ["Μετάξι"] })
+      product.variants.first.update!(specifications: { "Υλικό" => ["Λινό"] })
+
+      expect(stored(product)).to eq("Υλικό" => ["Μετάξι"])
+      expect(stored(product.variants.first)).to eq("Υλικό" => ["Λινό"])
+    end
+
+    {
+      "a list rather than names" => [["Μετάξι"]],
+      "a value that is not a list" => { "Υλικό" => "Μετάξι" },
+      "an empty list" => { "Υλικό" => [] },
+      "a blank value" => { "Υλικό" => [" "] },
+      "a blank name" => { " " => ["Μετάξι"] },
+      "two names that fold alike" => { "Υλικό" => ["Μετάξι"], "υλικο" => ["Λινό"] }
+    }.each do |name, specifications|
+      it "refuses #{name}" do
+        product.specifications = specifications
+
+        expect(product).not_to be_valid
+        expect(product.errors.details[:specifications]).to eq([{ error: :invalid }])
+      end
+    end
+  end
+
   describe "#update_options!" do
     before { add_variant(product) }
 

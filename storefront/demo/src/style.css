@@ -97,6 +97,9 @@ main.container { min-height: 70vh; padding-bottom: 64px; }
 .option-value.unavailable { color: var(--muted); text-decoration: line-through; }
 .stock-out { color: var(--sale); font-weight: 500; }
 .description { margin-top: 32px; border-top: 1px solid var(--line); padding-top: 16px; }
+.specifications { display: grid; grid-template-columns: max-content 1fr; gap: 8px 24px; margin: 0; }
+.specifications dt { color: var(--muted); }
+.specifications dd { margin: 0; }
 
 .button {
   display: inline-block; padding: 12px 24px; border: 1px solid var(--ink); border-radius: var(--radius);

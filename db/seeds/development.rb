@@ -41,7 +41,7 @@ demo_categories = {
   "Αξεσουάρ" => []
 }
 demo_products = [
-  { title: "Ψάθινο καπέλο", brand: "Λινό", category: "Αξεσουάρ", price: 2500,
+  { title: "Ψάθινο καπέλο", brand: "Λινό", category: "Αξεσουάρ", price: 2500, specifications: { "Υλικό" => ["Άχυρο"] },
     description: "Πλεκτό στο χέρι από φυσικό άχυρο. Γείσο 8 εκ., ελαφρύ και για όλη τη μέρα." },
   { title: "Ψάθινη τσάντα ώμου", brand: "Λινό", category: "Αξεσουάρ", price: 4500,
     description: "Χωράει πετσέτα, βιβλίο και αντηλιακό.\n\n- Δερμάτινα χερούλια\n- Βαμβακερή φόδρα" },
@@ -56,16 +56,18 @@ demo_products = [
     description: "Ίσια γραμμή, ελαφρύ βαμβάκι με λίγη ελαστικότητα." },
   { title: "Λινό πουκάμισο", brand: "Λινό", category: "Πουκάμισα", price: 5900,
     options: { "Μέγεθος" => ["M", "L", "XL"], "Χρώμα" => ["Λευκό", "Γαλάζιο"] },
-    sold_out: [{ "Μέγεθος" => "XL", "Χρώμα" => "Γαλάζιο" }],
+    specifications: { "Υλικό" => ["Λινό"] }, sold_out: [{ "Μέγεθος" => "XL", "Χρώμα" => "Γαλάζιο" }],
     description: "100% λινό, πλυμένο για πιο μαλακή αίσθηση.\n\n**Φροντίδα:** πλύσιμο στους 30°C." },
   { title: "Βαμβακερή μπλούζα", brand: "Αιγαίο", category: "Μπλούζες", price: 2900,
     options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Μαύρο", "Τερακότα"] },
+    specifications: { "Υλικό" => ["Οργανικό βαμβάκι"] },
     description: "Οργανικό βαμβάκι, φαρδιά γραμμή." },
   { title: "Μάξι φόρεμα με τιράντες", brand: "Αιγαίο", category: "Φορέματα", price: 6900, pre_discount: 9500,
-    options: { "Μέγεθος" => ["S", "M", "L"] }, sold_out: [{ "Μέγεθος" => "S" }],
+    options: { "Μέγεθος" => ["S", "M", "L"] }, specifications: { "Υλικό" => ["Βισκόζη"] },
+    sold_out: [{ "Μέγεθος" => "S" }],
     description: "Ριχτό φόρεμα από βισκόζη, για το καλοκαίρι στο νησί." },
   { title: "Λινό φόρεμα Σαντορίνη", brand: "Λινό", category: "Φορέματα", price: 8900,
-    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Άμμος"] },
+    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Άμμος"] }, specifications: { "Υλικό" => ["Λινό"] },
     description: "Το πιο αγαπημένο μας κομμάτι.\n\n- 100% λινό\n- Τσέπες στο πλάι\n- Ραμμένο στην Αθήνα" }
 ]
 
@@ -79,8 +81,11 @@ Tenancy.with_tenant(demo) do
   end.index_by(&:name)
 
   # Created oldest first, since lists show the newest first.
-  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, pre_discount: nil,
-                            stock: 10, sold_out: []|
+  # A facet, so the demo filters by it.
+  Specification.find_or_create_by!(name: "Υλικό") { |specification| specification.facet = true }
+
+  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, specifications: {},
+                            pre_discount: nil, stock: 10, sold_out: []|
     next if Product.exists?(title:)
 
     combinations = options.values.reduce([[]]) { |partial, values| partial.product(values).map(&:flatten) }
@@ -91,7 +96,7 @@ Tenancy.with_tenant(demo) do
         stock_quantity: quantity }
     end
 
-    Product.create!(title:, description:, status: "published", option_names: options.keys,
+    Product.create!(title:, description:, status: "published", option_names: options.keys, specifications:,
                     brand: Brand.find_or_create_by!(name: brand), categories: [categories.fetch(category)],
                     variants_attributes: variants)
   end
