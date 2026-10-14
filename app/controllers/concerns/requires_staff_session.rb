@@ -54,13 +54,14 @@ module RequiresStaffSession
     return render_failure(FAILURES.fetch(:missing_session)) if token.blank?
 
     @staff_session = Staff::Session.authenticate(token)
+    act_as(@staff_session) if @staff_session
 
-    if @staff_session.nil?
+    # A login that races the member's removal can leave a session behind.
+    unless @staff_session && Current.user.active?
       clear_session_cookie
       return render_failure(FAILURES.fetch(:invalid_session))
     end
 
-    act_as(@staff_session)
     @staff_session.refresh_expiry
   end
 

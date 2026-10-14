@@ -113,6 +113,24 @@ RSpec.describe "Tenant admin staff invites", type: :request do
     expect_failure(RequiresStaffSession::FAILURES.fetch(:tenant_suspended))
   end
 
+  context "when the email belongs to a removed member" do
+    let!(:member) { create(:staff, tenant:, status: "removed", role: "owner", password: nil) }
+
+    before { invite(email: member.email) }
+
+    it "makes the same member a pending staff member again, with no password" do
+      expect(response).to have_http_status(:ok)
+      expect(find_staff(member.email))
+        .to have_attributes(id: member.id, status: "pending", role: "staff", password_digest: nil)
+    end
+
+    it "mails a link that accepts" do
+      token = invite_token(ActionMailer::Base.deliveries.last)
+
+      expect(as_tenant(tenant) { Staff.find_by_token_for(:invite, token) }).to eq(find_staff(member.email))
+    end
+  end
+
   it "invites into a pending store" do
     tenant.update!(status: "pending")
 
@@ -120,5 +138,74 @@ RSpec.describe "Tenant admin staff invites", type: :request do
 
     expect(response).to have_http_status(:created)
     expect(ActionMailer::Base.deliveries.map(&:to)).to eq([[email]])
+  end
+
+  describe "listing" do
+    def list(as: owner)
+      get "/admin/staff", headers: staff_cookie(create(:staff_session, tenant:, staff: as))
+    end
+
+    it "lists active and pending members, without removed ones" do
+      pending = create(:staff, :pending, tenant:)
+      create(:staff, tenant:, status: "removed")
+
+      list
+
+      expect(response.parsed_body["staff"]).to contain_exactly(
+        { "id" => owner.id, "email" => owner.email, "role" => "owner", "status" => "active" },
+        { "id" => pending.id, "email" => pending.email, "role" => "staff", "status" => "pending" }
+      )
+    end
+
+    it "turns away a member who is not an owner" do
+      list(as: create(:staff, tenant:))
+
+      expect_failure(AuthorizesStaff::FAILURES.fetch(:permission_denied))
+    end
+  end
+
+  describe "removing" do
+    def remove(member, as: owner)
+      delete "/admin/staff/#{member.id}", headers: staff_cookie(create(:staff_session, tenant:, staff: as))
+    end
+
+    it "removes an active member" do
+      member = create(:staff, tenant:)
+
+      remove(member)
+
+      expect(response).to have_http_status(:no_content)
+      expect(find_staff(member.email)).to be_removed
+    end
+
+    it "cancels a pending member's invite, so the link stops working" do
+      member = create(:staff, :pending, tenant:)
+      token = as_tenant(tenant) { member.generate_token_for(:invite) }
+
+      remove(member)
+
+      expect(response).to have_http_status(:no_content)
+      expect(find_staff(member.email)).to be_removed
+      acceptance = Staff::InviteAcceptance.call(slug: tenant.slug, token:, password: SecureRandom.alphanumeric(16))
+      expect(acceptance.failure).to eq(:invalid_token)
+    end
+
+    it "refuses the last owner" do
+      remove(owner)
+
+      expect_failure(Admin::StaffController::FAILURES.fetch(:last_owner))
+    end
+
+    it "answers not found for a removed member" do
+      remove(create(:staff, tenant:, status: "removed"))
+
+      expect_failure(ApplicationController::FAILURES.fetch(:not_found))
+    end
+
+    it "turns away a member who is not an owner" do
+      remove(owner, as: create(:staff, tenant:))
+
+      expect_failure(AuthorizesStaff::FAILURES.fetch(:permission_denied))
+    end
   end
 end

@@ -65,9 +65,7 @@ class Staff::PasswordReset
 
     Staff.transaction do
       staff.save!
-      # Without the argument, an association's delete_all nulls the foreign key.
-      staff.sessions.delete_all(:delete_all)
-      staff.shopper&.sessions&.delete_all(:delete_all)
+      staff.end_sessions
       LoginAttempt.clear(staff.email)
       Result.success(staff.sessions.create!)
     end

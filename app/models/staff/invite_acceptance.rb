@@ -40,6 +40,9 @@ class Staff::InviteAcceptance
     return Result.failure(:invalid_password) unless staff.valid?
 
     Staff.transaction do
+      # Locked, so a cancel that lands meanwhile is not undone.
+      return refuse(:not_pending) unless Staff.lock.find(staff.id).pending?
+
       staff.save!
       shopper_merged = link_shopper(staff)
       LoginAttempt.clear(staff.email)

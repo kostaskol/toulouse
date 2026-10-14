@@ -39,7 +39,7 @@ Rails.application.routes.draw do
   namespace :admin do
     resource :session, only: [:create, :show, :destroy]
     resource :password_reset, only: [:create, :update]
-    resources :staff, only: :create
+    resources :staff, only: [:index, :create, :destroy]
     resource :invite, only: :update
 
     resources :brands, only: [:index, :create, :update, :destroy]

@@ -33,6 +33,12 @@ RSpec.describe Staff::Login do
     expect(Current.tenant).to be_nil
   end
 
+  it "refuses a removed member with the right password" do
+    as_tenant(tenant) { staff.update!(status: "removed") }
+
+    expect(log_in.failure).to eq(:invalid_credentials)
+  end
+
   it "opens a session for a suspended tenant" do
     tenant.update!(status: "suspended")
 

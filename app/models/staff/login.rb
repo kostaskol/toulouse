@@ -42,7 +42,7 @@ class Staff::Login
       return refuse(:locked, locked_until:)
     end
 
-    if (staff = Staff.authenticate_by(email: @email, password: @password))
+    if (staff = Staff.active.authenticate_by(email: @email, password: @password))
       LoginAttempt.clear(@email)
       return Result.success(staff.sessions.create!)
     end

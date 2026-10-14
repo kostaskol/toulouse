@@ -500,7 +500,7 @@ CREATE TABLE public.staff (
     updated_at timestamp(6) with time zone NOT NULL,
     invited_at timestamp(6) with time zone,
     CONSTRAINT staff_email_lowercase CHECK ((email = lower(email))),
-    CONSTRAINT staff_password_unless_pending CHECK (((status = 0) OR (password_digest IS NOT NULL)))
+    CONSTRAINT staff_password_when_active CHECK (((status <> 1) OR (password_digest IS NOT NULL)))
 );
 
 
@@ -1874,6 +1874,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014180100'),
 ('20261014150000'),
 ('20261014120000'),
 ('20261013130100'),
