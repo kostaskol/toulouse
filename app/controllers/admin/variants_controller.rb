@@ -6,7 +6,7 @@ module Admin
 
     FIELDS = [
       :sku, :barcode, :mpn, :price_cents, :pre_discount_price_cents, :vat_class, :status, :track_stock, :allow_oversell,
-      :image_id, { option_values: {} }
+      :image_id, { option_values: {}, specifications: {} }
     ].freeze
 
     def create

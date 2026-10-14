@@ -32,6 +32,24 @@ RSpec.describe "Tenant admin products", type: :request do
         .to eq([{ option => "1" }, { option => "2" }])
     end
 
+    it "takes specs on the product and overrides on a variant, creating missing definitions" do
+      create_product(specifications: { "Υλικό" => ["Μετάξι", "Λινό"] },
+                     variants: [variant.merge(specifications: { "Υλικό" => ["Βαμβάκι"] })])
+
+      product = response.parsed_body["product"]
+      definition = as_tenant(tenant) { Specification.find_by!(name: "Υλικό") }
+      expect(product["specifications"])
+        .to eq([{ "id" => definition.id, "name" => "Υλικό", "values" => ["Μετάξι", "Λινό"] }])
+      expect(product["variants"].first["specifications"])
+        .to eq([{ "id" => definition.id, "name" => "Υλικό", "values" => ["Βαμβάκι"] }])
+    end
+
+    it "refuses specs that are not a list of values per name" do
+      create_product(specifications: { "Υλικό" => [""] })
+
+      expect(response.parsed_body["errors"]).to include(include("code" => "invalid", "field" => "specifications"))
+    end
+
     it "answers one error per invalid field" do
       create_product(title: "", variants: [variant.merge(price_cents: -1)])
 
@@ -148,6 +166,13 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(find_product(product.id)).to be_published
+    end
+
+    it "replaces the product's specs" do
+      as_tenant(tenant) { product.update!(specifications: { "Υλικό" => ["Μετάξι"] }) }
+      patch "/admin/products/#{product.id}", params: { specifications: { "Χώρα" => ["Ελλάδα"] } }, headers:, as: :json
+
+      expect(response.parsed_body.dig("product", "specifications").pluck("name")).to eq(["Χώρα"])
     end
 
     it "keeps the slug when the title changes" do

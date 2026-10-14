@@ -44,6 +44,7 @@ Rails.application.routes.draw do
 
     resources :brands, only: [:index, :create, :update, :destroy]
     resources :categories, only: [:index, :create, :update, :destroy]
+    resources :specifications, only: [:index, :create, :update, :destroy]
     resources :products, only: [:index, :show, :create, :update] do
       resource :options, only: :update
       resources :images, only: [:create, :update, :destroy] do
