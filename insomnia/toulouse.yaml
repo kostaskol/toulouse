@@ -208,6 +208,42 @@ collection:
             send: true
             store: true
           rebuildPath: true
+      - url: "{{ _.base_url }}/admin/staff"
+        name: List staff
+        meta:
+          id: req_7055fe9c8d0472d73a17b52755948a5a
+          created: 1791987000000
+          modified: 1791987000000
+          isPrivate: false
+          sortKey: 6.3
+          description: Owner only. Active and pending members. Removed members are left out.
+        method: GET
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/staff/{% prompt 'Member id', 'From List staff', '', '', false, false %}"
+        name: Remove staff
+        meta:
+          id: req_577b8a12d25c764d7f339eb7bfd3f9a8
+          created: 1791987000000
+          modified: 1791987000000
+          isPrivate: false
+          sortKey: 6.6
+          description: Owner only. Cancels a pending member's invite, or removes an active member.
+        method: DELETE
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
       - url: "{{ _.base_url }}/admin/products"
         name: List products
         meta:
@@ -1165,6 +1201,38 @@ collection:
             value: "{{ _.api_key }}"
           - name: Authorization
             value: Bearer {{ _.shopper_token }}
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/v1/storefront/handoff"
+        name: Redeem handoff
+        meta:
+          id: req_9622f01a62472b2838550ad6445977d2
+          created: 1791987000000
+          modified: 1791987000000
+          isPrivate: false
+          sortKey: 2.5
+          description: >-
+            Open storefront or View as a shopper on a tenant page in platform
+            admin redirects to the storefront with the token after #handoff=.
+            Each token works once, within a minute.
+        method: POST
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "token": "{% prompt 'Handoff token', 'After #handoff= in the storefront URL', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+          - name: X-Api-Key
+            value: "{{ _.api_key }}"
         settings:
           renderRequestBody: true
           encodeUrl: true

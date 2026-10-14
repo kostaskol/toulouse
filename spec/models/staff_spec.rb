@@ -184,13 +184,15 @@ RSpec.describe Staff, :as_tenant, type: :model do
 
     it "rejects an active member with no password digest" do
       expect { insert_staff(tenant: create(:tenant), password_digest: nil) }
-        .to raise_error(ActiveRecord::StatementInvalid, /staff_password_unless_pending/)
+        .to raise_error(ActiveRecord::StatementInvalid, /staff_password_when_active/)
     end
 
-    it "allows a pending member with no password digest" do
-      pending = { password_digest: nil, status: described_class.statuses[:pending] }
+    it "allows a pending or removed member with no password digest" do
+      %i[pending removed].each do |status|
+        attributes = { password_digest: nil, status: described_class.statuses[status] }
 
-      expect { insert_staff(tenant: create(:tenant), **pending) }.not_to raise_error
+        expect { insert_staff(tenant: create(:tenant), **attributes) }.not_to raise_error
+      end
     end
 
     it "defaults role to staff and status to pending when callbacks are bypassed" do

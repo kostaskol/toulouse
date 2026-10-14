@@ -46,7 +46,11 @@ module V1
       def session_body(session)
         shopper = session.shopper
 
-        { shopper: { id: shopper.id, email: shopper.email }, expires_at: session.absolute_expiry }
+        {
+          shopper: { id: shopper.id, email: shopper.email },
+          expires_at: session.absolute_expiry,
+          read_only: session.impersonated?
+        }
       end
     end
   end

@@ -31,8 +31,20 @@ const specifications = computed(() => {
 });
 
 const valuesOf = (name) => [...new Set(product.value.variants.map((candidate) => candidate.option_values[name]))];
-const valueAvailable = (name, value) =>
-  product.value.variants.some((candidate) => candidate.available && matches(candidate, { ...selected, [name]: value }));
+// Only the options up to this one count, so no buyable variant is ever out of reach.
+const buyableWith = (name, value) => {
+  const names = product.value.option_names.slice(0, product.value.option_names.indexOf(name) + 1);
+  const choice = { ...selected, [name]: value };
+  return product.value.variants.find((candidate) =>
+    candidate.available && names.every((option) => candidate.option_values[option] === choice[option]));
+};
+
+const select = (name, value) => {
+  const fallback = buyableWith(name, value);
+  selected[name] = value;
+  if (!variant.value?.available) Object.assign(selected, fallback.option_values);
+  cartNote.value = false;
+};
 
 try {
   ({ product: product.value } = await shop.getProduct(props.slug));
@@ -58,14 +70,13 @@ try {
       <fieldset v-for="name in product.option_names" :key="name" class="option">
         <legend>{{ name }}: <strong>{{ selected[name] }}</strong></legend>
         <button v-for="value in valuesOf(name)" :key="value" type="button" class="option-value"
-                :class="{ selected: selected[name] === value, unavailable: !valueAvailable(name, value) }"
-                :aria-pressed="selected[name] === value" @click="selected[name] = value; cartNote = false">
+                :class="{ selected: selected[name] === value }" :disabled="!buyableWith(name, value)"
+                :aria-pressed="selected[name] === value" @click="select(name, value)">
           {{ value }}
         </button>
       </fieldset>
 
-      <p v-if="!variant" class="muted">Αυτός ο συνδυασμός δεν υπάρχει.</p>
-      <p v-else-if="!variant.available" class="stock-out">Εξαντλήθηκε</p>
+      <p v-if="variant && !variant.available" class="stock-out">Εξαντλήθηκε</p>
       <button class="button button-wide" :disabled="!variant?.available" @click="cartNote = true">
         Προσθήκη στο καλάθι
       </button>

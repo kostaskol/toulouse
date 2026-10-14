@@ -437,6 +437,23 @@ CREATE TABLE public.shopper_email_codes (
 
 
 --
+-- Name: shopper_handoffs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.shopper_handoffs (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    shopper_id uuid NOT NULL,
+    token_digest text NOT NULL,
+    expires_at timestamp(6) with time zone NOT NULL,
+    redeemed_at timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    impersonator_id uuid
+);
+
+
+--
 -- Name: shopper_sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -447,7 +464,8 @@ CREATE TABLE public.shopper_sessions (
     token_digest text NOT NULL,
     expires_at timestamp(6) with time zone NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    impersonator_id uuid
 );
 
 
@@ -458,13 +476,16 @@ CREATE TABLE public.shopper_sessions (
 CREATE TABLE public.shoppers (
     id uuid DEFAULT uuidv7() NOT NULL,
     tenant_id uuid NOT NULL,
-    email text NOT NULL,
+    email text,
     password_digest text,
     staff_id uuid,
     created_at timestamp(6) with time zone NOT NULL,
     updated_at timestamp(6) with time zone NOT NULL,
+    platform_admin_id uuid,
     CONSTRAINT shoppers_email_lowercase CHECK ((email = lower(email))),
-    CONSTRAINT shoppers_password_unless_linked CHECK (((staff_id IS NULL) = (password_digest IS NOT NULL)))
+    CONSTRAINT shoppers_email_unless_admin_linked CHECK (((platform_admin_id IS NULL) = (email IS NOT NULL))),
+    CONSTRAINT shoppers_one_link CHECK (((staff_id IS NULL) OR (platform_admin_id IS NULL))),
+    CONSTRAINT shoppers_password_unless_linked CHECK ((((staff_id IS NULL) AND (platform_admin_id IS NULL)) = (password_digest IS NOT NULL)))
 );
 
 
@@ -500,7 +521,7 @@ CREATE TABLE public.staff (
     updated_at timestamp(6) with time zone NOT NULL,
     invited_at timestamp(6) with time zone,
     CONSTRAINT staff_email_lowercase CHECK ((email = lower(email))),
-    CONSTRAINT staff_password_unless_pending CHECK (((status = 0) OR (password_digest IS NOT NULL)))
+    CONSTRAINT staff_password_when_active CHECK (((status <> 1) OR (password_digest IS NOT NULL)))
 );
 
 
@@ -744,6 +765,14 @@ ALTER TABLE ONLY public.products
 
 ALTER TABLE ONLY public.schema_migrations
     ADD CONSTRAINT schema_migrations_pkey PRIMARY KEY (version);
+
+
+--
+-- Name: shopper_handoffs shopper_handoffs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_handoffs
+    ADD CONSTRAINT shopper_handoffs_pkey PRIMARY KEY (id);
 
 
 --
@@ -1094,6 +1123,27 @@ CREATE UNIQUE INDEX index_shopper_email_codes_on_tenant_id_and_purpose_and_email
 
 
 --
+-- Name: index_shopper_handoffs_on_shopper_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_shopper_handoffs_on_shopper_id ON public.shopper_handoffs USING btree (shopper_id);
+
+
+--
+-- Name: index_shopper_handoffs_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_shopper_handoffs_on_tenant_id ON public.shopper_handoffs USING btree (tenant_id);
+
+
+--
+-- Name: index_shopper_handoffs_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_shopper_handoffs_on_token_digest ON public.shopper_handoffs USING btree (token_digest);
+
+
+--
 -- Name: index_shopper_sessions_on_shopper_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1133,6 +1183,13 @@ CREATE INDEX index_shoppers_on_tenant_id ON public.shoppers USING btree (tenant_
 --
 
 CREATE UNIQUE INDEX index_shoppers_on_tenant_id_and_email ON public.shoppers USING btree (tenant_id, email);
+
+
+--
+-- Name: index_shoppers_on_tenant_id_and_platform_admin_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_shoppers_on_tenant_id_and_platform_admin_id ON public.shoppers USING btree (tenant_id, platform_admin_id);
 
 
 --
@@ -1349,11 +1406,27 @@ ALTER TABLE ONLY public.tenant_settings
 
 
 --
+-- Name: shoppers fk_rails_4c34b78b67; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shoppers
+    ADD CONSTRAINT fk_rails_4c34b78b67 FOREIGN KEY (platform_admin_id) REFERENCES platform.admins(id);
+
+
+--
 -- Name: login_attempts fk_rails_4e3518a87b; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.login_attempts
     ADD CONSTRAINT fk_rails_4e3518a87b FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shopper_handoffs fk_rails_51e93c4778; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_handoffs
+    ADD CONSTRAINT fk_rails_51e93c4778 FOREIGN KEY (shopper_id) REFERENCES public.shoppers(id) ON DELETE CASCADE;
 
 
 --
@@ -1397,11 +1470,27 @@ ALTER TABLE ONLY public.product_variants
 
 
 --
+-- Name: shopper_handoffs fk_rails_6b2a4000bc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_handoffs
+    ADD CONSTRAINT fk_rails_6b2a4000bc FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: categories fk_rails_82f48f7407; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.categories
     ADD CONSTRAINT fk_rails_82f48f7407 FOREIGN KEY (parent_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: shopper_sessions fk_rails_85e7542355; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_sessions
+    ADD CONSTRAINT fk_rails_85e7542355 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
 
 
 --
@@ -1458,6 +1547,14 @@ ALTER TABLE ONLY public.active_storage_variant_records
 
 ALTER TABLE ONLY public.product_imports
     ADD CONSTRAINT fk_rails_9c45ada6a5 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopper_handoffs fk_rails_b03d328dc3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_handoffs
+    ADD CONSTRAINT fk_rails_b03d328dc3 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
 
 
 --
@@ -1654,6 +1751,12 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.shopper_email_codes ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: shopper_handoffs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.shopper_handoffs ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: shopper_sessions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1780,6 +1883,13 @@ CREATE POLICY tenant_isolation ON public.shopper_email_codes USING ((tenant_id =
 
 
 --
+-- Name: shopper_handoffs tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.shopper_handoffs USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
 -- Name: shopper_sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1874,6 +1984,9 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014200000'),
+('20261014190000'),
+('20261014180100'),
 ('20261014150000'),
 ('20261014120000'),
 ('20261013130100'),

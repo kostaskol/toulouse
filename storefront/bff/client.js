@@ -35,7 +35,7 @@ export function onSignedOut(listener) {
 
 /**
  * @param details [Object] `email` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const signIn = ({ email, password }) => request("POST", "session", { body: { email, password } });
 
@@ -49,9 +49,21 @@ export async function signOut() {
 }
 
 /**
- * @return [Object, null] `shopper` and `expires_at`, or null when signed out
+ * Redeems a handoff in the page URL first, so a storefront needs no code of its
+ * own for it.
+ *
+ * @return [Object, null] `shopper`, `expires_at` and `read_only`, or null when signed out
  */
 export async function currentSession() {
+  const handoff = takeHandoff();
+  if (handoff) {
+    try {
+      return await request("POST", "handoff", { body: { token: handoff } });
+    } catch (error) {
+      if (!(error instanceof ApiError && error.code === "invalid_handoff")) throw error;
+    }
+  }
+
   try {
     return await request("GET", "session");
   } catch (error) {
@@ -71,7 +83,7 @@ export const requestSignupCode = (email) => request("POST", "signup", { body: { 
  * Creates the account and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const completeSignup = ({ email, code, password }) =>
   request("PUT", "signup", { body: { email, code, password } });
@@ -87,7 +99,7 @@ export const requestPasswordResetCode = (email) => request("POST", "password_res
  * Sets the new password and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const completePasswordReset = ({ email, code, password }) =>
   request("PUT", "password_reset", { body: { email, code, password } });
@@ -202,6 +214,16 @@ function filterQuery(filter) {
   };
   for (const [key, values] of Object.entries(attributes ?? {})) query[`filter[attributes][${key}][]`] = values;
   return query;
+}
+
+// The token arrives in the fragment, which never reaches a server log. It is
+// cleared before use, so a reload or a shared link does not carry it.
+function takeHandoff() {
+  if (typeof location === "undefined") return null;
+
+  const token = new URLSearchParams(location.hash.slice(1)).get("handoff");
+  if (token) history.replaceState(history.state, "", location.pathname + location.search);
+  return token;
 }
 
 async function request(method, path, { query = {}, body } = {}) {

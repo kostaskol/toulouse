@@ -21,6 +21,8 @@ class Staff::Invite
     return Result.failure(:email_taken) if staff.active?
 
     created = staff.new_record?
+    # A removed member comes back as a new one would, without their old role.
+    staff.assign_attributes(status: :pending, role: :staff) if staff.removed?
     staff.invited_at = Time.current
     return Result.failure(:invalid_email) unless staff.save
 

@@ -224,15 +224,22 @@ RSpec.describe Product::Filter, :as_tenant do
       end
 
       it "splits by quantile into ranges open at both ends, edges on round euros" do
-        prices = (1..8).map { |n| n * 1000 }
+        prices = (1..8).map { |n| n * 1000 } * 2
         prices.each { |cents| product_with({ options: { "Χρώμα" => "Μαύρο" }, price_cents: cents }) }
 
         expect(facets[:price][:ranges]).to eq([
-          { min: nil, max: 1999, count: 1 },
-          { min: 2000, max: 3999, count: 2 },
-          { min: 4000, max: 5999, count: 2 },
-          { min: 6000, max: nil, count: 3 }
+          { min: nil, max: 1999, count: 2 },
+          { min: 2000, max: 3999, count: 4 },
+          { min: 4000, max: 5999, count: 4 },
+          { min: 6000, max: nil, count: 6 }
         ])
+      end
+
+      it "gives no ranges when one would hold a single product" do
+        prices = (1..8).map { |n| n * 1000 }
+        prices.each { |cents| product_with({ options: { "Χρώμα" => "Μαύρο" }, price_cents: cents }) }
+
+        expect(facets[:price]).to include(min: prices.min, max: prices.max, ranges: [])
       end
 
       it "counts a product in every range one of its variants falls in" do

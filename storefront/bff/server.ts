@@ -17,6 +17,7 @@ export const SESSION_COOKIE = "__Host-session";
 // Keyed by route, not by a token field, so a future endpoint returning some other token passes through untouched.
 const SESSION_ROUTES: Record<string, SessionRoute> = {
   "POST /session": "issue",
+  "POST /handoff": "issue",
   "PUT /signup": "issue",
   "PUT /password_reset": "issue",
   "DELETE /session": "clear"

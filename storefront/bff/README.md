@@ -22,7 +22,9 @@ It is one ES module with no dependencies and no build step: `client.js`.
 - A failed request throws an `ApiError`. Use `error.code` to decide what to
   show. `error.retryAfter` gives the seconds from `Retry-After`, or `null`.
 - If the BFF does not answer, the code is `bad_gateway`.
-- `currentSession()` resolves to `null` when the shopper is signed out.
+- `currentSession()` resolves to `null` when the shopper is signed out. When
+  the page URL has `#handoff=<token>`, it first removes it from the URL and
+  exchanges it for a session.
 - `onSignedOut(listener)` calls the listener when a request finds the session
   gone. It returns a function that removes the listener.
 
@@ -30,7 +32,7 @@ It is one ES module with no dependencies and no build step: `client.js`.
 | --- | --- |
 | `signIn({ email, password })` | `POST /session` |
 | `signOut()` | `DELETE /session` |
-| `currentSession()` | `GET /session` |
+| `currentSession()` | `POST /handoff` when the URL has one, then `GET /session` |
 | `requestSignupCode(email)` | `POST /signup` |
 | `completeSignup({ email, code, password })` | `PUT /signup` |
 | `requestPasswordResetCode(email)` | `POST /password_reset` |

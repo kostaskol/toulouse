@@ -4,6 +4,7 @@ class Tenant < ApplicationRecord
   enum :status, { pending: 0, active: 1, suspended: 2 }, validate: true
 
   has_many :domains, dependent: :destroy
+  has_one :primary_domain, -> { where(is_primary: true) }, class_name: "Tenant::Domain", inverse_of: false
   has_many :api_keys, dependent: :destroy
   has_many :shoppers, dependent: :destroy
   has_many :staff, dependent: :destroy

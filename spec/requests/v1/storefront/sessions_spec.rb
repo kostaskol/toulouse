@@ -90,7 +90,8 @@ RSpec.describe "Storefront shopper sessions", type: :request do
 
       expect(response.parsed_body).to eq(
         "shopper" => { "id" => shopper.id, "email" => shopper.email },
-        "expires_at" => session.absolute_expiry.iso8601(3)
+        "expires_at" => session.absolute_expiry.iso8601(3),
+        "read_only" => false
       )
     end
 

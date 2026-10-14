@@ -1,4 +1,4 @@
-import { beforeEach, describe, test } from "node:test";
+import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import * as client from "../client.js";
 
@@ -202,6 +202,37 @@ describe("session", () => {
     await assert.rejects(client.listProducts());
 
     assert.equal(signedOut, 2);
+  });
+});
+
+describe("handoff", () => {
+  let replaced;
+
+  beforeEach(() => {
+    replaced = null;
+    globalThis.location = new URL("https://shop.example.com/products?a=1#handoff=thd_token");
+    globalThis.history = { state: null, replaceState: (_state, _title, url) => (replaced = url) };
+  });
+
+  afterEach(() => {
+    delete globalThis.location;
+    delete globalThis.history;
+  });
+
+  test("redeems the handoff in the fragment and clears it", async () => {
+    replies = [json(201, { shopper: { email: null } })];
+
+    assert.deepEqual(await client.currentSession(), { shopper: { email: null } });
+    assert.equal(calls[0].url, new URL("handoff", BFF_URL).toString());
+    assert.deepEqual(JSON.parse(calls[0].body), { token: "thd_token" });
+    assert.equal(replaced, "/products?a=1");
+  });
+
+  test("falls back to the current session when the handoff is refused", async () => {
+    replies = [failure(401, "invalid_handoff"), json(200, { shopper: { email: "shopper" } })];
+
+    assert.deepEqual(await client.currentSession(), { shopper: { email: "shopper" } });
+    assert.equal(calls[1].url, new URL("session", BFF_URL).toString());
   });
 });
 

@@ -191,6 +191,17 @@ describe("session cookie", () => {
     assert.deepEqual(JSON.parse(res.body), { shopper: { email: "shopper" }, expires_at: expiresAt.toISOString() });
   });
 
+  test("sets the cookie for a redeemed handoff", async () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const body = JSON.stringify({ token: SESSION_TOKEN, expires_at: expiresAt });
+    reply = { status: 201, headers: JSON_HEADERS, body };
+
+    const res = await call(port, "/handoff", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
+
+    assert.ok(res.headers["set-cookie"]?.[0]?.startsWith(`${SESSION_COOKIE}=${SESSION_TOKEN};`));
+    assert.ok(!res.body.includes(SESSION_TOKEN));
+  });
+
   test("treats a trailing slash as the same session route", async () => {
     const expiresAt = new Date(Date.now() + 60_000).toISOString();
     const body = JSON.stringify({ token: SESSION_TOKEN, expires_at: expiresAt });

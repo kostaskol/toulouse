@@ -3,6 +3,9 @@ class Current < ActiveSupport::CurrentAttributes
   attribute :api_key_digest
   attribute :staff_session_digest
   attribute :user
+  # The platform admin behind a read-only shopper session. An id, since the app
+  # role cannot read platform admins.
+  attribute :impersonator_id
 
   def tenant
     resolution&.tenant

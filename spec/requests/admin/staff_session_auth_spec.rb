@@ -20,6 +20,14 @@ RSpec.describe "Staff session on tenant admin endpoints", type: :request do
     expect(response.parsed_body).to eq("tenant_id" => tenant.id, "staff_id" => staff_session.staff_id)
   end
 
+  it "refuses a session of a removed member" do
+    as_tenant(tenant) { staff_session.staff.update!(status: "removed") }
+
+    get "/admin/probe", headers: staff_cookie(staff_session)
+
+    expect_failure(RequiresStaffSession::FAILURES.fetch(:invalid_session))
+  end
+
   it "ignores a tenant named by the request" do
     other = create(:tenant)
     api_key = create(:tenant_api_key, tenant: other)

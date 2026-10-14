@@ -14,10 +14,12 @@ Rails.application.routes.draw do
     # HTML forms cannot send DELETE, and method override stays off the API.
     post "logout", to: "sessions#destroy"
 
-    resources :tenants, only: :index do
+    resources :tenants, only: [:index, :show] do
       resources :api_keys, only: [:index, :show, :create] do
         post :revoke, on: :member
       end
+      resources :handoffs, only: :create
+      resources :impersonations, only: :create
     end
   end
 
@@ -25,6 +27,7 @@ Rails.application.routes.draw do
     # The BFF matches session routes by exact path, so .json must not reach the same action.
     namespace :storefront, format: false do
       resource :session, only: [:create, :show, :destroy]
+      resource :handoff, only: :create
       resource :signup, only: [:create, :update]
       resource :password_reset, only: [:create, :update]
       resources :products, only: [:index, :show], param: :slug
@@ -39,7 +42,7 @@ Rails.application.routes.draw do
   namespace :admin do
     resource :session, only: [:create, :show, :destroy]
     resource :password_reset, only: [:create, :update]
-    resources :staff, only: :create
+    resources :staff, only: [:index, :create, :destroy]
     resource :invite, only: :update
 
     resources :brands, only: [:index, :create, :update, :destroy]
