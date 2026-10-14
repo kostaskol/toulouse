@@ -56,6 +56,19 @@ RSpec.describe "Storefront search", type: :request do
       expect(response.parsed_body["facets"]["price"]).to include("min", "max", "ranges")
     end
 
+    it "filters and counts by facet specs as attributes" do
+      as_tenant(tenant) do
+        create(:specification, name: "Υλικό", facet: true)
+        create(:product, :published, title: "Παπούτσια", specifications: { "Υλικό" => ["Δέρμα"] })
+        create(:product, :published, title: "Παπούτσια", specifications: { "Υλικό" => ["Ύφασμα"] })
+      end
+      search("παπούτσια", filter: { attributes: { "υλικο" => ["δερμα"] } })
+
+      expect(response.parsed_body["products"].size).to eq(1)
+      group = response.parsed_body["facets"]["attributes"].find { |facet| facet["key"] == "υλικο" }
+      expect(group["values"].pluck("label", "count")).to eq([["Δέρμα", 1], ["Ύφασμα", 1]])
+    end
+
     it "counts facets for a query that holds a question mark" do
       product = as_tenant(tenant) { create(:product, :published) }
       as_tenant(tenant) { product.variants.first.update!(sku: "#{product.slug}?") }

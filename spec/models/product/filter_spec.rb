@@ -52,29 +52,83 @@ RSpec.describe Product::Filter, :as_tenant do
       whole = product_with({ options: { "Χρώμα" => "Μαύρο", "Μέγεθος" => "42" } })
       options = { fold("Χρώμα") => [fold("Μαύρο")], fold("Μέγεθος") => [fold("42")] }
 
-      expect(filtered("options" => options)).to eq([whole])
-      expect(filtered("options" => options.except(fold("Μέγεθος")))).to contain_exactly(split, whole)
+      expect(filtered("attributes" => options)).to eq([whole])
+      expect(filtered("attributes" => options.except(fold("Μέγεθος")))).to contain_exactly(split, whole)
     end
 
     it "matches option values of any spelling by their folded key" do
       product = product_with({ options: { "ΧΡΏΜΑ" => "ΜΑΎΡΟΣ" } })
 
-      expect(filtered("options" => { fold("χρωμα") => [fold("μαυρος")] })).to eq([product])
+      expect(filtered("attributes" => { fold("χρωμα") => [fold("μαυρος")] })).to eq([product])
     end
 
-    it "keeps brackets out of an option key" do
+    it "keeps brackets out of an attribute key" do
       product = product_with({ options: { "Μέγεθος [EU]" => "42" } })
-      key = facets[:options].first[:key]
+      key = facets[:attributes].first[:key]
 
       expect(key).not_to match(/[\[\]]/)
-      expect(filtered("options" => { key => [fold("42")] })).to eq([product])
+      expect(filtered("attributes" => { key => [fold("42")] })).to eq([product])
     end
 
     it "leaves out archived variants" do
       product = product_with({ options: { "Χρώμα" => "Μαύρο" } }, { options: { "Χρώμα" => "Κόκκινο" } })
       product.variants.last.update!(status: "archived")
 
-      expect(filtered("options" => { fold("Χρώμα") => [fold("Κόκκινο")] })).to be_empty
+      expect(filtered("attributes" => { fold("Χρώμα") => [fold("Κόκκινο")] })).to be_empty
+    end
+
+    describe "with specifications" do
+      let!(:screen) { Specification.create!(name: "Οθόνη", facet: true) }
+
+      it "matches a product's spec on every variant, unless the variant overrides it" do
+        product = product_with({ options: { "Μέγεθος" => "S" } }, { options: { "Μέγεθος" => "M" } },
+                               specifications: { "Οθόνη" => ["6.1"] })
+        product.variants.last.update!(specifications: { "Οθόνη" => ["6.7"] })
+        small = { fold("Οθόνη") => [fold("6.1")], fold("Μέγεθος") => [fold("S")] }
+
+        expect(filtered("attributes" => small)).to eq([product])
+        expect(filtered("attributes" => small.merge(fold("Μέγεθος") => [fold("M")]))).to be_empty
+        expect(filtered("attributes" => { fold("Οθόνη") => [fold("6.7")] })).to eq([product])
+      end
+
+      it "matches an option and a spec of one name as one group" do
+        option = product_with({ options: { "Οθόνη" => "6.1" } })
+        spec = product_with({ options: { "Μέγεθος" => "S" } }, specifications: { "Οθόνη" => ["6.1"] })
+
+        expect(filtered("attributes" => { fold("Οθόνη") => [fold("6.1")] })).to contain_exactly(option, spec)
+      end
+
+      it "needs every value of a conjunctive group" do
+        screen.update!(mode: "all")
+        both = create(:product, option_names: [], specifications: { "Οθόνη" => ["OLED", "120 Hz"] })
+        create(:product, option_names: [], specifications: { "Οθόνη" => ["OLED"] })
+
+        expect(filtered("attributes" => { fold("Οθόνη") => [fold("OLED"), fold("120 Hz")] })).to eq([both])
+      end
+
+      it "reads a conjunctive group as one clause, however many values it holds" do
+        screen.update!(mode: "all")
+        values = [fold("OLED"), fold("120 Hz")]
+
+        sql = described_class.new("attributes" => { fold("Οθόνη") => values }).apply(Product.all).to_sql
+
+        expect(sql.scan("count(DISTINCT").size).to eq(1)
+      end
+
+      it "matches nothing for an empty list, whatever the mode" do
+        create(:product, option_names: [], specifications: { "Οθόνη" => ["6.1"] })
+
+        expect(filtered("attributes" => { fold("Οθόνη") => [] })).to be_empty
+        screen.update!(mode: "all")
+        expect(filtered("attributes" => { fold("Οθόνη") => [] })).to be_empty
+      end
+
+      it "matches nothing for a spec that is not a facet" do
+        screen.update!(facet: false)
+        create(:product, option_names: [], specifications: { "Οθόνη" => ["6.1"] })
+
+        expect(filtered("attributes" => { fold("Οθόνη") => [fold("6.1")] })).to be_empty
+      end
     end
 
     it "keeps to variants a shopper can buy when asked" do
@@ -89,7 +143,7 @@ RSpec.describe Product::Filter, :as_tenant do
       create(:product)
 
       expect(filtered("categories" => [SecureRandom.hex(4)])).to be_empty
-      expect(filtered("options" => { SecureRandom.hex(4) => [SecureRandom.hex(4)] })).to be_empty
+      expect(filtered("attributes" => { SecureRandom.hex(4) => [SecureRandom.hex(4)] })).to be_empty
     end
 
     {
@@ -99,11 +153,11 @@ RSpec.describe Product::Filter, :as_tenant do
       "a price that is not a whole number" => [{ "price_min" => "1.5" }, "filter[price_min]"],
       "a price past the column" => [{ "price_max" => (Product::Variant::MAX_INTEGER + 1).to_s }, "filter[price_max]"],
       "a minimum above the maximum" => [{ "price_min" => "2", "price_max" => "1" }, "filter[price_min]"],
-      "options that are not keyed" => [{ "options" => ["value"] }, "filter[options]"],
-      "more option groups than a variant can hold" => [
-        { "options" => (0..Product::MAX_OPTIONS).to_h { |n| [n.to_s, ["value"]] } }, "filter[options]"
+      "attributes that are not keyed" => [{ "attributes" => ["value"] }, "filter[attributes]"],
+      "more attribute groups than the cap" => [
+        { "attributes" => (0..described_class::MAX_ATTRIBUTES).to_h { |n| [n.to_s, ["value"]] } }, "filter[attributes]"
       ],
-      "option values that are not a list" => [{ "options" => { "key" => "value" } }, "filter[options][key]"],
+      "attribute values that are not a list" => [{ "attributes" => { "key" => "value" } }, "filter[attributes][key]"],
       "an available flag that is not a boolean" => [{ "available" => "yes" }, "filter[available]"]
     }.each do |name, (params, field)|
       it "refuses #{name}" do
@@ -201,13 +255,13 @@ RSpec.describe Product::Filter, :as_tenant do
       end
     end
 
-    describe "options" do
+    describe "attributes" do
       it "groups by folded name and value, labelled by the most common spelling" do
         product_with({ options: { "Χρώμα" => "Μαύρο" } })
         product_with({ options: { "Χρώμα" => "μαύρο" } })
         product_with({ options: { "χρωμα" => "Μαύρο" } })
 
-        expect(facets[:options]).to eq([
+        expect(facets[:attributes]).to eq([
           { key: fold("Χρώμα"), label: "Χρώμα", mode: "any",
             values: [{ key: fold("Μαύρο"), label: "Μαύρο", count: 3 }] }
         ])
@@ -219,10 +273,44 @@ RSpec.describe Product::Filter, :as_tenant do
         product_with({ options: { "Μέγεθος" => "M" } })
         product_with({ options: { "Χρώμα" => "Μαύρο" } })
 
-        groups = facets[:options]
+        groups = facets[:attributes]
 
         expect(groups.pluck(:label)).to eq(["Μέγεθος", "Χρώμα"])
         expect(groups.first[:values].pluck(:label)).to eq(["9", "9,5", "10", "M", "S"])
+      end
+
+      it "folds an option and a facet spec of one name into one group, in the spec's mode" do
+        Specification.create!(name: "Χρώμα", facet: true, mode: "all")
+        product_with({ options: { "Χρώμα" => "Μαύρο" } })
+        create(:product, option_names: [], specifications: { "χρώμα" => ["Μαύρο", "Λευκό"] })
+        create(:product, option_names: [], specifications: { "Μη φίλτρο" => ["Τιμή"] })
+
+        expect(facets[:attributes]).to eq([
+          { key: fold("Χρώμα"), label: "Χρώμα", mode: "all",
+            values: [{ key: fold("Λευκό"), label: "Λευκό", count: 1 },
+                     { key: fold("Μαύρο"), label: "Μαύρο", count: 2 }] }
+        ])
+      end
+
+      it "keeps a conjunctive group and its values when its picks match nothing" do
+        Specification.create!(name: "Χρώμα", facet: true, mode: "all")
+        create(:product, option_names: [], specifications: { "Χρώμα" => ["Μαύρο"] })
+        create(:product, option_names: [], specifications: { "Χρώμα" => ["Λευκό"] })
+
+        group = facets({ "attributes" => { fold("Χρώμα") => [fold("Μαύρο"), fold("Λευκό")] } })[:attributes].first
+
+        expect(group).to include(mode: "all")
+        expect(group[:values].to_h { |value| [value[:label], value[:count]] }).to eq("Λευκό" => 0, "Μαύρο" => 0)
+      end
+
+      it "narrows a conjunctive group's counts by its own selection" do
+        Specification.create!(name: "Χρώμα", facet: true, mode: "all")
+        create(:product, option_names: [], specifications: { "Χρώμα" => ["Μαύρο", "Λευκό"] })
+        create(:product, option_names: [], specifications: { "Χρώμα" => ["Λευκό"] })
+
+        values = facets({ "attributes" => { fold("Χρώμα") => [fold("Μαύρο")] } }).fetch(:attributes).first[:values]
+
+        expect(values.to_h { |value| [value[:label], value[:count]] }).to eq("Λευκό" => 1, "Μαύρο" => 1)
       end
 
       it "counts a group without its own selection but with the others on the same variant" do
@@ -231,8 +319,8 @@ RSpec.describe Product::Filter, :as_tenant do
         product_with({ options: { "Χρώμα" => "Κόκκινο", "Μέγεθος" => "40" } },
                      { options: { "Χρώμα" => "Μαύρο", "Μέγεθος" => "42" } })
 
-        groups = facets({ "options" => { fold("Χρώμα") => [fold("Μαύρο")] } })
-                 .fetch(:options).to_h { |group| [group[:label], group[:values].to_h { |v| [v[:label], v[:count]] }] }
+        groups = facets({ "attributes" => { fold("Χρώμα") => [fold("Μαύρο")] } }).fetch(:attributes)
+                 .to_h { |group| [group[:label], group[:values].to_h { |v| [v[:label], v[:count]] }] }
 
         expect(groups).to eq("Χρώμα" => { "Κόκκινο" => 2, "Μαύρο" => 2 }, "Μέγεθος" => { "42" => 2 })
       end

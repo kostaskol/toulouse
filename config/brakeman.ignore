@@ -9,16 +9,16 @@
       "note": "The interpolated SQL comes from sanitize_sql and connection.quote. The query never reaches it raw."
     },
     {
-      "fingerprint": "1eb9e33a7e910b578467fb0e3e26cd2ca9a116f254d49c14597895bbf7b49a52",
-      "note": "The interpolated SQL is a fixed fold around a column name. The option key and values are binds."
+      "fingerprint": "4e658cb986c22b7974b44f26d5cc2b37792811e6932e265aee72610229931064",
+      "note": "The interpolated SQL is a fixed fold and a fixed subquery with a literal alias. The attribute key, values and count are binds."
     },
     {
       "fingerprint": "7ce38a3601ddd1c9e9d5f8c6494bd6c5307ec41e73c375c52ffb2dae131cda8f",
       "note": "The interpolated SQL comes from sanitize_sql and a relation's to_sql. No request value reaches it raw."
     },
     {
-      "fingerprint": "70b7d92167c01cfb2574ac52d5baf41fff9e26044cd93c32cdaa7ab886470d83",
-      "note": "The interpolated SQL is a fixed fold, a relation's to_sql and a sanitize_sql fragment. No request value reaches it raw."
+      "fingerprint": "60179836dda72ae4905796a721a9c91a401f1bb329f2adc595d3eb2421ea07b9",
+      "note": "The interpolated SQL is a fixed fold, a fixed subquery with a literal alias, a relation's to_sql and a sanitize_sql fragment. No request value reaches it raw."
     }
   ],
   "brakeman_version": "7"

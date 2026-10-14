@@ -1,8 +1,11 @@
-# Narrows a product list by category, brand, price, option values and stock, and counts what each choice leaves.
-# Every group is disjunctive: its values OR together, and its counts leave out its own selection.
+# Narrows a product list by category, brand, price, attributes and stock, and counts what each choice leaves.
+# An attribute is an option or a facet spec, grouped by folded name. A group is disjunctive unless its spec says
+# all: then its values AND together and its counts narrow with its own selection.
 class Product::Filter
-  KEYS = ["categories", "brands", "price_min", "price_max", "options", "available"].freeze
+  KEYS = ["categories", "brands", "price_min", "price_max", "attributes", "available"].freeze
   RANGES = 4
+  # Each selected group adds a count query and a clause to every other query.
+  MAX_ATTRIBUTES = 10
   NUMBER = /\A\d+(?:[.,]\d+)?\z/
 
   class Invalid < StandardError
@@ -20,7 +23,7 @@ class Product::Filter
   # @param sql [String]
   # @return [String]
   def self.fold_sql(sql)
-    # Brackets go too, so a key fits inside filter[options][...].
+    # Brackets go too, so a key fits inside filter[attributes][...].
     "translate(lower(unaccent(#{sql})), 'ς[]', 'σ')"
   end
 
@@ -38,21 +41,21 @@ class Product::Filter
     @price_max = price(params["price_max"], "filter[price_max]")
     raise Invalid, "filter[price_min]" if @price_min && @price_max && @price_min > @price_max
 
-    @options = options(params["options"])
+    @attributes = attributes(params["attributes"])
     @available = available(params["available"])
   end
 
   def any?
-    [@categories, @brands, @price_min, @price_max, @options.presence, @available].any?
+    [@categories, @brands, @price_min, @price_max, @attributes.presence, @available].any?
   end
 
   # @param products [ActiveRecord::Relation<Product>]
   # @param except [Symbol, String, nil] the group to leave out, for its own counts: :categories, :brands, :price,
-  #   or an option key
+  #   or an attribute key
   # @return [ActiveRecord::Relation<Product>]
   def apply(products, except: nil)
     products = narrow(products, except:)
-    return products unless @price_min || @price_max || @available || @options.except(except).any?
+    return products unless @price_min || @price_max || @available || @attributes.except(except).any?
 
     products.where(id: variants(except:).select(:product_id))
   end
@@ -65,7 +68,7 @@ class Product::Filter
       categories: category_facet(products, root),
       brands: brand_facet(products),
       price: price_facet(products),
-      options: option_facet(products)
+      attributes: attribute_facet(products)
     }
   end
 
@@ -85,12 +88,32 @@ class Product::Filter
     Integer(value, 10).tap { |cents| raise Invalid, field if cents > Product::Variant::MAX_INTEGER }
   end
 
-  def options(value)
+  def attributes(value)
     return {} if value.nil?
-    # One variant must hold every option filter, and no variant has more options than its product.
-    raise Invalid, "filter[options]" unless value.is_a?(Hash) && value.size <= Product::MAX_OPTIONS
+    raise Invalid, "filter[attributes]" unless value.is_a?(Hash) && value.size <= MAX_ATTRIBUTES
 
-    value.to_h { |key, values| [key, strings(values, "filter[options][#{key}]")] }
+    value.to_h { |key, values| [key, strings(values, "filter[attributes][#{key}]")] }
+  end
+
+  # @return [Set<String>] the keys of groups that AND their values
+  def conjunctive
+    @conjunctive ||= Specification.where(facet: true).mode_all.pluck(:key).to_set
+  end
+
+  # Each attribute of a variant: its options, and the facet specs it overrides or inherits from its product.
+  #
+  # @param variant [String] the SQL name of the variant row
+  def pairs_sql(variant)
+    <<~SQL.squish
+      SELECT option.key AS name, option.value FROM jsonb_each_text(#{variant}.option_values) AS option
+      UNION ALL
+      SELECT specifications.name, spec.value
+      FROM product_specification_values AS spec JOIN specifications ON specifications.id = spec.specification_id
+      WHERE specifications.facet AND spec.product_id = #{variant}.product_id
+        AND (spec.variant_id = #{variant}.id OR (spec.variant_id IS NULL AND NOT EXISTS (
+          SELECT 1 FROM product_specification_values AS own
+          WHERE own.variant_id = #{variant}.id AND own.specification_id = spec.specification_id)))
+    SQL
   end
 
   def available(value)
@@ -109,7 +132,7 @@ class Product::Filter
     @brands && except != :brands ? products.where(brand_id: Brand.where(slug: @brands).select(:id)) : products
   end
 
-  # Option and price filters hold on one variant, so a shopper can buy what matched.
+  # Attribute and price filters hold on one variant, so a shopper can buy what matched.
   def variants(except: nil)
     scope = Product::Variant.active
     unless except == :price
@@ -117,11 +140,16 @@ class Product::Filter
       scope = scope.where(price_cents: ..@price_max) if @price_max
     end
     scope = scope.available if @available
-    # Keys and values compare as the facets gave them, already folded.
-    @options.except(except).reduce(scope) do |narrowed, (key, values)|
-      narrowed.where(<<~SQL.squish, key, values)
-        EXISTS (SELECT 1 FROM jsonb_each_text(product_variants.option_values) AS option
-                WHERE #{self.class.fold_sql("option.key")} = ? AND #{self.class.fold_sql("option.value")} IN (?))
+    # One clause per group whatever its mode, so MAX_ATTRIBUTES bounds the query. Keys and values compare as the
+    # facets gave them, already folded.
+    name = self.class.fold_sql("attribute.name")
+    value = self.class.fold_sql("attribute.value")
+    @attributes.except(except).reduce(scope) do |narrowed, (key, values)|
+      # At least one, so an empty list matches nothing in either mode.
+      needed = conjunctive.include?(key) ? [values.uniq.size, 1].max : 1
+      narrowed.where(<<~SQL.squish, key, values, needed)
+        (SELECT count(DISTINCT #{value}) FROM (#{pairs_sql("product_variants")}) AS attribute
+         WHERE #{name} = ? AND #{value} IN (?)) >= ?
       SQL
     end
   end
@@ -193,36 +221,44 @@ class Product::Filter
     (euros / step).round * step * 100
   end
 
-  def option_facet(products)
-    rows = option_rows(products, nil)
-    @options.each_key do |key|
-      rows = rows.reject { |row| row["group_key"] == key } + option_rows(products, key)
+  def attribute_facet(products)
+    rows = attribute_rows(products, nil)
+    @attributes.each_key do |key|
+      own = attribute_rows(products, key)
+      # A conjunctive group lists every value, so a pick that empties the list can be undone, but counts narrow.
+      if conjunctive.include?(key)
+        narrowed = rows.select { |row| row["group_key"] == key }.to_h { |row| [row["value_key"], row["count"]] }
+        own = own.map { |row| row.merge("count" => narrowed.fetch(row["value_key"], 0)) }
+      end
+      rows = rows.reject { |row| row["group_key"] == key } + own
     end
 
     groups = rows.group_by { |row| row["group_key"] }.map do |key, group_rows|
       (group, *), values = group_rows.partition { |row| row["whole_group"] == 1 }
       values = values.map { |row| { key: row["value_key"], label: row["value_label"], count: row["count"] } }
-      { key:, label: group["group_label"], mode: "any", count: group["count"],
+      mode = conjunctive.include?(key) ? "all" : "any"
+      { key:, label: group["group_label"], mode:, count: group["count"],
         values: values.sort_by { |value| natural(value[:key]) } }
     end
     groups.sort_by { |group| [-group[:count], group[:label]] }.map { |group| group.except(:count) }
   end
 
   # A row per value, plus a row per group with whole_group set, which counts the group's products.
-  def option_rows(products, key)
+  def attribute_rows(products, key)
     variants = variants(except: key).where(product_id: narrow(products).select(:id))
-                                    .select(:product_id, :option_values)
-    only = Product.sanitize_sql(["WHERE #{self.class.fold_sql("option.key")} = ?", key]) if key
+                                    .select(:id, :product_id, :option_values)
+    only = Product.sanitize_sql(["WHERE #{self.class.fold_sql("attribute.name")} = ?", key]) if key
     Product.connection.select_all(<<~SQL).to_a
       SELECT group_key, value_key, mode() WITHIN GROUP (ORDER BY name) AS group_label,
              mode() WITHIN GROUP (ORDER BY value) AS value_label, count(DISTINCT product_id) AS count,
              GROUPING(value_key) AS whole_group
       FROM (
-        SELECT variants.product_id, option.key AS name, option.value,
-               #{self.class.fold_sql("option.key")} AS group_key, #{self.class.fold_sql("option.value")} AS value_key
-        FROM (#{variants.to_sql}) AS variants, jsonb_each_text(variants.option_values) AS option
+        SELECT variants.product_id, attribute.name, attribute.value,
+               #{self.class.fold_sql("attribute.name")} AS group_key,
+               #{self.class.fold_sql("attribute.value")} AS value_key
+        FROM (#{variants.to_sql}) AS variants, LATERAL (#{pairs_sql("variants")}) AS attribute
         #{only}
-      ) AS options
+      ) AS attributes
       GROUP BY GROUPING SETS ((group_key), (group_key, value_key))
     SQL
   end
