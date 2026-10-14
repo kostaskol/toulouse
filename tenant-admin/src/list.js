@@ -30,3 +30,21 @@ export function useList(path, key, query = () => ({})) {
 
   return { items, next, busy, error, load, loadMore: () => load(true) };
 }
+
+/**
+ * Every page of a cursor-paged list, for a select that needs them all.
+ *
+ * @param path [String]
+ * @param key [String]
+ * @return [Array<Object>]
+ */
+export async function getAll(path, key) {
+  const items = [];
+  let after;
+  do {
+    const body = await get(path, { after, limit: 100 });
+    items.push(...body[key]);
+    after = body.meta.next_cursor;
+  } while (after);
+  return items;
+}

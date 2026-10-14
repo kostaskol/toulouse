@@ -5,9 +5,15 @@ import LoginPage from "./pages/LoginPage.vue";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.vue";
 import SetPasswordPage from "./pages/SetPasswordPage.vue";
 import NotFoundPage from "./pages/NotFoundPage.vue";
+import ProductsPage from "./pages/ProductsPage.vue";
+import ProductNewPage from "./pages/ProductNewPage.vue";
+import ProductEditPage from "./pages/ProductEditPage.vue";
 import BrandsPage from "./pages/BrandsPage.vue";
 import CategoriesPage from "./pages/CategoriesPage.vue";
 import SpecificationsPage from "./pages/SpecificationsPage.vue";
+
+// Pages put the id in API paths, so a crafted one must not climb to another endpoint.
+const encodedId = (route) => ({ id: encodeURIComponent(route.params.id) });
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -18,6 +24,9 @@ export const router = createRouter({
     // Both paths match the links in staff emails.
     { path: "/password-reset", component: SetPasswordPage, props: { kind: "reset" }, meta: { public: true } },
     { path: "/invite", component: SetPasswordPage, props: { kind: "invite" }, meta: { public: true } },
+    { path: "/products", component: ProductsPage },
+    { path: "/products/new", component: ProductNewPage },
+    { path: "/products/:id", component: ProductEditPage, props: encodedId },
     { path: "/brands", component: BrandsPage },
     { path: "/categories", component: CategoriesPage },
     { path: "/specifications", component: SpecificationsPage },
