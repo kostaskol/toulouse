@@ -37,9 +37,9 @@ class ApplicationMailer < ActionMailer::Base
   # @param token [String, nil]
   # @return [String]
   def storefront_url(path, token: nil)
-    domain = Current.tenant.domains.find_by(is_primary: true) || raise(MissingPrimaryDomainError)
+    domain = Current.tenant.primary_domain || raise(MissingPrimaryDomainError)
 
-    link("https://#{domain.hostname}", path, token)
+    link(domain.url, path, token)
   end
 
   # Links to a page in tenant admin.

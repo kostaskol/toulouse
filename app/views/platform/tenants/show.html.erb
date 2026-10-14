@@ -1,0 +1,16 @@
+<h1><%= @tenant.name %></h1>
+
+<p>
+  <%= link_to "Tenants", platform_tenants_path %> ·
+  <%= link_to "API keys", platform_tenant_api_keys_path(@tenant) %>
+</p>
+
+<h2>Storefront</h2>
+
+<% if @primary_domain %>
+  <p><%= @primary_domain.hostname %></p>
+  <%= button_to "Open storefront", platform_tenant_handoffs_path(@tenant),
+                form: { target: "_blank", rel: "noopener noreferrer" } %>
+<% else %>
+  <p>No primary domain.</p>
+<% end %>

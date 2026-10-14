@@ -9,7 +9,7 @@
   <tbody>
     <% @tenants.each do |tenant| %>
       <tr>
-        <td><%= tenant.name %></td>
+        <td><%= link_to tenant.name, platform_tenant_path(tenant) %></td>
         <td><%= tenant.slug %></td>
         <td><%= tenant.status %></td>
         <td><%= link_to "API keys", platform_tenant_api_keys_path(tenant) %></td>

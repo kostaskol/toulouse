@@ -32,6 +32,11 @@ class Platform::BaseController < ActionController::Base
     @admin_session.refresh_expiry
   end
 
+  def as_tenant(&)
+    @tenant = Tenant.find(params[:tenant_id])
+    Tenancy.with_tenant(@tenant, &)
+  end
+
   def write_session_cookie(session)
     cookies[COOKIE] = {
       value: session.token,

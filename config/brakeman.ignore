@@ -19,6 +19,10 @@
     {
       "fingerprint": "60179836dda72ae4905796a721a9c91a401f1bb329f2adc595d3eb2421ea07b9",
       "note": "The interpolated SQL is a fixed fold, a fixed subquery with a literal alias, a relation's to_sql and a sanitize_sql fragment. No request value reaches it raw."
+    },
+    {
+      "fingerprint": "f1e645edbbaac2405c6a0f594e0f727373eb1bd58a12c7862f1d23d34553380a",
+      "note": "The host is the tenant's primary domain, which platform admins set. No request value reaches the URL."
     }
   ],
   "brakeman_version": "7"

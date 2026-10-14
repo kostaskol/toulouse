@@ -26,11 +26,4 @@ class Platform::ApiKeysController < Platform::BaseController
     Tenant::ApiKey.find(params[:id]).revoke!
     redirect_to platform_tenant_api_keys_path(@tenant)
   end
-
-  private
-
-  def as_tenant(&)
-    @tenant = Tenant.find(params[:tenant_id])
-    Tenancy.with_tenant(@tenant, &)
-  end
 end
