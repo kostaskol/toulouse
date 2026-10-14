@@ -137,7 +137,7 @@ export const search = (query, { limit, after, filter } = {}) =>
  * Turns a filter into one URL path segment. The same filter gives the same segment whatever order it was picked
  * in, so each filtered page has one address for search engines.
  *
- * @param filter [Object] `categories`, `brands`, `price_min`, `price_max`, `options` and `available`, as the
+ * @param filter [Object] `categories`, `brands`, `price_min`, `price_max`, `attributes` and `available`, as the
  *   facets name them
  * @return [String] already percent-encoded
  */
@@ -145,7 +145,8 @@ export function filterPath(filter = {}) {
   const entries = [
     ...(filter.categories ?? []).map((slug) => ["category", slug]),
     ...(filter.brands ?? []).map((slug) => ["brand", slug]),
-    ...Object.entries(filter.options ?? {}).flatMap(([key, values]) => values.map((value) => [`option.${key}`, value])),
+    ...Object.entries(filter.attributes ?? {})
+      .flatMap(([key, values]) => values.map((value) => [`attribute.${key}`, value])),
     ...["price_min", "price_max"].filter((name) => filter[name] != null).map((name) => [name, String(filter[name])])
   ];
   if (filter.available) entries.push(["available", "true"]);
@@ -164,20 +165,20 @@ export function filterPath(filter = {}) {
  */
 export function parseFilterPath(segment) {
   const filter = {};
-  // A Map, so a key such as __proto__ stays a plain option key.
-  const options = new Map();
+  // A Map, so a key such as __proto__ stays a plain attribute key.
+  const attributes = new Map();
   const add = (list, value) => [...(list ?? []), value];
   for (const [name, value] of new URLSearchParams(segment)) {
     if (name === "category") filter.categories = add(filter.categories, value);
     else if (name === "brand") filter.brands = add(filter.brands, value);
     else if (name === "price_min" || name === "price_max") filter[name] = Number(value);
     else if (name === "available") filter.available = value === "true";
-    else if (name.startsWith("option.")) {
-      const key = name.slice("option.".length);
-      options.set(key, add(options.get(key), value));
+    else if (name.startsWith("attribute.")) {
+      const key = name.slice("attribute.".length);
+      attributes.set(key, add(attributes.get(key), value));
     }
   }
-  if (options.size) filter.options = Object.fromEntries(options);
+  if (attributes.size) filter.attributes = Object.fromEntries(attributes);
   return filter;
 }
 
@@ -191,7 +192,7 @@ export const categoryLeaves = (categories) =>
   categories.flatMap((category) => (category.children.length ? categoryLeaves(category.children) : [category]));
 
 function filterQuery(filter) {
-  const { categories, brands, price_min, price_max, options = {}, available } = filter ?? {};
+  const { categories, brands, price_min, price_max, attributes = {}, available } = filter ?? {};
   const query = {
     "filter[categories][]": categories,
     "filter[brands][]": brands,
@@ -199,7 +200,7 @@ function filterQuery(filter) {
     "filter[price_max]": price_max,
     "filter[available]": available ? "true" : null
   };
-  for (const [key, values] of Object.entries(options ?? {})) query[`filter[options][${key}][]`] = values;
+  for (const [key, values] of Object.entries(attributes ?? {})) query[`filter[attributes][${key}][]`] = values;
   return query;
 }
 

@@ -79,7 +79,7 @@ describe("filters", () => {
     brands: ["c"],
     price_min: 100,
     price_max: 200,
-    options: { "χρωμα": ["μαυρο", "a&b/c"] },
+    attributes: { "χρωμα": ["μαυρο", "a&b/c"] },
     available: true
   };
 
@@ -94,8 +94,8 @@ describe("filters", () => {
       ["filter[price_min]", "100"],
       ["filter[price_max]", "200"],
       ["filter[available]", "true"],
-      ["filter[options][χρωμα][]", "μαυρο"],
-      ["filter[options][χρωμα][]", "a&b/c"]
+      ["filter[attributes][χρωμα][]", "μαυρο"],
+      ["filter[attributes][χρωμα][]", "a&b/c"]
     ]);
   });
 
@@ -106,7 +106,7 @@ describe("filters", () => {
   });
 
   test("gives one path segment per filter, whatever the order", () => {
-    const reordered = { ...filter, categories: ["a", "b"], options: { "χρωμα": ["a&b/c", "μαυρο"] } };
+    const reordered = { ...filter, categories: ["a", "b"], attributes: { "χρωμα": ["a&b/c", "μαυρο"] } };
 
     assert.equal(client.filterPath(filter), client.filterPath(reordered));
     assert.equal(client.filterPath(filter), client.filterPath({ ...filter, brands: ["c", "c"] }));
@@ -116,13 +116,13 @@ describe("filters", () => {
   test("reads back the filter its path segment holds", () => {
     const read = client.parseFilterPath(client.filterPath(filter));
 
-    assert.deepEqual(read, { ...filter, categories: ["a", "b"], options: { "χρωμα": ["a&b/c", "μαυρο"] } });
+    assert.deepEqual(read, { ...filter, categories: ["a", "b"], attributes: { "χρωμα": ["a&b/c", "μαυρο"] } });
   });
 
-  test("keeps an option key named like an object property", () => {
-    const read = client.parseFilterPath("option.__proto__=a&option.constructor=b");
+  test("keeps an attribute key named like an object property", () => {
+    const read = client.parseFilterPath("attribute.__proto__=a&attribute.constructor=b");
 
-    assert.deepEqual(Object.entries(read.options), [["__proto__", ["a"]], ["constructor", ["b"]]]);
+    assert.deepEqual(Object.entries(read.attributes), [["__proto__", ["a"]], ["constructor", ["b"]]]);
   });
 
   test("gives the leaves of the category facet", () => {
