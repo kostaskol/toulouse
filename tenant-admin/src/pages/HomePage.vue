@@ -6,7 +6,8 @@ const SECTIONS = [
   { to: "/products", label: "Προϊόντα", text: "Τίτλοι, τιμές, παραλλαγές, απόθεμα και φωτογραφίες." },
   { to: "/brands", label: "Μάρκες", text: "Οι μάρκες των προϊόντων." },
   { to: "/categories", label: "Κατηγορίες", text: "Το δέντρο κατηγοριών του καταστήματος." },
-  { to: "/specifications", label: "Προδιαγραφές", text: "Χαρακτηριστικά προϊόντων και φίλτρα." }
+  { to: "/specifications", label: "Προδιαγραφές", text: "Χαρακτηριστικά προϊόντων και φίλτρα." },
+  { to: "/staff", label: "Ομάδα", text: "Μέλη και προσκλήσεις.", permission: "manage_staff" }
 ];
 
 const sections = computed(() => SECTIONS.filter((section) => !section.permission || can(section.permission)));

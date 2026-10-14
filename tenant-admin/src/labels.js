@@ -4,3 +4,5 @@ export const PRODUCT_STATUSES = { draft: "Πρόχειρο", published: "Δημ�
 export const PRODUCT_STATUS_BADGES = { draft: "badge-yellow", published: "badge-green", archived: "" };
 export const VAT_CLASSES = { standard: "Κανονικός", reduced: "Μειωμένος", super_reduced: "Υπερμειωμένος" };
 export const VARIANT_STATUSES = { active: "Ενεργή", archived: "Αρχειοθετημένη" };
+
+export const STAFF_STATUSES = { pending: "Σε αναμονή", active: "Ενεργό" };

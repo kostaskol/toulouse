@@ -11,7 +11,8 @@ const NAV = [
   { to: "/products", label: "Προϊόντα" },
   { to: "/brands", label: "Μάρκες" },
   { to: "/categories", label: "Κατηγορίες" },
-  { to: "/specifications", label: "Προδιαγραφές" }
+  { to: "/specifications", label: "Προδιαγραφές" },
+  { to: "/staff", label: "Ομάδα", permission: "manage_staff" }
 ];
 
 const route = useRoute();

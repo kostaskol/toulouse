@@ -8,6 +8,7 @@ import NotFoundPage from "./pages/NotFoundPage.vue";
 import ProductsPage from "./pages/ProductsPage.vue";
 import ProductNewPage from "./pages/ProductNewPage.vue";
 import ProductEditPage from "./pages/ProductEditPage.vue";
+import StaffPage from "./pages/StaffPage.vue";
 import BrandsPage from "./pages/BrandsPage.vue";
 import CategoriesPage from "./pages/CategoriesPage.vue";
 import SpecificationsPage from "./pages/SpecificationsPage.vue";
@@ -30,6 +31,7 @@ export const router = createRouter({
     { path: "/brands", component: BrandsPage },
     { path: "/categories", component: CategoriesPage },
     { path: "/specifications", component: SpecificationsPage },
+    { path: "/staff", component: StaffPage, meta: { permission: "manage_staff" } },
     { path: "/:path(.*)*", component: NotFoundPage }
   ]
 });
