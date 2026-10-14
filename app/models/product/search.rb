@@ -4,6 +4,8 @@ class Product::Search
   MIN_LENGTH = 2
   MAX_LENGTH = 200
   MATCHES = ["exact", "fuzzy"].freeze
+  # Marks too, so a decomposed accent does not split a word. A decimal stays whole, as Postgres keeps it.
+  WORD = /[\p{L}\p{M}\p{N}]+(?:\.\p{N}+)*/
 
   class InvalidCursor < StandardError; end
 
@@ -18,11 +20,20 @@ class Product::Search
     fields = { "A" => product.title, "B" => product.brand&.name, "C" => [*categories, *options].join(" "),
                "D" => product.description }
 
-    document = fields.map { "setweight(to_tsvector('search', ?), ?)" }.join(" || ")
+    # Skeletons are whole words, so they skip the stemmer.
+    document = fields.map { "setweight(to_tsvector('search', ?) || to_tsvector('simple', ?), ?)" }.join(" || ")
+    named = "#{product.title} #{product.brand&.name}"
     Product.where(id: product.id).update_all([
       "search_document = #{document}, search_text = ?",
-      *fields.flat_map { |weight, text| [text.to_s, weight] }, fold("#{product.title} #{product.brand&.name}")
+      *fields.flat_map { |weight, text| [text.to_s, skeletons(text.to_s), weight] },
+      "#{fold(named)} #{skeletons(named)}"
     ])
+  end
+
+  # @param text [String]
+  # @return [String] the greeklish skeleton of each Greek word
+  def self.skeletons(text)
+    text.scan(WORD).select { |word| Greeklish.greek?(word) }.map { |word| Greeklish.skeleton(word) }.join(" ")
   end
 
   # Drops accents and case, and turns final sigma into sigma.
@@ -38,7 +49,7 @@ class Product::Search
   # @param variants [ActiveRecord::Relation<Product::Variant>] the variants whose codes may match
   def initialize(query, products:, variants:)
     @query = query.strip
-    @terms = @query.scan(/[\p{L}\p{N}]+/)
+    @terms = @query.scan(WORD)
     @products = products
     @variants = variants
   end
@@ -88,14 +99,23 @@ class Product::Search
   end
 
   def fuzzy
-    query = Product.connection.quote(Product::Search.fold(@query))
-    ["0", "word_similarity(#{query}, products.search_text)", "#{query} <% products.search_text"]
+    queries = [Product::Search.fold(@query)]
+    queries << terms.map { |term| Greeklish.skeleton(term) }.join(" ") if terms.any? { |term| Greeklish.latin?(term) }
+    queries = queries.map { |query| Product.connection.quote(query) }
+
+    ["0", "GREATEST(#{queries.map { |query| "word_similarity(#{query}, products.search_text)" }.join(", ")})",
+     queries.map { |query| "#{query} <% products.search_text" }.join(" OR ")]
   end
 
-  # Every term must match. The last one matches as a prefix, since the shopper may still be typing it.
+  # Every term must match, the last as a prefix. A Latin term may be greeklish, so its skeleton matches too. So
+  # does a Greek last term: a half typed word can stem longer than the whole word.
   def tsquery
     parts = terms.each_with_index.map do |term, index|
-      Product.sanitize_sql(["to_tsquery('search', ?)", index == terms.size - 1 ? "#{term}:*" : term])
+      suffix = ":*" if index == terms.size - 1
+      part = Product.sanitize_sql(["to_tsquery('search', ?)", "#{term}#{suffix}"])
+      next part unless Greeklish.latin?(term) || (suffix && Greeklish.greek?(term))
+
+      "(#{part} || #{Product.sanitize_sql(["to_tsquery('simple', ?)", "#{Greeklish.skeleton(term)}#{suffix}"])})"
     end
     "(#{parts.join(" && ")})"
   end

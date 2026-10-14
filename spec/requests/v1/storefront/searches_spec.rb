@@ -53,6 +53,12 @@ RSpec.describe "Storefront search", type: :request do
       expect(response.parsed_body).to eq("category" => category.slice(:id, :name, :slug).as_json)
     end
 
+    it "answers with the category whose name the query spells in greeklish" do
+      search("papoutsia")
+
+      expect(response.parsed_body["category"]).to eq(category.slice(:id, :name, :slug).as_json)
+    end
+
     it "searches products when two categories share the name" do
       as_tenant(tenant) { create(:category, name: category.name, parent: create(:category)) }
       search(category.name)

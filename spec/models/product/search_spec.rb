@@ -86,6 +86,26 @@ RSpec.describe Product::Search, :as_tenant do
       expect(found("σοφός")).to eq([product])
     end
 
+    it "keeps a decomposed accent inside its word" do
+      product = create(:product, title: "Παπούτσια")
+
+      expect(search("παπούτσια".unicode_normalize(:nfd)).values_at(0, 2)).to eq([[product], "exact"])
+    end
+
+    it "matches a half typed last word whose stem outgrows the whole word's" do
+      product = create(:product, title: "Αθλητικά")
+
+      expect(search("αθλητικ").values_at(0, 2)).to eq([[product], "exact"])
+    end
+
+    it "keeps a decimal in the query whole" do
+      product = create(:product)
+      option = product.option_names.first
+      product.variants.first.update!(option_values: { option => "42.5" })
+
+      expect(search("42.5").values_at(0, 2)).to eq([[product], "exact"])
+    end
+
     it "matches inflected forms" do
       product = create(:product, title: "Παπούτσια")
 
@@ -119,6 +139,26 @@ RSpec.describe Product::Search, :as_tenant do
       create(:product, title: "Παπούτσια")
 
       expect(found("παπούτσια", products: Product.published)).to be_empty
+    end
+  end
+
+  describe "greeklish" do
+    it "matches a greeklish query against Greek text" do
+      product = create(:product, title: "Παπούτσια")
+
+      expect(found("papoutsia")).to eq([product])
+    end
+
+    it "matches the last greeklish term as a prefix" do
+      product = create(:product, title: "Παπούτσια")
+
+      expect(found("papoutsi")).to eq([product])
+    end
+
+    it "falls back to trigrams for a greeklish typo" do
+      product = create(:product, title: "Παπούτσια")
+
+      expect(search("papoutsa").values_at(0, 2)).to eq([[product], "fuzzy"])
     end
   end
 

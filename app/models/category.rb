@@ -38,7 +38,8 @@ class Category < ApplicationRecord
     SQL
   end
 
-  # The one category whose name means the same words, ignoring accents, case and inflection.
+  # The one category whose name means the same words, ignoring accents, case and inflection, or reads the same
+  # in greeklish.
   #
   # @param terms [Array<String>]
   # @return [Category, nil] nil when none or several match
@@ -46,7 +47,14 @@ class Category < ApplicationRecord
     return if terms.empty?
 
     same_words = "strip(to_tsvector('search', name)) = strip(to_tsvector('search', ?))"
-    matches = where(same_words, terms.join(" ")).limit(2).to_a
+    matches = where(same_words, terms.join(" ")).to_a
+    if terms.any? { |term| Greeklish.latin?(term) }
+      skeleton = terms.map { |term| Greeklish.skeleton(term) }
+      # Tens to hundreds of categories per tenant, so they are compared in memory.
+      matches |= all.select do |category|
+        category.name.scan(Product::Search::WORD).map { |word| Greeklish.skeleton(word) } == skeleton
+      end
+    end
     matches.first if matches.size == 1
   end
 
