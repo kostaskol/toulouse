@@ -39,6 +39,7 @@ It is one ES module with no dependencies and no build step: `client.js`.
 | `getProduct(slug)` | `GET /products/<slug>` |
 | `listCategories()` | `GET /categories` |
 | `listCategoryProducts(slug, { limit, after })` | `GET /categories/<slug>/products` |
+| `search(query, { limit, after })` | `GET /search/<query>` |
 
 ## Config
 

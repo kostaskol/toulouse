@@ -119,6 +119,17 @@ export const listCategories = () => request("GET", "categories");
 export const listCategoryProducts = (slug, { limit, after } = {}) =>
   request("GET", `categories/${encodeURIComponent(slug)}/products`, { query: { limit, after } });
 
+/**
+ * Searches products. A query that names one category answers with that category instead, so the storefront can
+ * open its page.
+ *
+ * @param query [String]
+ * @param page [Object] optional `limit` and `after`
+ * @return [Object] `category`, or `products` with `meta.next_cursor` and `meta.match` (`exact` or `fuzzy`)
+ */
+export const search = (query, { limit, after } = {}) =>
+  request("GET", `search/${encodeURIComponent(query)}`, { query: { limit, after } });
+
 async function request(method, path, { query = {}, body } = {}) {
   const url = new URL(path, BFF_URL);
   for (const [name, value] of Object.entries(query)) {
