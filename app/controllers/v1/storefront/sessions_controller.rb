@@ -4,6 +4,8 @@ module V1
       # Signing in is how a shopper replaces a session that has expired.
       skip_before_action :authenticate_shopper, only: :create
       before_action :require_shopper_session!, except: :create
+      # Signing out ends the impersonation, which changes nothing of the shopper's.
+      skip_before_action :reject_writes_while_impersonating, only: :destroy
 
       FAILURES = {
         invalid_credentials: Failure.new(

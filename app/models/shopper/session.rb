@@ -8,6 +8,7 @@ class Shopper::Session < ApplicationRecord
 
   IDLE_TIMEOUT = 30.days
   ABSOLUTE_TIMEOUT = 90.days
+  IMPERSONATION_TIMEOUT = 30.minutes
 
   belongs_to :shopper
 
@@ -23,4 +24,10 @@ class Shopper::Session < ApplicationRecord
     session = find_by(token_digest: digest(token))
     session if session&.live?
   end
+
+  def impersonated? = impersonator_id.present?
+
+  # Both limits match, so use never extends an impersonation.
+  def idle_timeout = impersonated? ? IMPERSONATION_TIMEOUT : super
+  def absolute_timeout = impersonated? ? IMPERSONATION_TIMEOUT : super
 end

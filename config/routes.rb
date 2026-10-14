@@ -19,6 +19,7 @@ Rails.application.routes.draw do
         post :revoke, on: :member
       end
       resources :handoffs, only: :create
+      resources :impersonations, only: :create
     end
   end
 

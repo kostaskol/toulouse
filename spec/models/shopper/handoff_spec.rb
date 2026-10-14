@@ -42,6 +42,14 @@ RSpec.describe Shopper::Handoff, :platform do
       expect(described_class.redeem(token)).to be_nil
     end
 
+    it "opens a read-only session for an impersonation" do
+      shopper = create(:shopper)
+      session = described_class.redeem(described_class.issue_impersonation(shopper, admin_id).token)
+
+      expect(session).to have_attributes(shopper:, impersonator_id: admin_id)
+      expect(session.expires_at).to be_within(1.second).of(Shopper::Session::IMPERSONATION_TIMEOUT.from_now)
+    end
+
     it "refuses another token type" do
       expect(described_class.redeem(create(:shopper_session).token)).to be_nil
     end

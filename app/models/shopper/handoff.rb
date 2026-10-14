@@ -23,6 +23,15 @@ class Shopper::Handoff < ApplicationRecord
     create!(shopper: Shopper.create_or_find_by!(platform_admin_id: admin_id))
   end
 
+  # Issues a read-only handoff to a shopper, on behalf of the admin.
+  #
+  # @param shopper [Shopper]
+  # @param admin_id [String]
+  # @return [Shopper::Handoff]
+  def self.issue_impersonation(shopper, admin_id)
+    create!(shopper:, impersonator_id: admin_id)
+  end
+
   # Spends the handoff and opens a session for its shopper. Row-level security
   # hides another tenant's handoff, so it answers like an unknown one.
   #
@@ -37,7 +46,7 @@ class Shopper::Handoff < ApplicationRecord
       next unless handoff&.live?
 
       handoff.update!(redeemed_at: Time.current)
-      handoff.shopper.sessions.create!
+      handoff.shopper.sessions.create!(impersonator_id: handoff.impersonator_id)
     end
   end
 end

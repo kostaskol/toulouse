@@ -11,6 +11,20 @@
   <p><%= @primary_domain.hostname %></p>
   <%= button_to "Open storefront", platform_tenant_handoffs_path(@tenant),
                 form: { target: "_blank", rel: "noopener noreferrer" } %>
+
+  <h2>View as a shopper</h2>
+
+  <p>Read-only, for <%= Shopper::Session::IMPERSONATION_TIMEOUT.inspect %>.</p>
+
+  <%= form_with url: platform_tenant_impersonations_path(@tenant),
+                html: { target: "_blank", rel: "noopener noreferrer" } do |form| %>
+    <%= form.label :email, "Shopper email" %>
+    <%= form.email_field :email, required: true %>
+    <%= form.submit "View storefront" %>
+  <% end %>
+  <% if @impersonation_error %>
+    <p><%= @impersonation_error %></p>
+  <% end %>
 <% else %>
   <p>No primary domain.</p>
 <% end %>

@@ -448,7 +448,8 @@ CREATE TABLE public.shopper_handoffs (
     expires_at timestamp(6) with time zone NOT NULL,
     redeemed_at timestamp(6) with time zone,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    impersonator_id uuid
 );
 
 
@@ -463,7 +464,8 @@ CREATE TABLE public.shopper_sessions (
     token_digest text NOT NULL,
     expires_at timestamp(6) with time zone NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    impersonator_id uuid
 );
 
 
@@ -1484,6 +1486,14 @@ ALTER TABLE ONLY public.categories
 
 
 --
+-- Name: shopper_sessions fk_rails_85e7542355; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_sessions
+    ADD CONSTRAINT fk_rails_85e7542355 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
+
+
+--
 -- Name: shopper_email_codes fk_rails_8d2d640287; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1537,6 +1547,14 @@ ALTER TABLE ONLY public.active_storage_variant_records
 
 ALTER TABLE ONLY public.product_imports
     ADD CONSTRAINT fk_rails_9c45ada6a5 FOREIGN KEY (staff_id) REFERENCES public.staff(id) ON DELETE SET NULL;
+
+
+--
+-- Name: shopper_handoffs fk_rails_b03d328dc3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.shopper_handoffs
+    ADD CONSTRAINT fk_rails_b03d328dc3 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
 
 
 --
@@ -1966,6 +1984,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261014200000'),
 ('20261014190000'),
 ('20261014180100'),
 ('20261014150000'),

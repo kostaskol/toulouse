@@ -35,7 +35,7 @@ export function onSignedOut(listener) {
 
 /**
  * @param details [Object] `email` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const signIn = ({ email, password }) => request("POST", "session", { body: { email, password } });
 
@@ -52,7 +52,7 @@ export async function signOut() {
  * Redeems a handoff in the page URL first, so a storefront needs no code of its
  * own for it.
  *
- * @return [Object, null] `shopper` and `expires_at`, or null when signed out
+ * @return [Object, null] `shopper`, `expires_at` and `read_only`, or null when signed out
  */
 export async function currentSession() {
   const handoff = takeHandoff();
@@ -83,7 +83,7 @@ export const requestSignupCode = (email) => request("POST", "signup", { body: { 
  * Creates the account and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const completeSignup = ({ email, code, password }) =>
   request("PUT", "signup", { body: { email, code, password } });
@@ -99,7 +99,7 @@ export const requestPasswordResetCode = (email) => request("POST", "password_res
  * Sets the new password and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper` and `expires_at`
+ * @return [Object] `shopper`, `expires_at` and `read_only`
  */
 export const completePasswordReset = ({ email, code, password }) =>
   request("PUT", "password_reset", { body: { email, code, password } });

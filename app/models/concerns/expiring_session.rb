@@ -37,14 +37,18 @@ module ExpiringSession
     expires_at.future?
   end
 
+  # Instance methods, so a model can give some of its rows other limits.
+  def idle_timeout = self.class::IDLE_TIMEOUT
+  def absolute_timeout = self.class::ABSOLUTE_TIMEOUT
+
   def absolute_expiry
-    created_at + self.class::ABSOLUTE_TIMEOUT
+    created_at + absolute_timeout
   end
 
   # Must run as the session's tenant, since row-level security grants no other
   # writes.
   def refresh_expiry
-    refreshed = [self.class::IDLE_TIMEOUT.from_now, absolute_expiry].min
+    refreshed = [idle_timeout.from_now, absolute_expiry].min
     update_columns(expires_at: refreshed) if refreshed - expires_at >= REFRESH_THROTTLE
   end
 
@@ -53,6 +57,6 @@ module ExpiringSession
   def assign_token
     @token = "#{self.class::TOKEN_PREFIX}#{SecureRandom.urlsafe_base64(32)}"
     self.token_digest = self.class.digest(@token)
-    self.expires_at = self.class::IDLE_TIMEOUT.from_now
+    self.expires_at = idle_timeout.from_now
   end
 end
