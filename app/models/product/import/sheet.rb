@@ -11,6 +11,7 @@ class Product::Import::Sheet
   ].freeze
   REQUIRED_COLUMNS = ["handle", "title", "price"].freeze
   OPTION_COLUMN = /\Aoption([1-9]\d*)_(?:name|value)\z/
+  SPEC_COLUMN = /\Aspec:(.*\S.*)\z/
 
   class Error < StandardError
     attr_reader :code
@@ -24,6 +25,12 @@ class Product::Import::Sheet
   end
 
   attr_reader :text
+
+  # Spec columns keep the merchant's spelling.
+  #
+  # @param column [String]
+  # @return [String]
+  def self.label(column) = column.match?(SPEC_COLUMN) ? column : column.humanize
 
   # @param text [String] the upload as received, in any encoding
   def initialize(text)
@@ -44,14 +51,15 @@ class Product::Import::Sheet
     header = @text.each_line.first.to_s
     @col_sep = header.count(";") > header.count(",") ? ";" : ","
     headers, count = scan
-    @option_count = check_header(headers)
+    @option_count, @spec_keys = check_header(headers)
     raise Error.new("file_empty", "The file has no product rows.") if count.zero?
   end
 
   # @return [Array<Product::Import::Group>] one per handle, in order of first appearance
   def groups
-    @groups ||= numbered_rows.group_by { |row, _| row["handle"].to_s.strip }
-                             .map { |handle, group_rows| Product::Import::Group.new(handle, group_rows, @option_count) }
+    @groups ||= numbered_rows.group_by { |row, _| row["handle"].to_s.strip }.map do |handle, group_rows|
+      Product::Import::Group.new(handle, group_rows, @option_count, @spec_keys)
+    end
   end
 
   private
@@ -78,7 +86,8 @@ class Product::Import::Sheet
     raise Error.new("file_malformed", "The file is not valid CSV near line #{error.line_number}.")
   end
 
-  # @return [Integer] how many option column pairs the header has
+  # @return [Array(Integer, Hash{String => String})] how many option column pairs the header has, and each spec
+  #   column's definition key
   def check_header(headers)
     if headers.empty? || headers.any?(&:blank?)
       raise Error.new("unknown_columns", "The header row has a column with no name.")
@@ -88,8 +97,14 @@ class Product::Import::Sheet
     raise Error.new("duplicate_columns", "Repeated columns: #{repeated.join(', ')}.") if repeated.any?
 
     options = headers.grep(OPTION_COLUMN)
-    unknown = headers - PRODUCT_COLUMNS - VARIANT_COLUMNS - options
+    specs = headers.grep(SPEC_COLUMN)
+    unknown = headers - PRODUCT_COLUMNS - VARIANT_COLUMNS - options - specs
     raise Error.new("unknown_columns", "Unknown columns: #{unknown.join(', ')}.") if unknown.any?
+
+    # Folded as spec definitions are, since two columns that fold alike would write one spec.
+    spec_keys = specs.zip(Specification.fold(specs.map { |column| column[SPEC_COLUMN, 1] })).to_h
+    alike = spec_keys.group_by(&:last).values.select(&:many?).flatten(1).map(&:first)
+    raise Error.new("duplicate_columns", "Repeated columns: #{alike.join(', ')}.") if alike.any?
 
     missing = REQUIRED_COLUMNS - headers
     raise Error.new("missing_columns", "Missing columns: #{missing.join(', ')}.") if missing.any?
@@ -100,7 +115,7 @@ class Product::Import::Sheet
       raise Error.new("option_columns_invalid", "Option columns must come in name and value pairs from 1 up.")
     end
 
-    count
+    [count, spec_keys]
   end
 
   # Row numbers count the header as row 1, as a spreadsheet shows them.

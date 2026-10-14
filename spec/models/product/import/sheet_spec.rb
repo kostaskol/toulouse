@@ -103,6 +103,21 @@ RSpec.describe Product::Import::Sheet, :as_tenant do
     expect(error_code(import_csv([row]).sub("price", "price,price"))).to eq("duplicate_columns")
   end
 
+  it "accepts spec columns" do
+    expect { described_class.new(import_csv([row.merge("spec:Υλικό" => "Λινό")])) }.not_to raise_error
+  end
+
+  it "refuses a spec column with no name" do
+    expect(error_code(import_csv([row.merge("spec: " => "Λινό")]))).to eq("unknown_columns")
+  end
+
+  it "refuses two spec columns that fold alike, as definitions fold" do
+    expect(error_code(import_csv([row.merge("spec:Υλικό" => "Λινό", "spec:υλικο" => "Λινό")])))
+      .to eq("duplicate_columns")
+    expect(error_code(import_csv([row.merge("spec:Μέγεθος [EU]" => "42", "spec:Μέγεθος EU" => "42")])))
+      .to eq("duplicate_columns")
+  end
+
   it "refuses an option name with no value column" do
     expect(error_code(import_csv([row.merge("option1_name" => "Size")]))).to eq("option_columns_invalid")
   end
