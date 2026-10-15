@@ -124,6 +124,11 @@ input[type="checkbox"], input[type="radio"] { width: auto; }
 .inline-form > .button { margin-top: 24px; }
 .inline-form .field { flex: 1 1 160px; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.spec-row { display: grid; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.spec-row .row { align-items: flex-start; }
+.spec-name { flex: 1 1 160px; max-width: 240px; }
+.spec-values { display: flex; flex-wrap: wrap; gap: 6px; flex: 3 1 280px; }
+.spec-value { width: 160px; }
 .filters { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .filters > * { flex: 1 1 160px; max-width: 260px; }
 .filters .search { flex: 2 1 240px; max-width: none; }

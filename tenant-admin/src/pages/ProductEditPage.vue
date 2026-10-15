@@ -25,6 +25,7 @@ const options = ref({ brands: [], categories: [], specifications: [] });
 const loading = useAction();
 const saving = useAction();
 const errors = computed(() => formErrors(saving.error.value, FIELDS));
+const specificationErrors = ref({});
 
 onMounted(() => loading.run(async () => {
   const [body, brands, categories, { specifications }] = await Promise.all([
@@ -53,10 +54,14 @@ async function refresh() {
 
 async function save() {
   const { title, slug, description, status, brand_id, category_ids, specifications } = form.value;
+  const { param, errors: rowErrors } = specificationsParam(specifications);
+  specificationErrors.value = rowErrors;
+  if (Object.keys(rowErrors).length) return;
+
   const done = await saving.run(async () => {
     const body = await patch(path, {
       title, slug: slug || undefined, description: description || null, status, brand_id: brand_id || null,
-      category_ids, specifications: specificationsParam(specifications)
+      category_ids, specifications: param
     });
     show(body.product);
   });
@@ -110,7 +115,9 @@ async function save() {
           </div>
         </FormField>
         <FormField label="Προδιαγραφές" group :error="errors.fields.specifications">
-          <SpecificationRows v-model="form.specifications" :definitions="options.specifications" />
+          <SpecificationRows
+            v-model="form.specifications" :definitions="options.specifications" v-model:errors="specificationErrors"
+          />
         </FormField>
         <div class="form-actions">
           <button class="button button-primary" :disabled="saving.busy.value">Αποθήκευση</button>
