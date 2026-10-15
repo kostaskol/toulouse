@@ -1,8 +1,6 @@
 import { reactive } from "vue";
 import { destroy, get } from "./api.js";
 
-const SLUG_KEY = "store-slug";
-
 export const session = reactive({ staff: null, tenant: null, loaded: false });
 
 /**
@@ -31,23 +29,3 @@ export async function signOut() {
  * @return [Boolean]
  */
 export const can = (permission) => session.staff?.permissions.includes(permission) ?? false;
-
-// Storage can be blocked, and the slug is only a convenience.
-export function rememberedSlug() {
-  try {
-    return localStorage.getItem(SLUG_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-/**
- * @param slug [String]
- */
-export function rememberSlug(slug) {
-  try {
-    localStorage.setItem(SLUG_KEY, slug);
-  } catch {
-    // Nothing to do: the next login asks again.
-  }
-}

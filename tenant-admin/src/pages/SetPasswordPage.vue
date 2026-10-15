@@ -4,7 +4,8 @@ import { useRoute, useRouter } from "vue-router";
 import { put } from "../api.js";
 import { useAction } from "../action.js";
 import { formErrors } from "../messages.js";
-import { rememberSlug, setSession } from "../session.js";
+import { setSession } from "../session.js";
+import { store } from "../store.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 
@@ -17,7 +18,7 @@ const props = defineProps({ kind: { type: String, required: true } });
 const route = useRoute();
 const router = useRouter();
 const copy = COPY[props.kind];
-const slug = String(route.query.slug ?? "");
+const slug = store.slug || String(route.query.slug ?? "");
 const token = ref("");
 const password = ref("");
 const confirmation = ref("");
@@ -40,7 +41,6 @@ async function submit() {
   });
   if (!done) return;
 
-  rememberSlug(slug);
   router.replace("/");
 }
 </script>
