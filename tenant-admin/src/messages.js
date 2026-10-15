@@ -22,10 +22,30 @@ const MESSAGES = {
   option_columns_invalid:
     "Οι στήλες επιλογών δεν είναι σωστές. Κάθε option<N> θέλει το ζευγάρι της, χωρίς κενά στην αρίθμηση.",
   query_too_short: "Γράψτε τουλάχιστον 2 χαρακτήρες.",
-  query_too_long: "Η αναζήτηση είναι πολύ μεγάλη."
+  query_too_long: "Η αναζήτηση είναι πολύ μεγάλη.",
+  file_malformed: "Το αρχείο δεν είναι έγκυρο CSV. Αποθηκεύστε το ξανά ως CSV.",
+  blank_column: "Η πρώτη γραμμή έχει στήλη χωρίς όνομα.",
+  import_failed: "Η εισαγωγή σταμάτησε από απρόσμενο σφάλμα. Ανεβάστε το αρχείο ξανά για να ολοκληρωθεί.",
+  too_large: "Το αρχείο είναι πολύ μεγάλο.",
+  content_type: "Ο τύπος αρχείου δεν υποστηρίζεται. Δεκτά αρχεία: JPEG, PNG, WebP.",
+  too_many_pixels: "Η εικόνα έχει πολύ μεγάλη ανάλυση.",
+  too_many_images: "Το προϊόν έχει ήδη όσες φωτογραφίες επιτρέπονται.",
+  image_unreachable: "Η φωτογραφία δεν κατέβηκε από τη διεύθυνσή της.",
+  image_address_refused: "Η διεύθυνση της φωτογραφίας δεν επιτρέπεται.",
+  image_failed: "Η φωτογραφία δεν αποθηκεύτηκε."
 };
 
-// Rails validation codes. Anything else keeps the API's English message.
+// The API names these columns in a field of their own.
+const COLUMN_MESSAGES = {
+  unknown_columns: "Άγνωστες στήλες",
+  missing_columns: "Λείπουν στήλες",
+  duplicate_columns: "Επαναλαμβάνονται στήλες"
+};
+
+// Neutral, as a retry does not fix most of the codes that reach it.
+const FALLBACK = "Η ενέργεια δεν ολοκληρώθηκε.";
+
+// Rails validation codes.
 const FIELD_MESSAGES = {
   blank: "Συμπληρώστε το πεδίο.",
   taken: "Χρησιμοποιείται ήδη.",
@@ -40,18 +60,20 @@ const FIELD_MESSAGES = {
 };
 
 /**
- * Greek text for a failed request.
+ * Greek text for a failed request or one item of an errors array. Unknown codes get a generic message.
  *
- * @param error [ApiError]
+ * @param error [ApiError, Object]
  * @return [String]
  */
 export function errorMessage(error) {
-  if (error.code === "too_many_attempts") {
+  const item = error.errors?.[0] ?? error;
+  if (item.code === "too_many_attempts") {
     const minutes = Math.max(1, Math.ceil((error.retryAfter ?? 60) / 60));
     return `Πολλές αποτυχημένες προσπάθειες. Δοκιμάστε ξανά σε ${minutes} λεπτά.`;
   }
+  if (COLUMN_MESSAGES[item.code]) return `${COLUMN_MESSAGES[item.code]}: ${(item.columns ?? []).join(", ")}.`;
 
-  return MESSAGES[error.code] ?? error.message;
+  return MESSAGES[item.code] ?? FIELD_MESSAGES[item.code] ?? FALLBACK;
 }
 
 /**
@@ -72,17 +94,12 @@ export const baseErrors = (...errors) => errors.flatMap((error) => formErrors(er
 export function formErrors(error, fields = []) {
   const result = { fields: {}, base: [] };
   if (!error) return result;
-  if (!error.errors) return { ...result, base: [error.message] };
 
-  for (const item of error.errors) {
-    if (item.field && fields.includes(item.field)) {
-      result.fields[item.field] ??= MESSAGES[item.code] ?? FIELD_MESSAGES[item.code] ?? item.message;
-    } else if (item.field) {
-      // The API's full message names the field, which this form does not show.
-      result.base.push(MESSAGES[item.code] ?? item.message);
-    } else {
-      result.base.push(errorMessage({ ...item, retryAfter: error.retryAfter }));
-    }
+  for (const item of error.errors ?? [error]) {
+    const message = errorMessage({ ...item, retryAfter: error.retryAfter });
+    if (item.field && fields.includes(item.field)) result.fields[item.field] ??= message;
+    // The field name tells the merchant where to look when the form does not show it.
+    else result.base.push(item.field ? `${item.field}: ${message}` : message);
   }
   return result;
 }
