@@ -37,6 +37,7 @@ const form = ref({
   specifications: specificationRows(source?.specifications ?? [])
 });
 const priceErrors = ref({});
+const specificationErrors = ref({});
 const { busy, error, run } = useAction();
 const errors = computed(() => formErrors(error.value, FIELDS));
 
@@ -49,14 +50,16 @@ async function save() {
     price: price_cents === null ? notAmount : "",
     pre_discount_price: values.pre_discount_price.trim() && pre_discount_price_cents === null ? notAmount : ""
   };
-  if (priceErrors.value.price || priceErrors.value.pre_discount_price) return;
+  const { param: specifications, errors: rowErrors } = specificationsParam(values.specifications);
+  specificationErrors.value = rowErrors;
+  if (priceErrors.value.price || priceErrors.value.pre_discount_price || Object.keys(rowErrors).length) return;
 
   const body = {
     option_values: values.option_values, sku: values.sku || null, barcode: values.barcode || null,
     mpn: values.mpn || null,
     price_cents, pre_discount_price_cents, vat_class: values.vat_class, status: values.status,
     track_stock: values.track_stock, allow_oversell: values.allow_oversell, image_id: values.image_id || null,
-    specifications: specificationsParam(values.specifications)
+    specifications
   };
   const path = `/products/${props.product.id}/variants`;
   const done = await run(() => (source ? patch(`${path}/${source.id}`, body) : post(path, body)));
@@ -119,7 +122,9 @@ async function save() {
       {{ errors.fields.track_stock ?? errors.fields.allow_oversell }}
     </span>
     <FormField label="Προδιαγραφές παραλλαγής" group :error="errors.fields.specifications">
-      <SpecificationRows v-model="form.specifications" :definitions="definitions" />
+      <SpecificationRows
+        v-model="form.specifications" v-model:errors="specificationErrors" :definitions="definitions"
+      />
     </FormField>
     <div class="form-actions">
       <button class="button button-primary" :disabled="busy">{{ source ? "Αποθήκευση" : "Προσθήκη" }}</button>
