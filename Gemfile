@@ -43,9 +43,6 @@ gem "ruby-vips", "~> 2.0"
 # Production image storage, on any S3-compatible host.
 gem "aws-sdk-s3", require: false
 
-# The tenant admin UI calls the API from its own origin with a session cookie.
-gem "rack-cors"
-
 # Platform admin's second factor.
 gem "rotp", "~> 6.3"
 

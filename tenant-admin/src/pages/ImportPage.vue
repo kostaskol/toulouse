@@ -5,7 +5,7 @@ import { useAction } from "../action.js";
 import { formatDateTime } from "../format.js";
 import { IMPORT_RESULTS, IMPORT_STATUS_BADGES, IMPORT_STATUSES, IMPORT_WARNINGS } from "../labels.js";
 import { useList } from "../list.js";
-import { baseErrors } from "../messages.js";
+import { baseErrors, errorMessage } from "../messages.js";
 import FormErrors from "../components/FormErrors.vue";
 import LoadMore from "../components/LoadMore.vue";
 
@@ -52,7 +52,7 @@ function show(next) {
 }
 
 const isShown = (next) => JSON.stringify(next) === JSON.stringify(filter.value);
-const warningLabel = (code) => IMPORT_WARNINGS[code] ?? code;
+const warningLabel = (code) => IMPORT_WARNINGS[code] ?? "Προειδοποίηση";
 </script>
 
 <template>
@@ -76,7 +76,7 @@ const warningLabel = (code) => IMPORT_WARNINGS[code] ?? code;
     <div v-if="record.dry_run && !running" class="alert alert-warn">
       Δοκιμή: δεν έγινε καμία αλλαγή. Ανεβάστε το αρχείο ξανά χωρίς δοκιμή για να γίνουν.
     </div>
-    <div v-for="item in record.errors" :key="item.code" class="alert alert-error">{{ item.message }}</div>
+    <div v-for="item in record.errors" :key="item.code" class="alert alert-error">{{ errorMessage(item) }}</div>
 
     <section class="panel">
       <h2>Σύνοψη</h2>
@@ -124,12 +124,14 @@ const warningLabel = (code) => IMPORT_WARNINGS[code] ?? code;
             <td><span class="badge" :class="RESULT_BADGES[entry.result]">{{ IMPORT_RESULTS[entry.result] }}</span></td>
             <td>
               <ul v-if="entry.errors.length || entry.warnings.length || entry.image_errors.length" class="issues">
-                <li v-for="(item, index) in entry.errors" :key="`e${index}`" class="field-error">{{ item.message }}</li>
+                <li v-for="(item, index) in entry.errors" :key="`e${index}`" class="field-error">
+                  {{ item.field ? `${item.field}: ` : "" }}{{ errorMessage(item) }}
+                </li>
                 <li v-for="(item, index) in entry.warnings" :key="`w${index}`">
-                  Γραμμή {{ item.row }}: {{ item.message }}
+                  Γραμμή {{ item.row }}{{ item.field ? `, στήλη ${item.field}` : "" }}: {{ warningLabel(item.code) }}
                 </li>
                 <li v-for="(item, index) in entry.image_errors" :key="`i${index}`" class="field-error">
-                  {{ item.url }}: {{ item.message }}
+                  {{ item.url }}: {{ errorMessage(item) }}
                 </li>
               </ul>
               <span v-if="entry.created_brands?.length" class="muted small">

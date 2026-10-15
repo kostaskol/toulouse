@@ -6,7 +6,7 @@ module RequiresStaffSession
   COOKIE_PATH = "/admin".freeze
 
   # A plain cross-site form can send these. A JSON body cannot without a CORS
-  # preflight, which only the admin origin passes.
+  # preflight, and the API admits no origin.
   BODY_METHODS = %w[POST PUT PATCH].freeze
 
   FAILURES = {

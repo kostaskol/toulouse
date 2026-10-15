@@ -9,10 +9,16 @@ RSpec.describe Product::Import::Sheet, :as_tenant do
     error.code
   end
 
+  def error_columns(text)
+    described_class.new(text)
+  rescue described_class::Error => error
+    error.columns
+  end
+
   def error_message(text)
     described_class.new(text)
   rescue described_class::Error => error
-    error.message if error.code == "unknown_columns"
+    error.message if error.code == "blank_column"
   end
 
   it "groups rows by handle in order of first appearance" do
@@ -101,6 +107,12 @@ RSpec.describe Product::Import::Sheet, :as_tenant do
 
   it "refuses a repeated column" do
     expect(error_code(import_csv([row]).sub("price", "price,price"))).to eq("duplicate_columns")
+  end
+
+  it "names the unknown, missing and repeated columns" do
+    expect(error_columns(import_csv([row.merge("prcie" => "1")]))).to eq(["prcie"])
+    expect(error_columns(import_csv([row.except("price")]))).to eq(["price"])
+    expect(error_columns(import_csv([row]).sub("price", "price,price"))).to eq(["price"])
   end
 
   it "accepts spec columns" do

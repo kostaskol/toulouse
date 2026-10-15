@@ -4,12 +4,12 @@ import { useRoute } from "vue-router";
 import { post } from "../api.js";
 import { useAction } from "../action.js";
 import { formErrors } from "../messages.js";
-import { rememberedSlug } from "../session.js";
+import { store } from "../store.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 
 const route = useRoute();
-const slug = ref(route.query.slug || rememberedSlug());
+const slug = ref(store.slug || String(route.query.slug ?? ""));
 const email = ref("");
 const sent = ref(false);
 const { busy, error, run } = useAction();
@@ -30,7 +30,7 @@ async function submit() {
   <form v-else class="form" @submit.prevent="submit">
     <p class="lead">Θα σας στείλουμε σύνδεσμο για να ορίσετε νέο κωδικό.</p>
     <FormErrors :messages="errors.base" />
-    <FormField label="Κωδικός καταστήματος">
+    <FormField v-if="!store.slug" label="Κωδικός καταστήματος">
       <input v-model="slug" required autocapitalize="off">
     </FormField>
     <FormField label="Email">

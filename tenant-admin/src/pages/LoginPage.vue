@@ -4,13 +4,14 @@ import { useRoute, useRouter } from "vue-router";
 import { post } from "../api.js";
 import { useAction } from "../action.js";
 import { formErrors } from "../messages.js";
-import { rememberSlug, rememberedSlug, setSession } from "../session.js";
+import { setSession } from "../session.js";
+import { store } from "../store.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 
 const route = useRoute();
 const router = useRouter();
-const slug = ref(route.query.slug ?? rememberedSlug());
+const slug = ref(store.slug || String(route.query.slug ?? ""));
 const email = ref("");
 const password = ref("");
 const { busy, error, run } = useAction();
@@ -22,7 +23,6 @@ async function submit() {
   });
   if (!done) return;
 
-  rememberSlug(slug.value.trim());
   // Only a path inside the app, so a crafted link cannot send the member elsewhere.
   const next = String(route.query.next ?? "");
   router.replace(next.startsWith("/") && !next.startsWith("//") ? next : "/");
@@ -34,7 +34,7 @@ async function submit() {
   <p class="lead">Συνδεθείτε στη διαχείριση του καταστήματός σας.</p>
   <form class="form" @submit.prevent="submit">
     <FormErrors :messages="errors.base" />
-    <FormField label="Κωδικός καταστήματος">
+    <FormField v-if="!store.slug" label="Κωδικός καταστήματος">
       <input v-model="slug" required autocomplete="organization" autocapitalize="off">
     </FormField>
     <FormField label="Email">

@@ -1,5 +1,3 @@
-// Undefined under node --test, where tests pass full paths against a stubbed fetch.
-const BASE = import.meta.env?.VITE_API_URL ?? "";
 const SIGNED_OUT_CODES = ["missing_session", "invalid_session"];
 
 let signedOutHandler = () => {};
@@ -47,9 +45,7 @@ export async function request(method, path, { json, body, type, query } = {}) {
 
   let response;
   try {
-    response = await fetch(`${BASE}/admin${path}${queryString(query)}`, {
-      method, headers, body, credentials: "include"
-    });
+    response = await fetch(`/admin${path}${queryString(query)}`, { method, headers, body });
   } catch {
     throw new ApiError(0, [{ code: "network", message: "The API could not be reached." }]);
   }

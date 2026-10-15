@@ -44,7 +44,8 @@ RSpec.describe "Tenant admin product imports", type: :request do
       upload(import_csv(rows.map { |row| row.merge("prcie" => "1") }))
 
       expect(response).to have_http_status(:unprocessable_content)
-      expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "unknown_columns"))
+      expect(response.parsed_body["errors"])
+        .to contain_exactly(include("code" => "unknown_columns", "columns" => ["prcie"]))
     end
 
     it "refuses a second import while one is active" do

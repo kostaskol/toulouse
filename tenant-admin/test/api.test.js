@@ -17,14 +17,13 @@ afterEach(() => {
   onSignedOut(() => {});
 });
 
-test("sends JSON with the session cookie and returns the body", async () => {
+test("sends JSON and returns the body", async () => {
   stub(201, { brand: { id: "1" } });
 
   assert.deepEqual(await post("/brands", { name: "x" }), { brand: { id: "1" } });
   const [{ url, init }] = calls;
   assert.equal(url, "/admin/brands");
   assert.equal(init.method, "POST");
-  assert.equal(init.credentials, "include");
   assert.equal(init.headers["Content-Type"], "application/json");
   assert.equal(init.body, '{"name":"x"}');
 });

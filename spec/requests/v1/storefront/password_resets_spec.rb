@@ -10,6 +10,8 @@ RSpec.describe "Storefront shopper password reset", type: :request do
 
   before do
     as_tenant(tenant) { tenant.setting.update!(sender_email: "orders@shop.example.com") }
+    # Staff mail links to admin on the primary domain.
+    create(:tenant_domain, tenant:, is_primary: true)
     ActionMailer::Base.deliveries.clear
   end
 

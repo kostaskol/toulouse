@@ -4,7 +4,12 @@ RSpec.describe StaffMailer do
   let(:tenant) { create(:tenant) }
   let(:staff) { create(:staff, tenant:) }
 
-  before { as_tenant(tenant) { tenant.setting.update!(sender_email: "orders@shop.example.com") } }
+  let(:domain) { as_tenant(tenant) { create(:tenant_domain, is_primary: true) } }
+
+  before do
+    as_tenant(tenant) { tenant.setting.update!(sender_email: "orders@shop.example.com") }
+    domain
+  end
 
   describe "#password_reset" do
     let(:mail) { as_tenant(tenant) { described_class.password_reset(staff).deliver_now } }
@@ -15,9 +20,7 @@ RSpec.describe StaffMailer do
     end
 
     it "links to the reset page in tenant admin, naming the store" do
-      admin_origin = URI(Rails.configuration.x.admin_origin)
-
-      expect([link.scheme, link.host, link.path]).to eq([admin_origin.scheme, admin_origin.host,
+      expect([link.scheme, link.host, link.path]).to eq(["https", "admin.#{domain.hostname}",
                                                          described_class::PASSWORD_RESET_PATH])
       expect(Rack::Utils.parse_query(link.query)).to eq("slug" => tenant.slug)
     end
@@ -41,9 +44,7 @@ RSpec.describe StaffMailer do
     end
 
     it "links to the invite page in tenant admin, naming the store" do
-      admin_origin = URI(Rails.configuration.x.admin_origin)
-
-      expect([link.scheme, link.host, link.path]).to eq([admin_origin.scheme, admin_origin.host,
+      expect([link.scheme, link.host, link.path]).to eq(["https", "admin.#{domain.hostname}",
                                                          described_class::INVITE_PATH])
       expect(Rack::Utils.parse_query(link.query)).to eq("slug" => tenant.slug)
     end

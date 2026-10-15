@@ -60,4 +60,14 @@ RSpec.describe Tenant::Domain, :as_tenant, type: :model do
         .to raise_error(ActiveRecord::InvalidForeignKey)
     end
   end
+
+  describe "#admin_url" do
+    it "puts tenant admin on the admin subdomain" do
+      expect(build(:tenant_domain, hostname: "shop.example.com").admin_url).to eq("https://admin.shop.example.com")
+    end
+
+    it "uses the bare domain for a www storefront" do
+      expect(build(:tenant_domain, hostname: "www.shop.example.com").admin_url).to eq("https://admin.shop.example.com")
+    end
+  end
 end

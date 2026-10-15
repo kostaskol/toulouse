@@ -39,7 +39,8 @@ module Admin
       import = Product::Import.start!(staff: Current.user, text:, dry_run:)
       render status: :accepted, json: { product_import: import_json(import) }
     rescue Product::Import::Sheet::Error => error
-      render_failure(Failure.new(status: :unprocessable_content, code: error.code, message: error.message))
+      failure = Failure.new(status: :unprocessable_content, code: error.code, message: error.message)
+      render_failure(failure, columns: error.columns)
     rescue ActiveRecord::RecordNotUnique
       render_failure(FAILURES.fetch(:import_in_progress))
     end

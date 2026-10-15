@@ -6,7 +6,7 @@ class ApplicationMailer < ActionMailer::Base
   end
 
   class MissingPrimaryDomainError < StandardError
-    def initialize(message = "The tenant has no primary domain to link its storefront to.")
+    def initialize(message = "The tenant has no primary domain to build its links from.")
       super
     end
   end
@@ -37,9 +37,7 @@ class ApplicationMailer < ActionMailer::Base
   # @param token [String, nil]
   # @return [String]
   def storefront_url(path, token: nil)
-    domain = Current.tenant.primary_domain || raise(MissingPrimaryDomainError)
-
-    link(domain.url, path, token)
+    link(primary_domain.url, path, token)
   end
 
   # Links to a page in tenant admin.
@@ -48,10 +46,13 @@ class ApplicationMailer < ActionMailer::Base
   # @param token [String, nil]
   # @return [String]
   def admin_url(path, token: nil)
-    origin = Rails.configuration.x.admin_origin.presence || raise(KeyError, "ADMIN_ORIGIN is not set")
+    # Development serves tenant admin on localhost, where no primary domain points.
+    origin = Rails.configuration.x.admin_origin.presence || primary_domain.admin_url
 
     link(origin, path, token)
   end
+
+  def primary_domain = Current.tenant.primary_domain || raise(MissingPrimaryDomainError)
 
   def link(origin, path, token)
     # Browsers never send the fragment to a server or in Referer, so the token
