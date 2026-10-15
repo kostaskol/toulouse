@@ -146,3 +146,30 @@ jobs:
       # Development mode reads .env.development, so the BFF URL is set.
       - name: Build
         run: npm run build -- --mode development
+
+  tenant-admin:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tenant-admin
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tenant-admin/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # Development mode reads .env.development, so the API URL is set.
+      - name: Build
+        run: npm run build -- --mode development
