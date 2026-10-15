@@ -7,10 +7,11 @@ module RendersFailures
 
   # @param failure [Failure]
   # @param headers [Hash{String => String}]
-  # @param field [String, nil] the request parameter the failure is about
-  def render_failure(failure, headers: {}, field: nil)
+  # @param detail [Hash] more keys for the error, such as `field`, the request parameter it is about
+  def render_failure(failure, headers: {}, **detail)
     headers.each { |name, value| response.set_header(name, value) }
-    render status: failure.status, json: { errors: [{ code: failure.code, field:, message: failure.message }.compact] }
+    error = { code: failure.code, **detail, message: failure.message }.compact
+    render status: failure.status, json: { errors: [error] }
   end
 
   # @param record [ActiveRecord::Base]

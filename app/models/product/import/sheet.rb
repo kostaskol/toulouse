@@ -14,12 +14,14 @@ class Product::Import::Sheet
   SPEC_COLUMN = /\Aspec:(.*\S.*)\z/
 
   class Error < StandardError
-    attr_reader :code
+    attr_reader :code, :columns
 
     # @param code [String]
     # @param message [String]
-    def initialize(code, message)
+    # @param columns [Array<String>, nil] the header columns at fault, so a client can name them in its own words
+    def initialize(code, message, columns: nil)
       @code = code
+      @columns = columns
       super(message)
     end
   end
@@ -90,24 +92,26 @@ class Product::Import::Sheet
   #   column's definition key
   def check_header(headers)
     if headers.empty? || headers.any?(&:blank?)
-      raise Error.new("unknown_columns", "The header row has a column with no name.")
+      raise Error.new("blank_column", "The header row has a column with no name.")
     end
 
     repeated = headers.tally.select { |_, count| count > 1 }.keys
-    raise Error.new("duplicate_columns", "Repeated columns: #{repeated.join(', ')}.") if repeated.any?
+    if repeated.any?
+      raise Error.new("duplicate_columns", "Repeated columns: #{repeated.join(', ')}.", columns: repeated)
+    end
 
     options = headers.grep(OPTION_COLUMN)
     specs = headers.grep(SPEC_COLUMN)
     unknown = headers - PRODUCT_COLUMNS - VARIANT_COLUMNS - options - specs
-    raise Error.new("unknown_columns", "Unknown columns: #{unknown.join(', ')}.") if unknown.any?
+    raise Error.new("unknown_columns", "Unknown columns: #{unknown.join(', ')}.", columns: unknown) if unknown.any?
 
     # Folded as spec definitions are, since two columns that fold alike would write one spec.
     spec_keys = specs.zip(Specification.fold(specs.map { |column| column[SPEC_COLUMN, 1] })).to_h
     alike = spec_keys.group_by(&:last).values.select(&:many?).flatten(1).map(&:first)
-    raise Error.new("duplicate_columns", "Repeated columns: #{alike.join(', ')}.") if alike.any?
+    raise Error.new("duplicate_columns", "Repeated columns: #{alike.join(', ')}.", columns: alike) if alike.any?
 
     missing = REQUIRED_COLUMNS - headers
-    raise Error.new("missing_columns", "Missing columns: #{missing.join(', ')}.") if missing.any?
+    raise Error.new("missing_columns", "Missing columns: #{missing.join(', ')}.", columns: missing) if missing.any?
 
     count = options.map { |name| name[OPTION_COLUMN, 1].to_i }.max || 0
     paired = (1..count).all? { |n| headers.include?("option#{n}_name") && headers.include?("option#{n}_value") }
