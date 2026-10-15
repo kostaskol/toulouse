@@ -64,12 +64,26 @@ RSpec.describe ApplicationMailer do
       expect { link(:storefront, "/path", token) }.to raise_error(ApplicationMailer::MissingPrimaryDomainError)
     end
 
-    it "points admin links at the tenant admin origin, with the token in the fragment" do
-      expect(link(:admin, "/path", token)).to eq("#{Rails.configuration.x.admin_origin}/path##{token}")
+    it "points admin links at the admin host of the primary domain, with the token in the fragment" do
+      domain = as_tenant(tenant) { create(:tenant_domain, is_primary: true) }
+
+      expect(link(:admin, "/path", token)).to eq("https://admin.#{domain.hostname}/path##{token}")
     end
 
     it "leaves out the fragment when there is no token" do
-      expect(link(:admin, "/path", nil)).to eq("#{Rails.configuration.x.admin_origin}/path")
+      domain = as_tenant(tenant) { create(:tenant_domain, is_primary: true) }
+
+      expect(link(:admin, "/path", nil)).to eq("https://admin.#{domain.hostname}/path")
+    end
+
+    it "refuses an admin link for a tenant with no primary domain" do
+      expect { link(:admin, "/path", token) }.to raise_error(ApplicationMailer::MissingPrimaryDomainError)
+    end
+
+    it "points admin links at the configured origin when development sets one" do
+      allow(Rails.configuration.x).to receive(:admin_origin).and_return("http://localhost:5174")
+
+      expect(link(:admin, "/path", nil)).to eq("http://localhost:5174/path")
     end
   end
 end
