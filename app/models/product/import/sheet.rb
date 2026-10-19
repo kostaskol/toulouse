@@ -7,7 +7,8 @@ class Product::Import::Sheet
   BOM = "\uFEFF".freeze
   PRODUCT_COLUMNS = ["handle", "title", "description", "status", "brand", "category", "image_urls"].freeze
   VARIANT_COLUMNS = [
-    "price", "pre_discount_price", "vat_class", "sku", "barcode", "mpn", "stock", "track_stock", "allow_oversell"
+    "price", "pre_discount_price", "vat_class", "sku", "barcode", "mpn", "stock", "track_stock", "allow_oversell",
+    "weight"
   ].freeze
   REQUIRED_COLUMNS = ["handle", "title", "price"].freeze
   SPEC_COLUMN = /\Aspecification:(.*\S.*)\z/

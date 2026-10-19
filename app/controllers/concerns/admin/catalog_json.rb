@@ -22,7 +22,7 @@ module Admin
     def variant_json(variant)
       variant.slice(
         :id, :sku, :barcode, :mpn, :price_cents, :pre_discount_price_cents, :vat_class, :status, :track_stock,
-        :stock_quantity, :allow_oversell
+        :stock_quantity, :allow_oversell, :weight_grams
       ).merge(selection: variant.selection, specifications: specifications_json(variant))
     end
 

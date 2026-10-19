@@ -46,6 +46,35 @@ RSpec.describe Product, :as_tenant, type: :model do
       expect(product.update(status: "published")).to be(false)
       expect(product.errors.details[:status]).to eq([{ error: :no_active_variant }])
     end
+
+    context "when the store needs weights" do
+      before { Current.tenant.setting.update!(weight_required: true) }
+
+      it "is refused while an active variant has no weight" do
+        expect(product.update(status: "published")).to be(false)
+        expect(product.errors.details[:status]).to eq([{ error: :weight_missing }])
+      end
+
+      it "is refused on create too" do
+        expect(build(:product, :published)).not_to be_valid
+      end
+
+      it "is allowed when every active variant has a weight" do
+        create(:product_variant, product:, status: "archived")
+        product.variants.first.update!(weight_grams: 250)
+
+        expect(product.reload.update(status: "published")).to be(true)
+      end
+
+      it "does not block saves of a product that is already published" do
+        Current.tenant.setting.update!(weight_required: false)
+        product.update!(status: "published")
+        Current.tenant.setting.update!(weight_required: true)
+
+        expect(product.reload.update(title: "Νέος τίτλος")).to be(true)
+        expect(product.variants.first.change_stock!(delta: 1)).to be(true)
+      end
+    end
   end
 
   describe "specifications" do

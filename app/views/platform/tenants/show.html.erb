@@ -28,3 +28,14 @@
 <% else %>
   <p>No primary domain.</p>
 <% end %>
+
+<h2>Settings</h2>
+
+<%= form_with model: @setting, scope: :setting, url: platform_tenant_setting_path(@tenant), method: :patch do |form| %>
+  <p>
+    <%= form.check_box :weight_required %>
+    <%= form.label :weight_required, "Weight required to publish" %>
+  </p>
+  <p>Ask at onboarding whether the merchant uses weight-based shipping rules on Skroutz or BestPrice.</p>
+  <%= form.submit "Save settings" %>
+<% end %>

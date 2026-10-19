@@ -20,6 +20,7 @@ Rails.application.routes.draw do
       end
       resources :handoffs, only: :create
       resources :impersonations, only: :create
+      resource :setting, only: :update
     end
   end
 

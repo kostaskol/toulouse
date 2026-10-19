@@ -43,6 +43,16 @@ RSpec.describe "Tenant admin product variants", type: :request do
       .to include(include("code" => "less_than_or_equal_to", "field" => "price_cents"))
   end
 
+  it "sets and clears the weight" do
+    patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { weight_grams: 250 }, headers:, as: :json
+
+    expect(response.parsed_body.dig("variant", "weight_grams")).to eq(250)
+
+    patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { weight_grams: nil }, headers:, as: :json
+
+    expect(response.parsed_body.dig("variant", "weight_grams")).to be_nil
+  end
+
   it "refuses to archive the last active variant of a published product" do
     patch "/admin/products/#{product.id}/variants/#{variant.id}", params: { status: "archived" }, headers:, as: :json
 
