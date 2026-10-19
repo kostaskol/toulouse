@@ -2,12 +2,12 @@
 import { computed, onMounted, ref } from "vue";
 import { get, patch } from "../api.js";
 import { useAction } from "../action.js";
-import { flatten, loadCategories } from "../categories.js";
+import { flatten, lineageLinks, loadCategories } from "../categories.js";
 import { PRODUCT_STATUSES } from "../labels.js";
 import { getAll } from "../list.js";
 import { formErrors } from "../messages.js";
 import { notify } from "../notice.js";
-import { specificationRows, specificationsParam } from "../specifications.js";
+import { linkedFirst, specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 import ProductImages from "../components/ProductImages.vue";
@@ -25,6 +25,8 @@ const loading = useAction();
 const saving = useAction();
 const errors = computed(() => formErrors(saving.error.value, FIELDS));
 const specificationErrors = ref({});
+const definitions = computed(() =>
+  linkedFirst(options.value.specifications, lineageLinks(options.value.categories, form.value?.category_id)));
 
 onMounted(() => loading.run(async () => {
   const [body, brands, categories, { specifications }] = await Promise.all([
@@ -78,6 +80,10 @@ async function save() {
   <FormErrors :messages="formErrors(loading.error.value).base" />
 
   <template v-if="product">
+    <div v-if="product.missing_specifications.length" class="alert alert-warn">
+      {{ product.status === "published" ? "Το προϊόν είναι δημοσιευμένο, αλλά" : "Για να δημοσιευτεί," }}
+      λείπουν υποχρεωτικές προδιαγραφές από κάποια ενεργή παραλλαγή: {{ product.missing_specifications.join(", ") }}.
+    </div>
     <section class="panel">
       <h2>Στοιχεία</h2>
       <FormErrors :messages="errors.base" />
@@ -111,7 +117,7 @@ async function save() {
         </FormField>
         <FormField label="Προδιαγραφές" group :error="errors.fields.specifications">
           <SpecificationRows
-            v-model="form.specifications" :definitions="options.specifications" v-model:errors="specificationErrors"
+            v-model="form.specifications" :definitions="definitions" v-model:errors="specificationErrors"
           />
         </FormField>
         <div class="form-actions">
@@ -120,6 +126,6 @@ async function save() {
       </form>
     </section>
     <ProductImages :product="product" @changed="refresh" />
-    <ProductVariants :product="product" :definitions="options.specifications" @changed="refresh" />
+    <ProductVariants :product="product" :definitions="definitions" @changed="refresh" />
   </template>
 </template>

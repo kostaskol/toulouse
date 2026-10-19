@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { singleValue, specificationRows, specificationsParam } from "../src/specifications.js";
+import { linkedFirst, singleValue, specificationRows, specificationsParam } from "../src/specifications.js";
 
 test("round-trips the API's specifications through rows", () => {
   const specifications = [{ id: "1", name: "A", values: ["x, with a comma", "y"] }];
@@ -43,4 +43,11 @@ test("finds a single-value spec by its folded name", () => {
   assert.equal(singleValue(definitions, " ΧΡΩΜΑ "), true);
   assert.equal(singleValue(definitions, "Υλικό"), false);
   assert.equal(singleValue(definitions, "Οθόνη"), false);
+});
+
+test("puts linked definitions first and keeps each group's order", () => {
+  const definitions = [{ id: "1" }, { id: "2" }, { id: "3" }, { id: "4" }];
+
+  const sorted = linkedFirst(definitions, [{ specification_id: "4" }, { specification_id: "2" }]);
+  assert.deepEqual(sorted.map((definition) => definition.id), ["2", "4", "1", "3"]);
 });

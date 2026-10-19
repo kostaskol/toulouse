@@ -1,18 +1,21 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { destroy, patch, post } from "../api.js";
+import { destroy, get, patch, post } from "../api.js";
 import { useAction } from "../action.js";
-import { flatten, loadCategories } from "../categories.js";
+import { flatten, lineageLinks, loadCategories } from "../categories.js";
 import { baseErrors, formErrors } from "../messages.js";
 import { notify } from "../notice.js";
 import CategoryNode from "../components/CategoryNode.vue";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 
-const FIELDS = ["name", "slug", "parent_id", "position"];
-const blank = (parentId = null) => ({ id: null, name: "", slug: "", parent_id: parentId, position: 0 });
+const FIELDS = ["name", "slug", "parent_id", "position", "specification_links"];
+const blank = (parentId = null) => ({
+  id: null, name: "", slug: "", parent_id: parentId, position: 0, specification_links: []
+});
 
 const tree = ref([]);
+const definitions = ref([]);
 const form = ref(blank());
 const loading = useAction();
 const saving = useAction();
@@ -21,11 +24,17 @@ const errors = computed(() => formErrors(saving.error.value, FIELDS));
 const pageErrors = computed(() => baseErrors(loading.error.value, removing.error.value));
 // A category cannot move below itself, so its own subtree is left out of the parents.
 const parents = computed(() => flatten(tree.value).filter((category) => !inSubtree(category)));
+const inherited = computed(() => lineageLinks(flatten(tree.value), form.value.parent_id).map((link) => {
+  const name = definitions.value.find((definition) => definition.id === link.specification_id)?.name;
+  return link.required ? `${name} (υποχρεωτική)` : name;
+}));
 
 onMounted(reload);
 
 async function reload() {
-  await loading.run(async () => (tree.value = await loadCategories()));
+  await loading.run(async () => {
+    [tree.value, { specifications: definitions.value }] = await Promise.all([loadCategories(), get("/specifications")]);
+  });
 }
 
 function inSubtree(category) {
@@ -38,7 +47,7 @@ function inSubtree(category) {
 
 function edit(category) {
   saving.error.value = null;
-  form.value = { ...category };
+  form.value = { ...category, specification_links: category.specification_links.map((link) => ({ ...link })) };
 }
 
 function addChild(category) {
@@ -47,8 +56,8 @@ function addChild(category) {
 }
 
 async function save() {
-  const { id, name, slug, parent_id, position } = form.value;
-  const body = { name, slug: slug || undefined, parent_id, position: Number(position) || 0 };
+  const { id, name, slug, parent_id, position, specification_links } = form.value;
+  const body = { name, slug: slug || undefined, parent_id, position: Number(position) || 0, specification_links };
   const done = await saving.run(() => (id ? patch(`/categories/${id}`, body) : post("/categories", body)));
   if (!done) return;
 
@@ -89,6 +98,35 @@ async function remove(category) {
           <input v-model="form.position" type="number" step="1">
         </FormField>
       </div>
+      <FormField
+        label="Προδιαγραφές" group hint="Ισχύουν και για τις υποκατηγορίες."
+        :error="errors.fields.specification_links"
+      >
+        <div class="form">
+          <p v-if="inherited.length" class="muted small">Από γονικές κατηγορίες: {{ inherited.join(", ") }}</p>
+          <div v-for="(link, index) in form.specification_links" :key="index" class="row">
+            <select v-model="link.specification_id" required aria-label="Προδιαγραφή">
+              <option v-for="definition in definitions" :key="definition.id" :value="definition.id">
+                {{ definition.name }}
+              </option>
+            </select>
+            <label class="check"><input v-model="link.required" type="checkbox"> Υποχρεωτική για δημοσίευση</label>
+            <button
+              type="button" class="button button-small button-danger" @click="form.specification_links.splice(index, 1)"
+            >
+              Αφαίρεση
+            </button>
+          </div>
+          <div>
+            <button
+              type="button" class="button button-small"
+              @click="form.specification_links.push({ specification_id: '', required: true })"
+            >
+              + Προδιαγραφή
+            </button>
+          </div>
+        </div>
+      </FormField>
       <div class="form-actions">
         <button class="button button-primary" :disabled="saving.busy.value">
           {{ form.id ? "Αποθήκευση" : "Προσθήκη" }}

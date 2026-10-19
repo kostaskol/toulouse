@@ -51,3 +51,15 @@ export function specificationsParam(rows) {
   });
   return { param, errors };
 }
+
+/**
+ * Definitions with the linked ones first, each group in its own order.
+ *
+ * @param definitions [Array<Object>] as the API returns them
+ * @param links [Array<Object>] category links of `specification_id`
+ * @return [Array<Object>]
+ */
+export function linkedFirst(definitions, links) {
+  const linked = new Set(links.map((link) => link.specification_id));
+  return [...definitions].sort((a, b) => linked.has(b.id) - linked.has(a.id));
+}
