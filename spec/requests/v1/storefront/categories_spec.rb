@@ -18,24 +18,18 @@ RSpec.describe "Storefront categories", type: :request do
   describe "GET /v1/storefront/categories/:slug/products" do
     it "lists published products from the category and every category below it" do
       on_root, on_child = as_tenant(tenant) do
-        [create(:product, :published, category_ids: [root.id]), create(:product, :published, category_ids: [child.id])]
+        [create(:product, :published, category: root), create(:product, :published, category: child)]
       end
-      as_tenant(tenant) { create(:product, category_ids: [root.id]) }
+      as_tenant(tenant) { create(:product, category: root) }
       get "/v1/storefront/categories/#{root.slug}/products", headers: headers
 
-      expect(response.parsed_body["products"].pluck("id")).to eq([on_child.id, on_root.id])
-    end
-
-    it "lists a product linked twice in the subtree once" do
-      product = as_tenant(tenant) { create(:product, :published, category_ids: [root.id, child.id]) }
-      get "/v1/storefront/categories/#{root.slug}/products", headers: headers
-
-      expect(response.parsed_body["products"].pluck("id")).to eq([product.id])
+      expect(response.parsed_body["products"].pluck("id", "category_id"))
+        .to eq([[on_child.id, child.id], [on_root.id, root.id]])
     end
 
     it "narrows by filter and counts facets below the category" do
-      branded = as_tenant(tenant) { create(:product, :published, brand: create(:brand), category_ids: [child.id]) }
-      as_tenant(tenant) { create(:product, :published, category_ids: [root.id]) }
+      branded = as_tenant(tenant) { create(:product, :published, brand: create(:brand), category: child) }
+      as_tenant(tenant) { create(:product, :published, category: root) }
       get "/v1/storefront/categories/#{root.slug}/products",
           params: { filter: { brands: [branded.brand.slug] }, limit: 1 }, headers: headers
 
@@ -45,7 +39,7 @@ RSpec.describe "Storefront categories", type: :request do
     end
 
     it "leaves facets off a later page" do
-      product = as_tenant(tenant) { create(:product, :published, category_ids: [root.id]) }
+      product = as_tenant(tenant) { create(:product, :published, category: root) }
       get "/v1/storefront/categories/#{root.slug}/products", params: { after: product.id }, headers: headers
 
       expect(response.parsed_body.keys).to eq(["products", "meta"])

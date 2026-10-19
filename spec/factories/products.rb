@@ -2,6 +2,7 @@ FactoryBot.define do
   factory :product, traits: [:tenant_scoped] do
     sequence(:title) { |n| "Product #{n}" }
     sequence(:option_names) { |n| ["Option #{n}"] }
+    category { association(:category, tenant:) }
 
     # Every product is created with a variant.
     after(:build) do |product|

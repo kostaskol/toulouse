@@ -15,7 +15,7 @@ import ProductOptions from "../components/ProductOptions.vue";
 import ProductVariants from "../components/ProductVariants.vue";
 import SpecificationRows from "../components/SpecificationRows.vue";
 
-const FIELDS = ["title", "slug", "description", "status", "brand_id", "category_ids", "specifications"];
+const FIELDS = ["title", "slug", "description", "status", "brand_id", "category_id", "specifications"];
 
 const props = defineProps({ id: { type: String, required: true } });
 const path = `/products/${props.id}`;
@@ -42,7 +42,7 @@ function show(loaded) {
   product.value = loaded;
   form.value = {
     title: loaded.title, slug: loaded.slug, description: loaded.description ?? "", status: loaded.status,
-    brand_id: loaded.brand?.id ?? "", category_ids: [...loaded.category_ids],
+    brand_id: loaded.brand?.id ?? "", category_id: loaded.category_id,
     specifications: specificationRows(loaded.specifications)
   };
 }
@@ -53,7 +53,7 @@ async function refresh() {
 }
 
 async function save() {
-  const { title, slug, description, status, brand_id, category_ids, specifications } = form.value;
+  const { title, slug, description, status, brand_id, category_id, specifications } = form.value;
   const { param, errors: rowErrors } = specificationsParam(specifications);
   specificationErrors.value = rowErrors;
   if (Object.keys(rowErrors).length) return;
@@ -61,7 +61,7 @@ async function save() {
   const done = await saving.run(async () => {
     const body = await patch(path, {
       title, slug: slug || undefined, description: description || null, status, brand_id: brand_id || null,
-      category_ids, specifications: param
+      category_id, specifications: param
     });
     show(body.product);
   });
@@ -103,16 +103,12 @@ async function save() {
         <FormField label="Περιγραφή" hint="Δέχεται Markdown." :error="errors.fields.description">
           <textarea v-model="form.description"></textarea>
         </FormField>
-        <FormField label="Κατηγορίες" group :error="errors.fields.category_ids">
-          <div class="check-list">
-            <label
-              v-for="category in options.categories" :key="category.id" class="check"
-              :style="{ paddingLeft: `${category.depth * 20}px` }"
-            >
-              <input v-model="form.category_ids" type="checkbox" :value="category.id"> {{ category.name }}
-            </label>
-            <span v-if="!options.categories.length" class="muted small">Δεν υπάρχουν κατηγορίες.</span>
-          </div>
+        <FormField label="Κατηγορία" :error="errors.fields.category_id">
+          <select v-model="form.category_id" required>
+            <option v-for="category in options.categories" :key="category.id" :value="category.id">
+              {{ category.label }}
+            </option>
+          </select>
         </FormField>
         <FormField label="Προδιαγραφές" group :error="errors.fields.specifications">
           <SpecificationRows

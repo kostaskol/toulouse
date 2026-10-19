@@ -9,8 +9,10 @@ RSpec.describe "Tenant admin products", type: :request do
   def find_product(id) = as_tenant(tenant) { Product.find(id) }
 
   describe "POST /admin/products" do
+    let(:category) { as_tenant(tenant) { create(:category) } }
+
     def create_product(**body)
-      params = { title: attributes_for(:product)[:title], variants: [variant], **body }
+      params = { title: attributes_for(:product)[:title], category_id: category.id, variants: [variant], **body }
       post "/admin/products", params:, headers:, as: :json
     end
 
@@ -19,7 +21,7 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response).to have_http_status(:created)
       product = response.parsed_body["product"]
-      expect(product).to include("status" => "draft", "option_names" => [])
+      expect(product).to include("status" => "draft", "option_names" => [], "category_id" => category.id)
       expect(product["variants"]).to contain_exactly(include("price_cents" => variant[:price_cents]))
     end
 
@@ -58,6 +60,12 @@ RSpec.describe "Tenant admin products", type: :request do
         { "code" => "blank", "field" => "title" },
         { "code" => "greater_than_or_equal_to", "field" => "variants[0].price_cents" }
       )
+    end
+
+    it "needs a category" do
+      create_product(category_id: nil)
+
+      expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "blank", "field" => "category_id"))
     end
 
     it "needs a variant" do

@@ -5,7 +5,7 @@ class Product::Import::Sheet
   MAX_BYTES = 10.megabytes
   MAX_ROWS = 50_000
   BOM = "\uFEFF".freeze
-  PRODUCT_COLUMNS = ["handle", "title", "description", "status", "brand", "categories", "image_urls"].freeze
+  PRODUCT_COLUMNS = ["handle", "title", "description", "status", "brand", "category", "image_urls"].freeze
   VARIANT_COLUMNS = [
     "price", "pre_discount_price", "vat_class", "sku", "barcode", "mpn", "stock", "track_stock", "allow_oversell"
   ].freeze

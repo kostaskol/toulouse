@@ -21,7 +21,7 @@ class Product::Import::Group
     end
   end
 
-  attr_reader :handle, :errors, :variants, :option_names, :category_paths, :image_urls, :specifications
+  attr_reader :handle, :errors, :variants, :option_names, :category_path, :image_urls, :specifications
 
   # @param handle [String]
   # @param rows [Array<Array(CSV::Row, Integer)>] each row with its number in the file
@@ -40,7 +40,7 @@ class Product::Import::Group
     check_handle
     check_conflicts(option_count)
     @status = parse_status
-    @category_paths = parse_categories
+    @category_path = parse_category
     @image_urls = parse_image_urls
     @specifications = parse_specifications(@first, @first_number)
     @variants = rows.map { |row, number| variant(row, number, option_count) }
@@ -114,10 +114,15 @@ class Product::Import::Group
     value
   end
 
-  def parse_categories
-    paths = cell(@first, "categories").split(LIST).map { |path| path.split(LEVEL).map(&:strip) }
-    add_error("invalid", "categories") if paths.any? { |path| path.empty? || path.any?(&:empty?) }
-    paths
+  # @return [Array<String>, nil] nil when blank, which the product's validation reports
+  def parse_category
+    value = cell(@first, "category")
+    return if value.empty?
+
+    path = value.split(LEVEL).map(&:strip)
+    # A list means the file still gives several categories, and a product has one.
+    add_error("invalid", "category") if value.include?(LIST) || path.empty? || path.any?(&:empty?)
+    path
   end
 
   def parse_image_urls

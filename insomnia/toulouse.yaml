@@ -308,14 +308,15 @@ collection:
           isPrivate: false
           sortKey: 9
           description: >-
-            Creates a draft. A product with options sends option_values on each variant. specifications maps a
-            name to its values, on the product and on a variant as an override.
+            Creates a draft in one category. A product with options sends option_values on each variant.
+            specifications maps a name to its values, on the product and on a variant as an override.
         method: POST
         body:
           mimeType: application/json
           text: |-
             {
               "title": "{% prompt 'Title', '', '', '', false, false %}",
+              "category_id": "{{ _.category_id }}",
               "option_names": [],
               "specifications": {},
               "variants": [
@@ -344,7 +345,7 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 10
-          description: Also takes title, slug, description, brand_id, category_ids and specifications.
+          description: Also takes title, slug, description, brand_id, category_id and specifications.
         method: PATCH
         body:
           mimeType: application/json
@@ -745,7 +746,7 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 22
-          description: Refused while categories sit below it. Products stay.
+          description: Refused while categories sit below it or products sit in it.
         method: DELETE
         settings:
           renderRequestBody: true

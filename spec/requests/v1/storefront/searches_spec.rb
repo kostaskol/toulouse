@@ -138,7 +138,7 @@ RSpec.describe "Storefront search", type: :request do
     end
 
     it "searches products on a later page" do
-      products = as_tenant(tenant) { create_list(:product, 2, :published, category_ids: [category.id]) }
+      products = as_tenant(tenant) { create_list(:product, 2, :published, category: category) }
       _page, cursor = as_tenant(tenant) do
         Product::Search.new(category.name, products: Product.all, variants: Product::Variant.all)
                        .page(after: nil, limit: 1)

@@ -14,7 +14,7 @@ module Admin
         option_names: product.option_names,
         specifications: specifications_json(product),
         brand: product.brand && brand_json(product.brand),
-        category_ids: product.category_ids,
+        category_id: product.category_id,
         images: product.images.map { |image| image_json(image) },
         variants: product.variants.map { |variant| variant_json(variant) }
       }

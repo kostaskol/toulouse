@@ -127,7 +127,7 @@ class Product::Filter
   def narrow(products, except: nil)
     if @categories && except != :categories
       @subtree_ids ||= Category.subtree_ids(Category.where(slug: @categories).ids)
-      products = products.where(id: Product::Categorization.where(category_id: @subtree_ids).select(:product_id))
+      products = products.where(category_id: @subtree_ids)
     end
     @brands && except != :brands ? products.where(brand_id: Brand.where(slug: @brands).select(:id)) : products
   end
@@ -155,8 +155,7 @@ class Product::Filter
   end
 
   def category_facet(products, root)
-    links = Product::Categorization.where(product_id: apply(products, except: :categories).select(:id))
-                                   .select(:product_id, :category_id)
+    links = Product.where(id: apply(products, except: :categories).select(:id)).select("id AS product_id", :category_id)
     counts = Category.connection.select_rows(<<~SQL).to_h
       WITH RECURSIVE links(product_id, category_id) AS (
         #{links.to_sql}

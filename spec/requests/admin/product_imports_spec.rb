@@ -8,7 +8,8 @@ RSpec.describe "Tenant admin product imports", type: :request do
   let(:headers) { staff_cookie(staff_session) }
   let(:rows) do
     [
-      { "handle" => "first", "title" => "First", "price" => "1" },
+      { "handle" => "first", "title" => "First", "price" => "1",
+        "category" => as_tenant(tenant) { create(:category) }.name },
       { "handle" => "second", "title" => "Second", "price" => "" }
     ]
   end

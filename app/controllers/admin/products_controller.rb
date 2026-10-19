@@ -5,15 +5,13 @@ module Admin
 
     allow_any_staff
 
-    FIELDS = [:title, :slug, :description, :status, :brand_id, { category_ids: [], specifications: {} }].freeze
+    FIELDS = [:title, :slug, :description, :status, :brand_id, :category_id, { specifications: {} }].freeze
 
     def index
-      scope = Product.with_images.with_specifications.includes(:brand, :categories)
+      scope = Product.with_images.with_specifications.includes(:brand)
       scope = scope.where(status: params[:status]) if params[:status]
       scope = scope.where(brand: Brand.find(params[:brand_id])) if params[:brand_id]
-      if params[:category_id]
-        scope = scope.where(id: Category.find(params[:category_id]).categorizations.select(:product_id))
-      end
+      scope = scope.where(category: Category.find(params[:category_id])) if params[:category_id]
       return search(scope) if params[:q].present?
 
       products, next_cursor = paginate(scope)
