@@ -308,8 +308,8 @@ collection:
           isPrivate: false
           sortKey: 9
           description: >-
-            Creates a draft in one category. A product with options sends option_values on each variant.
-            specifications maps a name to its values, on the product and on a variant as an override.
+            Creates a draft in one category. specifications maps a name to its values, on the product and on a
+            variant as an override. Variants differ by their values of selectable specifications.
         method: POST
         body:
           mimeType: application/json
@@ -317,7 +317,6 @@ collection:
             {
               "title": "{% prompt 'Title', '', '', '', false, false %}",
               "category_id": "{{ _.category_id }}",
-              "option_names": [],
               "specifications": {},
               "variants": [
                 {
@@ -364,38 +363,6 @@ collection:
             send: true
             store: true
           rebuildPath: true
-      - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/options"
-        name: Update options
-        meta:
-          id: req_babb64565a659e5ecff2febf57b3a387
-          created: 1791830772923
-          modified: 1791830772923
-          isPrivate: false
-          sortKey: 11
-          description: Lists every option to keep, in order. from keeps an option under name; value adds name to every variant. Options left out are removed.
-        method: PUT
-        body:
-          mimeType: application/json
-          text: |-
-            {
-              "option_names": [
-                {
-                  "name": "{% prompt 'New name', '', '', '', false, false %}",
-                  "from": "{% prompt 'Current name', '', '', '', false, false %}"
-                }
-              ]
-            }
-        headers:
-          - name: Content-Type
-            value: application/json
-        settings:
-          renderRequestBody: true
-          encodeUrl: true
-          followRedirects: global
-          cookies:
-            send: true
-            store: true
-          rebuildPath: true
       - url: "{{ _.base_url }}/admin/products/{{ _.product_id }}/variants"
         name: Add variant
         meta:
@@ -404,7 +371,8 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 12
-          description: option_values needs a value for each of the product's options.
+          description: >-
+            specifications gives the variant its own value of each selectable specification the product uses.
         method: POST
         body:
           mimeType: application/json
@@ -412,7 +380,7 @@ collection:
             {
               "price_cents": {% prompt 'Price in cents', 'VAT included', '', '', false, false %},
               "vat_class": "standard",
-              "option_values": {}
+              "specifications": {}
             }
         headers:
           - name: Content-Type
@@ -434,8 +402,8 @@ collection:
           isPrivate: false
           sortKey: 13
           description: >-
-            Also takes sku, barcode, mpn, prices, vat_class, option_values, stock settings, image_id and
-            specifications, which override the product's.
+            Also takes sku, barcode, mpn, prices, vat_class, stock settings and specifications, which override the
+            product's.
         method: PATCH
         body:
           mimeType: application/json
@@ -490,7 +458,9 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 14.1
-          description: Send a JPEG, PNG or WebP file. Set Content-Type to match it.
+          description: >-
+            Send a JPEG, PNG or WebP file. Set Content-Type to match it. Add selection[<specification name>]=<value>
+            to the query to show the image only on variants with that value.
         method: POST
         body:
           mimeType: application/octet-stream
@@ -514,7 +484,9 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 14.2
-          description: Blank alt falls back to the product title.
+          description: >-
+            Blank alt falls back to the product title. selection links the image to one value of a selectable
+            specification, as { "<name>": "<value>" }. An empty selection shows it on every variant.
         method: PATCH
         body:
           mimeType: application/json
@@ -782,7 +754,9 @@ collection:
           modified: 1792000000000
           isPrivate: false
           sortKey: 22.2
-          description: Also takes position, facet and mode. Products create missing ones by name too.
+          description: >-
+            Also takes position, facet, mode, kind, multiple and selectable. Products create missing ones by name
+            too.
         method: POST
         body:
           mimeType: application/json
@@ -809,7 +783,9 @@ collection:
           modified: 1792000000000
           isPrivate: false
           sortKey: 22.3
-          description: Also takes name and position. mode is any or all.
+          description: >-
+            Also takes name and position. mode is any or all. kind is none, colour or size. A kind needs selectable,
+            and selectable needs multiple off.
         method: PATCH
         body:
           mimeType: application/json
