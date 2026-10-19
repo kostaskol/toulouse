@@ -15,7 +15,9 @@ import ProductImages from "../components/ProductImages.vue";
 import ProductVariants from "../components/ProductVariants.vue";
 import SpecificationRows from "../components/SpecificationRows.vue";
 
-const FIELDS = ["title", "slug", "description", "status", "brand_id", "category_id", "specifications"];
+const FIELDS = [
+  "title", "slug", "description", "status", "brand_id", "category_id", "in_comparison_feeds", "specifications"
+];
 
 const props = defineProps({ id: { type: String, required: true } });
 const path = `/products/${props.id}`;
@@ -44,7 +46,7 @@ function show(loaded) {
   product.value = loaded;
   form.value = {
     title: loaded.title, slug: loaded.slug, description: loaded.description ?? "", status: loaded.status,
-    brand_id: loaded.brand?.id ?? "", category_id: loaded.category_id,
+    brand_id: loaded.brand?.id ?? "", category_id: loaded.category_id, in_comparison_feeds: loaded.in_comparison_feeds,
     specifications: specificationRows(loaded.specifications)
   };
 }
@@ -55,7 +57,7 @@ async function refresh() {
 }
 
 async function save() {
-  const { title, slug, description, status, brand_id, category_id, specifications } = form.value;
+  const { title, slug, description, status, brand_id, category_id, in_comparison_feeds, specifications } = form.value;
   const { param, errors: rowErrors } = specificationsParam(specifications);
   specificationErrors.value = rowErrors;
   if (Object.keys(rowErrors).length) return;
@@ -63,7 +65,7 @@ async function save() {
   const done = await saving.run(async () => {
     const body = await patch(path, {
       title, slug: slug || undefined, description: description || null, status, brand_id: brand_id || null,
-      category_id, specifications: param
+      category_id, in_comparison_feeds, specifications: param
     });
     show(body.product);
   });
@@ -120,6 +122,9 @@ async function save() {
             </option>
           </select>
         </FormField>
+        <label class="check">
+          <input v-model="form.in_comparison_feeds" type="checkbox"> Εμφάνιση στις μηχανές σύγκρισης τιμών
+        </label>
         <FormField label="Προδιαγραφές" group :error="errors.fields.specifications">
           <SpecificationRows
             v-model="form.specifications" :definitions="definitions" v-model:errors="specificationErrors"
