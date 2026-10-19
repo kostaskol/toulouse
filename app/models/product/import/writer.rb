@@ -67,19 +67,18 @@ class Product::Import::Writer
     entry("created", product)
   end
 
+  # A row is an existing variant when their selectable values match.
   def add_variants(product)
-    unless @group.option_names == product.option_names
-      product.errors.add(:option_names, :option_names_mismatch)
-      raise ActiveRecord::RecordInvalid, product
-    end
-
     warn_product_cells(product)
     inherited = stored_by_key(product)
-    stored = product.variants.index_by(&:option_values)
+    selectable = Specification.where(selectable: true).pluck(:key)
+    stored = product.variants.includes(specification_values: :specification)
+                    .index_by { |variant| inherited.merge(stored_by_key(variant)).slice(*selectable) }
     added = 0
     @group.variants.each do |variant|
-      if stored.key?(variant.option_values)
-        warn_variant_cells(variant, stored[variant.option_values], inherited)
+      existing = stored[inherited.merge(@group.keyed(variant.specifications)).slice(*selectable)]
+      if existing
+        warn_variant_cells(variant, existing, inherited)
       else
         create_variant(product, variant, inherited)
         added += 1
@@ -123,6 +122,7 @@ class Product::Import::Writer
 
       add_warning("product_cell_ignored", column, stored[column])
     end
+    @group.value_image_cells.each { |column, row| add_warning("image_urls_ignored", column, nil, row:) }
   end
 
   # @return [Hash{String => Array<String>}] the record's own spec values by definition key
@@ -139,7 +139,9 @@ class Product::Import::Writer
     effective = inherited.merge(stored_by_key(existing))
     variant.specifications.each do |name, values|
       kept = effective[@group.key(name)]
-      add_warning("variant_cell_ignored", "spec:#{name}", kept.to_a.join(" | "), row: variant.row) unless values == kept
+      next if values == kept
+
+      add_warning("variant_cell_ignored", "specification:#{name}", kept.to_a.join(" | "), row: variant.row)
     end
   end
 
@@ -169,7 +171,6 @@ class Product::Import::Writer
     return if attribute == "base"
     return "brand" if record.is_a?(Brand)
     return "category" if record.is_a?(Category)
-    return "option1_value" if attribute == "option_values" && @group.option_names.any?
 
     COLUMNS.fetch(attribute, attribute)
   end

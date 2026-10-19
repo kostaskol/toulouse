@@ -1,6 +1,6 @@
 <script setup>
 import { useId, watch } from "vue";
-import { blankSpecificationRow } from "../specifications.js";
+import { blankSpecificationRow, singleValue } from "../specifications.js";
 
 defineProps({ definitions: { type: Array, default: () => [] } });
 const rows = defineModel({ type: Array, required: true });
@@ -36,7 +36,12 @@ watch(rows, () => (errors.value = {}), { deep: true });
               ×
             </button>
           </span>
-          <button type="button" class="button button-small" @click="row.values.push('')">+ Τιμή</button>
+          <button
+            v-if="!singleValue(definitions, row.name)" type="button" class="button button-small"
+            @click="row.values.push('')"
+          >
+            + Τιμή
+          </button>
         </div>
         <button
           type="button" class="button button-small button-danger"

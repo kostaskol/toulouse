@@ -31,7 +31,16 @@ en:
   hello: "Hello world"
   errors:
     messages:
-      duplicate_combination: "repeat another variant's option values"
+      duplicate_combination: "repeat another variant's values for the selectable specifications"
+      selection_incomplete: "leave an active variant with no value for a selectable specification"
+      kind_taken: "use two specifications of one kind"
+      single_value: "give more than one value to a single-value specification"
+      required_by_kind: "must be on for a specification with a kind"
+      off_when_selectable: "must be off for a specification with variant selection"
+      any_when_single: "must be any for a single-value specification"
+      multiple_values_held: "cannot be turned off while a product or variant holds more than one value"
+      kind_in_use: "would give a product two specifications of this kind"
+      selection_in_use: "would leave variants that repeat each other or lack a value"
       no_active_variant: "cannot be published without an active variant"
       last_active_variant: "cannot be archived on the last active variant of a published product"
       too_many_variants: "would exceed %{count} variants for the product"
@@ -42,4 +51,3 @@ en:
       too_many_pixels: "must be at most %{count} megapixels"
       too_many_images: "would exceed %{count} images for the product"
       product_cell_conflict: "differs from the first row of this handle"
-      option_names_mismatch: "differ from the existing product's options"

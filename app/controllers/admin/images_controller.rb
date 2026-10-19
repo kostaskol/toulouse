@@ -17,13 +17,13 @@ module Admin
     before_action :require_image_body!, only: :create
 
     def create
-      image = Product.find(params[:product_id]).add_image!(request.body)
+      image = Product.find(params[:product_id]).add_image!(request.body, params.permit(selection: {})[:selection])
       render status: :created, json: { image: image_json(image) }
     end
 
     def update
       image = find_image
-      image.update!(params.permit(:alt))
+      image.update!(params.permit(:alt, selection: {}))
       render json: { image: image_json(image) }
     end
 

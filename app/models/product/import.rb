@@ -69,10 +69,10 @@ class Product::Import < ApplicationRecord
 
       entry = transaction do
         attributes = Writer.new(group).call
-        self.class.update_counters(id, images_pending: group.image_urls.size) if attributes[:result] == "created"
+        self.class.update_counters(id, images_pending: group.images.size) if attributes[:result] == "created"
         entries.create!(**attributes, position:)
       end
-      ProductImageImportJob.perform_later(entry, group.image_urls) if entry.created? && group.image_urls.any?
+      ProductImageImportJob.perform_later(entry, group.images) if entry.created? && group.images.any?
       touch
     end
   end

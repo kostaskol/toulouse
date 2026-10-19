@@ -11,7 +11,6 @@ class Product::Variant < ApplicationRecord
   attr_accessor :stock_reason
 
   belongs_to :product, inverse_of: :variants
-  belongs_to :image, class_name: "Product::Image", optional: true
   # Overrides only. The product states the rest.
   has_many :specification_values, class_name: "Product::SpecificationValue", inverse_of: :variant, autosave: true
 
@@ -29,21 +28,34 @@ class Product::Variant < ApplicationRecord
   validates :sku, uniqueness: { scope: :tenant_id }, allow_nil: true
   validates :stock_quantity, numericality: { only_integer: true, less_than_or_equal_to: MAX_INTEGER }
   validate :stock_covered
-  validate :option_values_match_product
-  validate :combination_unique
   validate :sku_unique_among_siblings
   validate :within_limit, on: :create
   validate :keeps_published_product_sellable
-  validate :image_of_product
+  validate :selection_valid, if: -> { !product.saving? && (new_record? || @specifications || status_changed?) }
 
-  after_save :refresh_product_search, if: lambda {
-    saved_change_to_option_values? || saved_change_to_status? || saved_change_to_specifications?
-  }
+  after_save :refresh_product_search, if: -> { saved_change_to_status? || saved_change_to_specifications? }
+  after_save(if: -> { saved_change_to_specifications? && !product.saving? }) { product.unlink_stale_images }
 
   scope :available, -> { where(track_stock: false).or(where(allow_oversell: true)).or(where(stock_quantity: 1..)) }
 
   def available?
     !track_stock || allow_oversell || stock_quantity.positive?
+  end
+
+  # @return [Hash{String => String}] the value of each selectable spec by name, in definition order. An override
+  #   wins over the product's value.
+  def selection
+    entries = product.specification_entries.to_h.merge(specification_entries.to_h)
+    entries.select { |specification, _| specification.selectable }
+           .sort_by { |specification, _| [specification.position, specification.id] }
+           .to_h { |specification, values| [specification.name, values.first] }
+  end
+
+  # Read from memory, so a product saved with its variants sees the unsaved ones.
+  #
+  # @return [Array<Product::Variant>] the product's other variants
+  def siblings
+    product.variants.reject { |variant| variant.equal?(self) || (persisted? && variant.id == id) }
   end
 
   # Sets the counted stock, or adds a delta to the current stock under a row
@@ -66,28 +78,14 @@ class Product::Variant < ApplicationRecord
     Product::Search.refresh(product) unless product.saving?
   end
 
-  # Read from memory, so a product saved with its variants sees the unsaved ones.
-  def siblings
-    product.variants.reject { |variant| variant.equal?(self) || (persisted? && variant.id == id) }
+  def selection_valid
+    Product::Selection.new(product, variant: self).faults.each { |fault| errors.add(:specifications, fault) }
   end
 
   def stock_covered
     return unless track_stock && !allow_oversell && stock_quantity.is_a?(Integer) && stock_quantity.negative?
 
     errors.add(:stock_quantity, :insufficient_stock)
-  end
-
-  def option_values_match_product
-    return if option_values.is_a?(Hash) && option_values.keys.sort == product.option_names.sort &&
-              option_values.values.all? { |value| value.is_a?(String) && value.present? }
-
-    errors.add(:option_values, :invalid)
-  end
-
-  def combination_unique
-    return unless siblings.any? { |variant| variant.option_values == option_values }
-
-    errors.add(:option_values, :duplicate_combination)
   end
 
   # A database lookup cannot see siblings that are saved in the same nested create.
@@ -99,13 +97,6 @@ class Product::Variant < ApplicationRecord
 
   def within_limit
     errors.add(:base, :too_many_variants, count: MAX_PER_PRODUCT) if siblings.size >= MAX_PER_PRODUCT
-  end
-
-  # A malformed id casts to nil, so the raw value tells a bad id from no id.
-  def image_of_product
-    return if image_id_before_type_cast.blank? || image&.product_id == product_id
-
-    errors.add(:image_id, :invalid)
   end
 
   def keeps_published_product_sellable

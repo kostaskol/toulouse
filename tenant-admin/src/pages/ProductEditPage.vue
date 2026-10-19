@@ -11,7 +11,6 @@ import { specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
 import ProductImages from "../components/ProductImages.vue";
-import ProductOptions from "../components/ProductOptions.vue";
 import ProductVariants from "../components/ProductVariants.vue";
 import SpecificationRows from "../components/SpecificationRows.vue";
 
@@ -121,7 +120,6 @@ async function save() {
       </form>
     </section>
     <ProductImages :product="product" @changed="refresh" />
-    <ProductOptions :product="product" @changed="refresh" />
     <ProductVariants :product="product" :definitions="options.specifications" @changed="refresh" />
   </template>
 </template>

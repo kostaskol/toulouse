@@ -28,6 +28,6 @@ module Admin
 
     private
 
-    def specification_params = params.permit(:name, :position, :facet, :mode)
+    def specification_params = params.permit(:name, :position, :facet, :mode, :kind, :multiple, :selectable)
   end
 end

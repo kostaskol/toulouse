@@ -34,14 +34,15 @@ RSpec.describe "Storefront products", type: :request do
     expect(body["variants"].first["specifications"]).to eq([{ "name" => "Υλικό", "values" => ["Λινό"] }])
   end
 
-  it "shows images in display order, and which one each variant uses" do
-    images = as_tenant(tenant) { create_list(:product_image, 2, product:) }
-    as_tenant(tenant) { product.variants.first.update!(image: images.last) }
+  it "shows images in display order with their linked value, and each variant's selectable values" do
+    selection = as_tenant(tenant) { product.variants.first.selection }
+    images = as_tenant(tenant) { [create(:product_image, product:), create(:product_image, product:, selection:)] }
     get "/v1/storefront/products/#{product.slug}", headers: headers
 
     body = response.parsed_body["product"]
-    expect(body["images"].pluck("id")).to eq(images.map(&:id))
-    expect(body["variants"].first["image_id"]).to eq(images.last.id)
+    expect(body["images"].map { |image| image.values_at("id", "selection") }).to eq([[images.first.id, {}],
+                                                                                    [images.last.id, selection]])
+    expect(body["variants"].first["selection"]).to eq(selection)
   end
 
   it "tells whether each variant can be bought" do

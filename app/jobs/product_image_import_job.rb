@@ -5,18 +5,19 @@ class ProductImageImportJob < ApplicationJob
   # Fetches one image, then queues the rest, so images keep the file's order.
   #
   # @param entry [Product::Import::Entry]
-  # @param urls [Array<String>] the URLs still to fetch, in display order
-  def perform(entry, urls)
-    url, *rest = urls
-    store(entry, url)
+  # @param images [Array<Array(String, Hash{String => String})>] the URLs still to fetch, in display order, each
+  #   with the spec value it shows for
+  def perform(entry, images)
+    (url, selection), *rest = images
+    store(entry, url, selection)
     Product::Import.update_counters(entry.product_import_id, images_pending: -1)
     self.class.perform_later(entry, rest) if rest.any?
   end
 
   private
 
-  def store(entry, url)
-    Product::Image::Download.open(url) { |file| entry.product.add_image!(file) }
+  def store(entry, url, selection)
+    Product::Image::Download.open(url) { |file| entry.product.add_image!(file, selection) }
   rescue Product::Image::Download::Error => error
     entry.add_image_error!(code: error.code, message: error.message, url:)
   rescue ActiveRecord::RecordInvalid => error

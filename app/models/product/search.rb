@@ -16,12 +16,9 @@ class Product::Search
     # Locked before reading, so two saves of one product cannot each write a document missing the other's change.
     Product.where(id: product.id).lock.pick(:id)
     categories = Category.names_with_ancestors([product.category_id])
-    variants = product.variants.active.pluck(:id, :option_values)
-    options = variants.flat_map { |_, values| values.values }
-    own = [nil, *variants.map(&:first)]
+    own = [nil, *product.variants.active.ids]
     specifications = Product::SpecificationValue.where(product_id: product.id, variant_id: own).pluck(:value)
-    fields = { "A" => product.title, "B" => product.brand&.name,
-               "C" => [*categories, *options, *specifications].join(" "),
+    fields = { "A" => product.title, "B" => product.brand&.name, "C" => [*categories, *specifications].join(" "),
                "D" => product.description }
 
     # Skeletons are whole words, so they skip the stemmer.

@@ -17,30 +17,29 @@ RSpec.describe Product::Search, :as_tenant do
       expect(found("παπούτσια")).to eq([product])
     end
 
-    it "takes the brand, the category with its ancestors, and active option values" do
+    it "takes the brand and the category with its ancestors" do
       parent = create(:category, name: "Παπούτσια")
       product = create(:product, brand: create(:brand), category: create(:category, parent:))
-      option = product.variants.first.option_values.values.first
 
       expect(found(product.brand.name)).to eq([product])
       expect(found("παπούτσια")).to eq([product])
-      expect(found(option)).to eq([product])
     end
 
-    it "follows a variant's options and leaves out archived variants" do
+    it "follows a variant's overrides and leaves out archived variants" do
       product = create(:product)
       variant = create(:product_variant, product:)
-      option = variant.option_values.values.first
-      expect(found(option)).to eq([product])
+      value = variant.specifications.values.first.first
+      expect(found(value)).to eq([product])
 
       variant.update!(status: "archived")
 
-      expect(found(option)).to be_empty
+      expect(found(value)).to be_empty
     end
 
     it "takes spec values of the product and of its active variants' overrides" do
       product = create(:product, specifications: { "Υλικό" => ["Βαμβάκι"] })
-      variant = create(:product_variant, product:, specifications: { "Υλικό" => ["Μετάξι"] })
+      variant = create(:product_variant, product:)
+      variant.update!(specifications: variant.specifications.merge("Υλικό" => ["Μετάξι"]))
 
       expect(found("βαμβάκι")).to eq([product])
       expect(found("μετάξι")).to eq([product])
@@ -117,9 +116,7 @@ RSpec.describe Product::Search, :as_tenant do
     end
 
     it "keeps a decimal in the query whole" do
-      product = create(:product)
-      option = product.option_names.first
-      product.variants.first.update!(option_values: { option => "42.5" })
+      product = create(:product, specifications: { "Μέγεθος" => ["42.5"] })
 
       expect(search("42.5").values_at(0, 2)).to eq([[product], "exact"])
     end

@@ -21,17 +21,25 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response).to have_http_status(:created)
       product = response.parsed_body["product"]
-      expect(product).to include("status" => "draft", "option_names" => [], "category_id" => category.id)
+      expect(product).to include("status" => "draft", "category_id" => category.id)
       expect(product["variants"]).to contain_exactly(include("price_cents" => variant[:price_cents]))
     end
 
-    it "takes options and a value per variant" do
-      option = attributes_for(:product)[:option_names].first
-      create_product(option_names: [option], variants: [variant.merge(option_values: { option => "1" }),
-                                                        variant.merge(option_values: { option => "2" })])
+    it "takes variants that differ by a selectable spec" do
+      name = as_tenant(tenant) { create(:specification, multiple: false, selectable: true) }.name
+      create_product(variants: [variant.merge(specifications: { name => ["1"] }),
+                                variant.merge(specifications: { name => ["2"] })])
 
-      expect(response.parsed_body.dig("product", "variants").pluck("option_values"))
-        .to eq([{ option => "1" }, { option => "2" }])
+      expect(response.parsed_body.dig("product", "variants").pluck("selection"))
+        .to eq([{ name => "1" }, { name => "2" }])
+    end
+
+    it "refuses variants that do not differ" do
+      create_product(variants: [variant, variant])
+
+      expect(response.parsed_body["errors"].pluck("code", "field")).to contain_exactly(
+        ["duplicate_combination", "variants[0].specifications"], ["duplicate_combination", "variants[1].specifications"]
+      )
     end
 
     it "takes specs on the product and overrides on a variant, creating missing definitions" do
@@ -187,28 +195,6 @@ RSpec.describe "Tenant admin products", type: :request do
       patch "/admin/products/#{product.id}", params: { title: attributes_for(:product)[:title] }, headers:, as: :json
 
       expect(find_product(product.id).slug).to eq(product.slug)
-    end
-  end
-
-  describe "PUT /admin/products/:id/options" do
-    let(:product) { as_tenant(tenant) { create(:product) } }
-
-    it "renames an option" do
-      option = product.option_names.first
-      put "/admin/products/#{product.id}/options", params: { option_names: [{ name: "#{option} 2", from: option }] },
-                                                   headers:, as: :json
-
-      expect(response.parsed_body.dig("product", "variants", 0, "option_values").keys).to eq(["#{option} 2"])
-    end
-
-    [{}, { option_names: ["Option"] }].each do |body|
-      it "refuses #{body.inspect} rather than removing every option" do
-        put "/admin/products/#{product.id}/options", params: body, headers: headers, as: :json
-
-        expect(response.parsed_body["errors"])
-          .to contain_exactly(include("code" => "invalid", "field" => "option_names"))
-        expect(find_product(product.id).option_names).to eq(product.option_names)
-      end
     end
   end
 end

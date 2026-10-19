@@ -116,28 +116,28 @@ RSpec.describe Product::Import::Sheet, :as_tenant do
   end
 
   it "accepts spec columns" do
-    expect { described_class.new(import_csv([row.merge("spec:Υλικό" => "Λινό")])) }.not_to raise_error
+    expect { described_class.new(import_csv([row.merge("specification:Υλικό" => "Λινό")])) }.not_to raise_error
   end
 
   it "refuses a spec column with no name" do
-    expect(error_code(import_csv([row.merge("spec: " => "Λινό")]))).to eq("unknown_columns")
+    expect(error_code(import_csv([row.merge("specification: " => "Λινό")]))).to eq("unknown_columns")
   end
 
   it "refuses two spec columns that fold alike, as definitions fold" do
-    expect(error_code(import_csv([row.merge("spec:Υλικό" => "Λινό", "spec:υλικο" => "Λινό")])))
+    expect(error_code(import_csv([row.merge("specification:Υλικό" => "Λινό", "specification:υλικο" => "Λινό")])))
       .to eq("duplicate_columns")
-    expect(error_code(import_csv([row.merge("spec:Μέγεθος [EU]" => "42", "spec:Μέγεθος EU" => "42")])))
-      .to eq("duplicate_columns")
+    bracketed = row.merge("specification:Μέγεθος [EU]" => "42", "specification:Μέγεθος EU" => "42")
+    expect(error_code(import_csv([bracketed]))).to eq("duplicate_columns")
   end
 
-  it "refuses an option name with no value column" do
-    expect(error_code(import_csv([row.merge("option1_name" => "Size")]))).to eq("option_columns_invalid")
+  it "refuses the option columns specification columns replace" do
+    expect(error_columns(import_csv([row.merge("option1_name" => "Size", "option1_value" => "S")])))
+      .to eq(["option1_name", "option1_value"])
   end
 
-  it "refuses a gap in the option columns" do
-    text = import_csv([row.merge("option2_name" => "Size", "option2_value" => "S")])
-
-    expect(error_code(text)).to eq("option_columns_invalid")
+  it "refuses a value image column with no specification column" do
+    expect(error_columns(import_csv([row.merge("specification:Υλικό" => "Λινό", "image_urls:Χρώμα" => "")])))
+      .to eq(["image_urls:Χρώμα"])
   end
 
   it "refuses a file that does not parse" do

@@ -11,39 +11,42 @@ class Product::Import::Group
   LIST = "|".freeze
   LEVEL = ">".freeze
 
-  Variant = Data.define(:row, :option_values, :filled, :specifications) do
+  Variant = Data.define(:row, :filled, :specifications) do
     # A blank VAT class means standard and a blank stock means zero. Other blank cells keep the model's defaults.
     #
     # @return [Hash] model attributes
     def attributes
-      { option_values:, vat_class: "standard", stock_quantity: 0 }
+      { vat_class: "standard", stock_quantity: 0 }
         .merge(filled.transform_keys(Product::Import::Group::VARIANT_ATTRIBUTES))
     end
   end
 
-  attr_reader :handle, :errors, :variants, :option_names, :category_path, :image_urls, :specifications
+  attr_reader :handle, :errors, :variants, :category_path, :specifications
+  # @return [Array<Array(String, Hash{String => String})>] each image URL in display order, with the spec value it
+  #   shows for, or none for every variant
+  attr_reader :images
+  # @return [Array<Array(String, Integer)>] the column and row of each filled value image cell
+  attr_reader :value_image_cells
 
   # @param handle [String]
   # @param rows [Array<Array(CSV::Row, Integer)>] each row with its number in the file
-  # @param option_count [Integer]
   # @param spec_keys [Hash{String => String}] each spec column's definition key
-  def initialize(handle, rows, option_count, spec_keys)
+  # @param image_columns [Hash{String => String}] each value image column's spec column
+  def initialize(handle, rows, spec_keys, image_columns)
     @handle = handle
     @rows = rows
     @errors = []
     @first, @first_number = rows.first
-    @option_slots = (1..option_count).select { |n| cell(@first, "option#{n}_name").present? }
-    @option_names = @option_slots.map { |n| cell(@first, "option#{n}_name") }
     @spec_columns = spec_keys.keys
     @spec_keys = spec_keys.transform_keys { |column| spec_name(column) }
 
     check_handle
-    check_conflicts(option_count)
+    check_conflicts
     @status = parse_status
     @category_path = parse_category
-    @image_urls = parse_image_urls
+    @images = parse_images(image_columns)
     @specifications = parse_specifications(@first, @first_number)
-    @variants = rows.map { |row, number| variant(row, number, option_count) }
+    @variants = rows.map { |row, number| variant(row, number) }
   end
 
   def first_row = @first_number
@@ -55,7 +58,7 @@ class Product::Import::Group
   def product_attributes
     {
       slug: handle, title: cell(@first, "title"), description: cell(@first, "description").presence,
-      status: @status, option_names:, specifications:
+      status: @status, specifications:
     }
   end
 
@@ -96,10 +99,9 @@ class Product::Import::Group
     add_error("invalid", "handle") unless Sluggable::FORMAT.match?(handle)
   end
 
-  def check_conflicts(option_count)
-    columns = Product::Import::Sheet::PRODUCT_COLUMNS + (1..option_count).map { |n| "option#{n}_name" }
+  def check_conflicts
     @rows.drop(1).each do |row, number|
-      columns.each do |column|
+      Product::Import::Sheet::PRODUCT_COLUMNS.each do |column|
         value = cell(row, column)
         add_error("product_cell_conflict", column, number) unless value.empty? || value == cell(@first, column)
       end
@@ -125,11 +127,32 @@ class Product::Import::Group
     path
   end
 
-  def parse_image_urls
-    urls = cell(@first, "image_urls").split(LIST).map { |url| Product::Image.encode_url(url.strip) }
-                                     .compact_blank.uniq
-    valid = urls.size <= Product::Image::MAX_PER_PRODUCT && urls.all? { |url| http_url?(url) }
-    add_error("invalid", "image_urls") unless valid
+  # Value images go on the first row of their value, so each value has one cell to read.
+  def parse_images(image_columns)
+    images = parse_image_urls(@first, "image_urls", @first_number).map { |url| [url, {}] }
+    @value_image_cells = []
+    image_columns.each do |column, spec_column|
+      name = spec_name(spec_column)
+      seen = Set.new
+      @rows.each do |row, number|
+        value = cell(row, spec_column).presence || cell(@first, spec_column)
+        first = seen.add?(value)
+        urls = parse_image_urls(row, column, number)
+        next if urls.empty?
+
+        @value_image_cells << [column, number]
+        next add_error("invalid", column, number) if value.empty? || !first
+
+        images.concat(urls.map { |url| [url, { name => value }] })
+      end
+    end
+    add_error("invalid", "image_urls") if images.uniq.size > Product::Image::MAX_PER_PRODUCT
+    images.uniq
+  end
+
+  def parse_image_urls(row, column, number)
+    urls = cell(row, column).split(LIST).map { |url| Product::Image.encode_url(url.strip) }.compact_blank.uniq
+    add_error("invalid", column, number) unless urls.all? { |url| http_url?(url) }
     urls
   end
 
@@ -153,19 +176,13 @@ class Product::Import::Group
     false
   end
 
-  def variant(row, number, option_count)
-    (1..option_count).each do |n|
-      next if @option_slots.include?(n) || cell(row, "option#{n}_value").empty?
-
-      add_error("invalid", "option#{n}_value", number)
-    end
+  def variant(row, number)
     add_error("blank", "price", number) if cell(row, "price").empty?
 
-    option_values = @option_slots.to_h { |n| [cell(@first, "option#{n}_name"), cell(row, "option#{n}_value")] }
     filled = VARIANT_ATTRIBUTES.keys.to_h { |column| [column, cell(row, column)] }.compact_blank
     parsed = filled.to_h { |column, value| [column, parse(column, value, number)] }
     specifications = number == @first_number ? @specifications : parse_specifications(row, number)
-    Variant.new(row: number, option_values:, filled: parsed, specifications:)
+    Variant.new(row: number, filled: parsed, specifications:)
   end
 
   def parse(column, value, number)

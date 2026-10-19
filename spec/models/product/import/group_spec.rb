@@ -39,8 +39,8 @@ RSpec.describe Product::Import::Group, :as_tenant do
   end
 
   it "reads specs from the first row, and a differing later row as that variant's override" do
-    rows = [base.merge("spec:Υλικό" => "Λινό | Μετάξι"), base.merge("spec:Υλικό" => ""),
-            base.merge("spec:Υλικό" => "Βαμβάκι")]
+    rows = [base.merge("specification:Υλικό" => "Λινό | Μετάξι"), base.merge("specification:Υλικό" => ""),
+            base.merge("specification:Υλικό" => "Βαμβάκι")]
     group = group(*rows)
 
     expect(group.product_attributes[:specifications]).to eq("Υλικό" => ["Λινό", "Μετάξι"])
@@ -50,23 +50,37 @@ RSpec.describe Product::Import::Group, :as_tenant do
   end
 
   it "refuses a spec cell with no value, naming the column as the file spells it" do
-    error = group(base.merge("spec:Υλικό" => "|")).errors.sole
+    error = group(base.merge("specification:Υλικό" => "|")).errors.sole
 
-    expect(error).to include(code: "invalid", field: "spec:Υλικό")
-    expect(error[:message]).to start_with("spec:Υλικό ")
+    expect(error).to include(code: "invalid", field: "specification:Υλικό")
+    expect(error[:message]).to start_with("specification:Υλικό ")
   end
 
-  it "reads options from the first row's names" do
-    rows = [base.merge("option1_name" => "Size", "option1_value" => "S"), base.merge("option1_value" => "M")]
+  describe "value images" do
+    let(:black) { base.merge("specification:Χρώμα" => "Μαύρο") }
+    let(:white) { base.merge("specification:Χρώμα" => "Λευκό") }
 
-    expect(group(*rows).option_names).to eq(["Size"])
-    expect(group(*rows).variants.map(&:option_values)).to eq([{ "Size" => "S" }, { "Size" => "M" }])
-  end
+    it "links them to the value on the first row of that value, after the images for every variant" do
+      rows = [black.merge("image_urls" => "https://host/a.jpg", "image_urls:Χρώμα" => "https://host/b.jpg"),
+              black, white.merge("image_urls:Χρώμα" => "https://host/c.jpg")]
 
-  it "refuses a value in an unnamed option slot" do
-    row = base.merge("option1_name" => "", "option1_value" => "S")
+      expect(group(*rows).images).to eq([
+        ["https://host/a.jpg", {}], ["https://host/b.jpg", { "Χρώμα" => "Μαύρο" }],
+        ["https://host/c.jpg", { "Χρώμα" => "Λευκό" }]
+      ])
+    end
 
-    expect(codes(group(row))).to eq([["invalid", "option1_value"]])
+    it "refuses them on a later row of the value" do
+      rows = [black, white, black.merge("image_urls:Χρώμα" => "https://host/b.jpg")]
+
+      expect(codes(group(*rows))).to eq([["invalid", "image_urls:Χρώμα"]])
+    end
+
+    it "takes a blank value cell as the first row's value" do
+      rows = [black, base.merge("image_urls:Χρώμα" => "https://host/b.jpg")]
+
+      expect(codes(group(*rows))).to eq([["invalid", "image_urls:Χρώμα"]])
+    end
   end
 
   it "refuses a later row whose product cell differs" do
@@ -114,7 +128,7 @@ RSpec.describe Product::Import::Group, :as_tenant do
     product = group(base.merge("image_urls" => "https://host/εικόνα.jpg|https://host/εικόνα.jpg"))
 
     expect(product.errors).to be_empty
-    expect(product.image_urls).to eq(["https://host/%CE%B5%CE%B9%CE%BA%CF%8C%CE%BD%CE%B1.jpg"])
+    expect(product.images).to eq([["https://host/%CE%B5%CE%B9%CE%BA%CF%8C%CE%BD%CE%B1.jpg", {}]])
   end
 
   it "refuses a handle that is not a slug" do

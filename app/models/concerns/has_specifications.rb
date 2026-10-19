@@ -25,19 +25,39 @@ module HasSpecifications
                         .map { |specification, values| [specification, values.sort_by(&:position).map(&:value)] }
   end
 
+  # @return [Hash{String => Array<String>}] values by definition key, unsaved writes included
+  def keyed_specifications
+    return specification_entries.to_h { |specification, values| [specification.key, values] } unless @specifications
+    # A malformed write reports itself in validation.
+    return {} unless specifications_shaped?
+
+    Specification.fold(@specifications.keys).zip(@specifications.values.map { |values| values.map(&:strip).uniq }).to_h
+  end
+
   # True after a save that wrote specs, until the next save.
   def saved_change_to_specifications? = @saved_specifications
 
   private
 
-  def specifications_valid
-    valid = @specifications.is_a?(Hash) && @specifications.all? do |name, values|
+  def specifications_shaped?
+    @specifications.is_a?(Hash) && @specifications.all? do |name, values|
       name.is_a?(String) && name.strip.present? && values.is_a?(Array) && values.any? &&
         values.all? { |value| value.is_a?(String) && value.strip.present? }
     end
+  end
+
+  def specifications_valid
+    valid = specifications_shaped?
     # Two names that fold alike would land on one definition.
-    valid &&= Specification.fold(@specifications.keys).uniq.size == @specifications.size
-    errors.add(:specifications, :invalid) unless valid
+    keys = Specification.fold(@specifications.keys) if valid
+    valid &&= keys.uniq.size == @specifications.size
+    return errors.add(:specifications, :invalid) unless valid
+
+    single = Specification.where(key: keys, multiple: false).pluck(:key)
+    held = keys.zip(@specifications.values).any? do |key, values|
+      single.include?(key) && values.map(&:strip).uniq.many?
+    end
+    errors.add(:specifications, :single_value) if held
   end
 
   # Keeps rows whose value stays, so the audit log shows only real changes.

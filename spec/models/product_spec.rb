@@ -2,25 +2,21 @@ require "rails_helper"
 
 RSpec.describe Product, :as_tenant, type: :model do
   let(:product) { create(:product) }
-  let(:option) { product.option_names.first }
+  let(:colour) { create(:specification, name: "Χρώμα", kind: "colour", multiple: false, selectable: true) }
 
-  def add_variant(product, **attributes) = create(:product_variant, product:, **attributes)
+  # @param own [Hash{String => Array<String>}] the product's own specs
+  # @param overrides [Array<Hash{String => Array<String>}>] one per variant
+  def build_with(own, *overrides)
+    product = build(:product, specifications: own)
+    product.variants = overrides.map { |specifications| build(:product_variant, product:, specifications:) }
+    product
+  end
 
   it "needs a variant to be created" do
     product = build(:product)
     product.variants = []
 
     expect(product).not_to be_valid
-  end
-
-  it "accepts up to #{described_class::MAX_OPTIONS} options" do
-    names = Array.new(described_class::MAX_OPTIONS + 1) { |index| "#{option} #{index}" }
-
-    expect(build(:product, option_names: names)).not_to be_valid
-  end
-
-  it "refuses an option name used twice" do
-    expect(build(:product, option_names: [option, option])).not_to be_valid
   end
 
   it "refuses a brand of another tenant" do
@@ -101,44 +97,54 @@ RSpec.describe Product, :as_tenant, type: :model do
     end
   end
 
-  describe "#update_options!" do
-    before { add_variant(product) }
+  describe "variant selection" do
+    it "refuses two values for a single-value spec" do
+      product.specifications = { colour.name => ["Λευκό", "Μαύρο"] }
 
-    it "renames an option on every variant" do
-      product.update_options!([{ name: "#{option} renamed", from: option }])
-
-      expect(product.reload.variants.map { |variant| variant.option_values.keys }).to all(eq(["#{option} renamed"]))
+      expect(product).not_to be_valid
+      expect(product.errors.details[:specifications]).to eq([{ error: :single_value }])
     end
 
-    it "adds an option with one value for every variant" do
-      product.update_options!([{ name: option, from: option }, { name: "Added", value: "Value" }])
+    it "refuses two specs of one kind" do
+      size = create(:specification, kind: "size", multiple: false, selectable: true)
+      other = create(:specification, kind: "size", multiple: false, selectable: true)
+      product.specifications = { size.name => ["Λευκό"], other.name => ["Μαύρο"] }
 
-      expect(product.reload.variants.map { |variant| variant.option_values["Added"] }).to eq(["Value", "Value"])
-      expect(product.option_names).to eq([option, "Added"])
+      expect(product).not_to be_valid
+      expect(product.errors.details[:specifications]).to eq([{ error: :kind_taken }])
     end
 
-    it "refuses to remove an option when two variants would match" do
-      expect { product.update_options!([]) }.to raise_error(ActiveRecord::RecordInvalid)
-      expect(product.reload.option_names).to eq([option])
+    it "lets variants differ by the values they override" do
+      expect(build_with({}, { colour.name => ["Λευκό"] }, { colour.name => ["Μαύρο"] })).to be_valid
     end
 
-    it "removes an option when the variants stay distinct" do
-      product.update_options!([{ name: option, from: option }, { name: "Added", value: "Value" }])
-      product.reload.update_options!([{ name: option, from: option }])
+    it "refuses a variant with no value for a selectable spec another variant uses" do
+      product = build_with({}, { colour.name => ["Λευκό"] }, {})
 
-      expect(product.reload.variants.map { |variant| variant.option_values.keys }).to all(eq([option]))
+      expect(product).not_to be_valid
+      expect(product.errors.details[:"variants[1].specifications"]).to eq([{ error: :selection_incomplete }])
     end
 
-    it "refuses to keep an option the product does not have" do
-      expect { product.update_options!([{ name: option, from: "#{option} missing" }]) }
-        .to raise_error(ActiveRecord::RecordInvalid)
+    it "lets an archived variant go without the value" do
+      product = build_with({}, { colour.name => ["Λευκό"] }, {})
+      product.variants.last.status = "archived"
+
+      expect(product).to be_valid
     end
 
-    it "lets two variants swap option values in one save" do
-      first, second = product.reload.variants.to_a
-      first.option_values, second.option_values = second.option_values, first.option_values
+    it "refuses a product value that makes two variants repeat each other" do
+      product = build_with({ colour.name => ["Μαύρο"] }, { colour.name => ["Λευκό"] }, {})
+      product.save!
 
-      expect { product.save! }.not_to raise_error
+      expect(product.update(specifications: { colour.name => ["Λευκό"] })).to be(false)
+      expect(product.errors.details[:specifications]).to eq([{ error: :duplicate_combination }])
+    end
+
+    it "refuses two variants with no selectable spec" do
+      product = build_with({}, {}, {})
+
+      expect(product).not_to be_valid
+      expect(product.errors.details[:"variants[1].specifications"]).to eq([{ error: :duplicate_combination }])
     end
   end
 end

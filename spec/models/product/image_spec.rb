@@ -77,4 +77,63 @@ RSpec.describe Product::Image, :as_tenant do
 
     expect([copy.get("vips-loader"), copy.width, largest.width]).to eq(["webpload_buffer", width, width * 2])
   end
+
+  describe "selection" do
+    let(:variant) { product.variants.first }
+    let(:name) { variant.specifications.keys.first }
+
+    def link(selection) = build(:product_image, product:, selection:).tap(&:valid?)
+
+    it "links to a selectable value the product uses" do
+      selection = { name => variant.specifications[name].first }
+
+      expect(link(selection).selection).to eq(selection)
+    end
+
+    it "shows on every variant once no variant holds its value" do
+      selection = { name => variant.specifications[name].first }
+      image = create(:product_image, product:, selection:)
+
+      variant.update!(specifications: { name => ["#{selection[name]} renamed"] })
+
+      expect(image.reload.selection).to eq({})
+    end
+
+    it "shows on every variant once a variant saved through its product drops the value" do
+      selection = { name => variant.specifications[name].first }
+      image = create(:product_image, product:, selection:)
+
+      variant.assign_attributes(specifications: { name => ["#{selection[name]} renamed"] },
+                                price_cents: variant.price_cents + 1)
+      product.save!
+
+      expect(image.reload.selection).to eq({})
+    end
+
+    it "keeps its link while a variant holds the value" do
+      selection = { name => variant.specifications[name].first }
+      image = create(:product_image, product:, selection:)
+
+      create(:product_variant, product:).update!(specifications: { name => ["#{selection[name]} other"] })
+
+      expect(image.reload.selection).to eq(selection)
+    end
+
+    it "shows on every variant with no link" do
+      expect(link({}).selection).to eq({})
+    end
+
+    {
+      "a value the product does not use" => ->(name) { { name => "#{name} other" } },
+      "a spec that is not selectable" => ->(_) { { "Οθόνη" => "6.1" } },
+      "two values" => ->(name) { { name => "6.1", "Οθόνη" => "6.1" } },
+      "an unknown spec" => ->(name) { { "#{name} other" => "6.1" } }
+    }.each do |case_name, selection|
+      it "refuses #{case_name}" do
+        product.update!(specifications: { "Οθόνη" => ["6.1"] })
+
+        expect(link(selection.call(name)).errors.details[:selection]).to eq([{ error: :invalid }])
+      end
+    end
+  end
 end

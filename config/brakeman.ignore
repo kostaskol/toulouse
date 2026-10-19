@@ -1,7 +1,7 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "55a8c2fefb4ef4aad82716a42381471c0bc09af0a46e0a6c3d68523fcf01d5db",
+      "fingerprint": "9f1ff7bbe23def914eb74a5cfd673b86b5beee94493a6f4bb02547a1aac16bcf",
       "note": "The interpolated SQL is a fixed fragment repeated per weight. Every value is a bind."
     },
     {
@@ -17,7 +17,7 @@
       "note": "The interpolated SQL comes from sanitize_sql and a relation's to_sql. No request value reaches it raw."
     },
     {
-      "fingerprint": "60179836dda72ae4905796a721a9c91a401f1bb329f2adc595d3eb2421ea07b9",
+      "fingerprint": "ee1af5a1d301c292ba1edd1478bf7ebb1a4023d71c116f7f10fcc465c7a19b15",
       "note": "The interpolated SQL is a fixed fold, a fixed subquery with a literal alias, a relation's to_sql and a sanitize_sql fragment. No request value reaches it raw."
     },
     {

@@ -3,8 +3,6 @@ class Product < ApplicationRecord
   include Sluggable
   include HasSpecifications
 
-  MAX_OPTIONS = 3
-
   # The search columns are derived, so versions leave them out.
   has_paper_trail versions: { class_name: "Version" }, skip: [:search_document, :search_text]
 
@@ -12,7 +10,7 @@ class Product < ApplicationRecord
   # Optional here, so a missing or unknown id fails as category_id, the field a client sends.
   belongs_to :category, optional: true
   has_many :variants, -> { order(:id) }, inverse_of: :product, index_errors: true
-  has_many :active_variants, -> { active.order(:id) }, class_name: "Product::Variant"
+  has_many :active_variants, -> { active.order(:id) }, class_name: "Product::Variant", inverse_of: :product
   has_many :images, -> { order(:position, :id) }, inverse_of: :product
   # The product's own values. A variant's overrides sit on the variant.
   has_many :specification_values, -> { where(variant_id: nil) }, class_name: "Product::SpecificationValue",
@@ -20,7 +18,7 @@ class Product < ApplicationRecord
 
   accepts_nested_attributes_for :variants
 
-  scope :with_images, -> { includes(images: { file_attachment: :blob }) }
+  scope :with_images, -> { includes(images: [:specification, { file_attachment: :blob }]) }
   scope :with_specifications, lambda { |variants: :variants|
     includes(specification_values: :specification, variants => { specification_values: :specification })
   }
@@ -29,43 +27,37 @@ class Product < ApplicationRecord
 
   validates :title, presence: true
   validates :variants, presence: true, on: :create
-  validates :option_names, length: { maximum: MAX_OPTIONS }
-  validate :option_names_distinct
   validate :brand_in_tenant
   validate :active_variant_when_published
   validate :category_in_tenant
+  validate :selection_valid
 
   around_save :refresh_search
+  # After the nested variants save, so it runs once for all of them.
+  after_save :unlink_stale_images, if: lambda {
+    saved_change_to_specifications? || (variants.loaded? && variants.any?(&:saved_change_to_specifications?))
+  }
 
-  # Renames, reorders, adds and removes options, and rewrites every variant to match.
-  #
-  # @param options [Array<Hash>] in display order. `from` keeps an existing
-  #   option under `name`; otherwise `value` adds `name` to every variant.
-  #   Options left out are removed.
-  def update_options!(options)
-    renames = options.select { |option| option[:from] }.to_h { |option| [option[:from], option[:name]] }
-    added = options.reject { |option| option[:from] }.to_h { |option| [option[:name], option[:value]] }
-
-    errors.add(:option_names, :invalid) unless (renames.keys - option_names).empty?
-    raise ActiveRecord::RecordInvalid, self if errors.any?
-
-    self.option_names = options.map { |option| option[:name] }
-    variants.each do |variant|
-      variant.option_values = variant.option_values.slice(*renames.keys).transform_keys(renames).merge(added)
+  # Shares each image whose linked value no product or variant holds any more, so it still shows somewhere.
+  def unlink_stale_images
+    held = Product::SpecificationValue.where(product_id: id).pluck(:specification_id, :value)
+    images.where.not(specification_id: nil).each do |image|
+      # One by one, so the audit log records each.
+      image.update!(specification: nil, value: nil) unless held.include?([image.specification_id, image.value])
     end
-    save!
   end
 
   # Stores an uploaded image as the product's last.
   #
   # @param io [IO] the raw upload
+  # @param selection [Hash{String => String}, nil] the selectable spec value it shows for, or none for every variant
   # @return [Product::Image]
-  def add_image!(io)
+  def add_image!(io, selection = nil)
     Tempfile.create(binmode: true) do |file|
       # One byte over the cap is enough for validation to refuse it.
       IO.copy_stream(io, file, Product::Image::MAX_BYTES + 1)
       file.rewind
-      image = Product::Image.new(product: self, file: Product::Image.attachable(file, slug))
+      image = Product::Image.new(product: self, file: Product::Image.attachable(file, slug), selection:)
       # Locked, so two uploads cannot both take the last slot.
       with_lock { image.save! }
       image
@@ -91,8 +83,16 @@ class Product < ApplicationRecord
     end
   end
 
-  # True while the product saves, variants included.
-  def saving? = @saving
+  # Its variants skip their own selection check, since the product judges them all at once.
+  def valid?(context = nil)
+    @validating = true
+    super
+  ensure
+    @validating = false
+  end
+
+  # True while the product validates or saves, variants included.
+  def saving? = @saving || @validating
 
   private
 
@@ -106,9 +106,19 @@ class Product < ApplicationRecord
     @saving = false
   end
 
-  def option_names_distinct
-    named = option_names.all? { |name| name.is_a?(String) && name.present? }
-    errors.add(:option_names, :invalid) unless named && option_names.uniq.size == option_names.size
+  # A saved variant's fault shows on the product, as the variant is not the one saving.
+  def selection_valid
+    selection = Product::Selection.new(self)
+    errors.add(:specifications, selection.fault(self)) if selection.fault(self)
+    variants.each_with_index do |variant, index|
+      fault = selection.fault(variant)
+      if fault && variant.new_record?
+        errors.import(ActiveModel::Error.new(variant, :specifications, fault),
+                      attribute: :"variants[#{index}].specifications")
+      elsif fault && !errors.added?(:specifications, fault)
+        errors.add(:specifications, fault)
+      end
+    end
   end
 
   # Read before the uuid cast, which turns a malformed id into nil.

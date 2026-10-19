@@ -32,8 +32,8 @@ seed_linked_shopper.call(demo, email: "owner@example.com")
 # The storefront BFF reads this token from storefront/bff/.env.
 Tenancy.with_tenant(demo) { demo.api_keys.find_or_create_by!(name: "Demo storefront") }
 
-# The demo storefront's catalog. Prices are in cents. A sold_out entry empties
-# every variant it matches.
+# The demo storefront's catalog. Prices are in cents. Each choice is a
+# selectable spec. A sold_out entry empties every variant it matches.
 demo_categories = {
   "Γυναικεία" => ["Φορέματα", "Μπλούζες"],
   "Ανδρικά" => ["Πουκάμισα", "Παντελόνια"],
@@ -46,28 +46,28 @@ demo_products = [
   { title: "Ψάθινη τσάντα ώμου", brand: "Λινό", category: "Αξεσουάρ", price: 4500,
     description: "Χωράει πετσέτα, βιβλίο και αντηλιακό.\n\n- Δερμάτινα χερούλια\n- Βαμβακερή φόδρα" },
   { title: "Λευκά δερμάτινα sneakers", brand: "Αιγαίο", category: "Sneakers", price: 8900, pre_discount: 11_000,
-    options: { "Νούμερο" => ["40", "41", "42", "43", "44"] },
+    choices: { "Νούμερο" => ["40", "41", "42", "43", "44"] },
     description: "Μαλακό δέρμα, λαστιχένια σόλα. Ταιριάζουν με όλα." },
   { title: "Δερμάτινα σανδάλια", brand: "Πήλιο", category: "Σανδάλια", price: 7500, stock: 0,
-    options: { "Νούμερο" => ["37", "38", "39", "40"] },
+    choices: { "Νούμερο" => ["37", "38", "39", "40"] },
     description: "Χειροποίητα στο Πήλιο από φυτικά δεψασμένο δέρμα. Η σόλα παίρνει το σχήμα του ποδιού." },
   { title: "Βαμβακερό chino παντελόνι", brand: "Πήλιο", category: "Παντελόνια", price: 6500,
-    options: { "Μέγεθος" => ["30", "32", "34", "36"], "Χρώμα" => ["Μπεζ", "Navy"] },
+    choices: { "Μέγεθος" => ["30", "32", "34", "36"], "Χρώμα" => ["Μπεζ", "Navy"] },
     description: "Ίσια γραμμή, ελαφρύ βαμβάκι με λίγη ελαστικότητα." },
   { title: "Λινό πουκάμισο", brand: "Λινό", category: "Πουκάμισα", price: 5900,
-    options: { "Μέγεθος" => ["M", "L", "XL"], "Χρώμα" => ["Λευκό", "Γαλάζιο"] },
+    choices: { "Μέγεθος" => ["M", "L", "XL"], "Χρώμα" => ["Λευκό", "Γαλάζιο"] },
     specifications: { "Υλικό" => ["Λινό"] }, sold_out: [{ "Μέγεθος" => "XL", "Χρώμα" => "Γαλάζιο" }],
     description: "100% λινό, πλυμένο για πιο μαλακή αίσθηση.\n\n**Φροντίδα:** πλύσιμο στους 30°C." },
   { title: "Βαμβακερή μπλούζα", brand: "Αιγαίο", category: "Μπλούζες", price: 2900,
-    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Μαύρο", "Τερακότα"] },
+    choices: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Μαύρο", "Τερακότα"] },
     specifications: { "Υλικό" => ["Οργανικό βαμβάκι"] },
     description: "Οργανικό βαμβάκι, φαρδιά γραμμή." },
   { title: "Μάξι φόρεμα με τιράντες", brand: "Αιγαίο", category: "Φορέματα", price: 6900, pre_discount: 9500,
-    options: { "Μέγεθος" => ["S", "M", "L"] }, specifications: { "Υλικό" => ["Βισκόζη"] },
+    choices: { "Μέγεθος" => ["S", "M", "L"] }, specifications: { "Υλικό" => ["Βισκόζη"] },
     sold_out: [{ "Μέγεθος" => "S" }],
     description: "Ριχτό φόρεμα από βισκόζη, για το καλοκαίρι στο νησί." },
   { title: "Λινό φόρεμα Σαντορίνη", brand: "Λινό", category: "Φορέματα", price: 8900,
-    options: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Άμμος"] }, specifications: { "Υλικό" => ["Λινό"] },
+    choices: { "Μέγεθος" => ["S", "M", "L"], "Χρώμα" => ["Λευκό", "Άμμος"] }, specifications: { "Υλικό" => ["Λινό"] },
     description: "Το πιο αγαπημένο μας κομμάτι.\n\n- 100% λινό\n- Τσέπες στο πλάι\n- Ραμμένο στην Αθήνα" }
 ]
 
@@ -83,20 +83,25 @@ Tenancy.with_tenant(demo) do
   # Created oldest first, since lists show the newest first.
   # A facet, so the demo filters by it.
   Specification.find_or_create_by!(name: "Υλικό") { |specification| specification.facet = true }
+  { "Μέγεθος" => "size", "Χρώμα" => "colour", "Νούμερο" => "size" }.each do |name, kind|
+    Specification.find_or_create_by!(name:) do |specification|
+      specification.assign_attributes(kind:, multiple: false, selectable: true, facet: true)
+    end
+  end
 
-  seed_product = lambda do |title:, brand:, category:, price:, description:, options: {}, specifications: {},
+  seed_product = lambda do |title:, brand:, category:, price:, description:, choices: {}, specifications: {},
                             pre_discount: nil, stock: 10, sold_out: []|
     next if Product.exists?(title:)
 
-    combinations = options.values.reduce([[]]) { |partial, values| partial.product(values).map(&:flatten) }
+    combinations = choices.values.reduce([[]]) { |partial, values| partial.product(values).map(&:flatten) }
     variants = combinations.map do |values|
-      option_values = options.keys.zip(values).to_h
-      quantity = sold_out.any? { |sold| sold <= option_values } ? 0 : stock
-      { option_values:, price_cents: price, pre_discount_price_cents: pre_discount, vat_class: "standard",
-        stock_quantity: quantity }
+      chosen = choices.keys.zip(values).to_h
+      quantity = sold_out.any? { |sold| sold <= chosen } ? 0 : stock
+      { specifications: chosen.transform_values { |value| [value] }, price_cents: price,
+        pre_discount_price_cents: pre_discount, vat_class: "standard", stock_quantity: quantity }
     end
 
-    Product.create!(title:, description:, status: "published", option_names: options.keys, specifications:,
+    Product.create!(title:, description:, status: "published", specifications:,
                     brand: Brand.find_or_create_by!(name: brand), category: categories.fetch(category),
                     variants_attributes: variants)
   end
