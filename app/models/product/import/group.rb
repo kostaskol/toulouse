@@ -3,10 +3,11 @@ class Product::Import::Group
   VARIANT_ATTRIBUTES = {
     "price" => :price_cents, "pre_discount_price" => :pre_discount_price_cents, "vat_class" => :vat_class,
     "sku" => :sku, "barcode" => :barcode, "mpn" => :mpn, "stock" => :stock_quantity,
-    "track_stock" => :track_stock, "allow_oversell" => :allow_oversell
+    "track_stock" => :track_stock, "allow_oversell" => :allow_oversell, "weight" => :weight_grams
   }.freeze
   PRICE = /\A(\d+)(?:[.,](\d{1,2}))?\z/
   STOCK = /\A-?\d+\z/
+  GRAMS = /\A\d+\z/
   BOOLEANS = { "true" => true, "1" => true, "false" => false, "0" => false }.freeze
   LIST = "|".freeze
   LEVEL = ">".freeze
@@ -189,6 +190,7 @@ class Product::Import::Group
     parsed = case column
     when "price", "pre_discount_price" then cents(value)
     when "stock" then Integer(value, 10) if STOCK.match?(value)
+    when "weight" then Integer(value, 10) if GRAMS.match?(value)
     when "track_stock", "allow_oversell" then BOOLEANS[value.downcase]
     when "vat_class" then value if Product::Variant.vat_classes.key?(value)
     else value

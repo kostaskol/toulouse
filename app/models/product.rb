@@ -29,6 +29,7 @@ class Product < ApplicationRecord
   validates :variants, presence: true, on: :create
   validate :brand_in_tenant
   validate :active_variant_when_published
+  validate :weights_when_published
   validate :category_in_tenant
   validate :selection_valid
 
@@ -133,5 +134,12 @@ class Product < ApplicationRecord
 
   def active_variant_when_published
     errors.add(:status, :no_active_variant) if published? && variants.none?(&:active?)
+  end
+
+  # Only the change to published, so later saves and stock changes of a published product still go through.
+  def weights_when_published
+    return unless will_save_change_to_status?(to: "published") && tenant.setting.weight_required?
+
+    errors.add(:status, :weight_missing) if variants.any? { |variant| variant.active? && variant.weight_grams.nil? }
   end
 end

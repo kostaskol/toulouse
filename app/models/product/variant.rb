@@ -25,6 +25,9 @@ class Product::Variant < ApplicationRecord
   validates :pre_discount_price_cents, numericality: {
     only_integer: true, greater_than: :price_cents, less_than_or_equal_to: MAX_INTEGER
   }, allow_nil: true, if: :price_cents
+  validates :weight_grams, numericality: {
+    only_integer: true, greater_than: 0, less_than_or_equal_to: MAX_INTEGER
+  }, allow_nil: true
   validates :sku, uniqueness: { scope: :tenant_id }, allow_nil: true
   validates :stock_quantity, numericality: { only_integer: true, less_than_or_equal_to: MAX_INTEGER }
   validate :stock_covered

@@ -6,6 +6,7 @@ import { VARIANT_STATUSES, VAT_CLASSES } from "../labels.js";
 import { formErrors } from "../messages.js";
 import { eurosInput, parseEuros } from "../money.js";
 import { notify } from "../notice.js";
+import { session } from "../session.js";
 import { specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "./FormErrors.vue";
 import FormField from "./FormField.vue";
@@ -13,7 +14,7 @@ import SpecificationRows from "./SpecificationRows.vue";
 
 const FIELDS = [
   "sku", "barcode", "mpn", "price_cents", "pre_discount_price_cents", "vat_class", "status", "track_stock",
-  "allow_oversell", "specifications"
+  "allow_oversell", "weight_grams", "specifications"
 ];
 
 const props = defineProps({
@@ -30,7 +31,7 @@ const form = ref({
   price: eurosInput(source?.price_cents), pre_discount_price: eurosInput(source?.pre_discount_price_cents),
   vat_class: source?.vat_class ?? "", status: source?.status ?? "active",
   track_stock: source?.track_stock ?? true, allow_oversell: source?.allow_oversell ?? false,
-  specifications: specificationRows(source?.specifications ?? [])
+  weight: source?.weight_grams ?? "", specifications: specificationRows(source?.specifications ?? [])
 });
 const priceErrors = ref({});
 const specificationErrors = ref({});
@@ -53,7 +54,8 @@ async function save() {
   const body = {
     sku: values.sku || null, barcode: values.barcode || null, mpn: values.mpn || null,
     price_cents, pre_discount_price_cents, vat_class: values.vat_class, status: values.status,
-    track_stock: values.track_stock, allow_oversell: values.allow_oversell, specifications
+    track_stock: values.track_stock, allow_oversell: values.allow_oversell,
+    weight_grams: values.weight === "" ? null : values.weight, specifications
   };
   const path = `/products/${props.product.id}/variants`;
   const done = await run(() => (source ? patch(`${path}/${source.id}`, body) : post(path, body)));
@@ -94,6 +96,12 @@ async function save() {
       <FormField label="SKU" :error="errors.fields.sku"><input v-model="form.sku"></FormField>
       <FormField label="Barcode" :error="errors.fields.barcode"><input v-model="form.barcode"></FormField>
       <FormField label="MPN" :error="errors.fields.mpn"><input v-model="form.mpn"></FormField>
+      <FormField
+        label="Βάρος (g)" :error="errors.fields.weight_grams"
+        :hint="session.tenant?.weight_required ? 'Χρειάζεται για δημοσίευση.' : 'Κενό χωρίς βάρος.'"
+      >
+        <input v-model.number="form.weight" type="number" min="1" step="1">
+      </FormField>
     </div>
     <div class="checks">
       <label class="check"><input v-model="form.track_stock" type="checkbox"> Παρακολούθηση αποθέματος</label>

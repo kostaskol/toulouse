@@ -8,6 +8,7 @@ class Platform::ImpersonationsController < Platform::BaseController
 
     if shopper.nil?
       @impersonation_error = "No shopper has this email."
+      @setting = @tenant.setting
       return render "platform/tenants/show", status: :unprocessable_content
     end
 

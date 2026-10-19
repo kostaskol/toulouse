@@ -47,6 +47,25 @@ RSpec.describe Tenant::Setting, :as_tenant, type: :model do
     end
   end
 
+  describe "#weight_required" do
+    it "is off until set" do
+      expect(tenant.setting.weight_required?).to be(false)
+    end
+
+    it "stores a form's checkbox value as a boolean" do
+      tenant.setting.update!(weight_required: "1")
+
+      expect(tenant.setting.reload.settings).to include("weight_required" => true)
+      expect(tenant.setting.weight_required?).to be(true)
+    end
+
+    it "stores a blank value as off" do
+      tenant.setting.update!(weight_required: "")
+
+      expect(tenant.setting.reload.weight_required?).to be(false)
+    end
+  end
+
   describe "database constraints" do
     def insert_setting(tenant:, settings: {})
       described_class.insert!({ tenant_id: tenant.id, settings: settings })
