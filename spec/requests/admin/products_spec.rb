@@ -25,6 +25,23 @@ RSpec.describe "Tenant admin products", type: :request do
       expect(product["variants"]).to contain_exactly(include("price_cents" => variant[:price_cents]))
     end
 
+    context "when the store needs weights" do
+      before { as_tenant(tenant) { tenant.setting.update!(weight_required: true) } }
+
+      it "publishes a product whose variants have weights" do
+        create_product(status: "published", variants: [variant.merge(weight_grams: 250)])
+
+        expect(response).to have_http_status(:created)
+        expect(response.parsed_body.dig("product", "variants", 0, "weight_grams")).to eq(250)
+      end
+
+      it "refuses to publish a product whose variant has no weight" do
+        create_product(status: "published")
+
+        expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "weight_missing", "field" => "status"))
+      end
+    end
+
     it "takes variants that differ by a selectable spec" do
       name = as_tenant(tenant) { create(:specification, multiple: false, selectable: true) }.name
       create_product(variants: [variant.merge(specifications: { name => ["1"] }),

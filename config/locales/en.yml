@@ -43,6 +43,7 @@ en:
       selection_in_use: "would leave variants that repeat each other or lack a value"
       no_active_variant: "cannot be published without an active variant"
       required_specifications_missing: "cannot be published until every active variant states %{names}"
+      weight_missing: "cannot be published while an active variant has no weight"
       last_active_variant: "cannot be archived on the last active variant of a published product"
       too_many_variants: "would exceed %{count} variants for the product"
       invalid_parent: "cannot be the category itself or one below it"

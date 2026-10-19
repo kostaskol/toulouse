@@ -403,8 +403,8 @@ collection:
           isPrivate: false
           sortKey: 13
           description: >-
-            Also takes sku, barcode, mpn, prices, vat_class, stock settings and specifications, which override the
-            product's.
+            Also takes sku, barcode, mpn, prices, vat_class, stock settings, weight_grams and specifications, which
+            override the product's.
         method: PATCH
         body:
           mimeType: application/json
@@ -1121,6 +1121,36 @@ collection:
           params:
             - name: authenticity_token
               value: "{{ _.platform_authenticity_token }}"
+        headers:
+          - name: Content-Type
+            value: application/x-www-form-urlencoded
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/platform/tenants/{{ _.platform_tenant_id }}/setting"
+        name: Save tenant settings
+        meta:
+          id: req_3f0c9a3e5b8d4c27a1e6f2d9b4c7a810
+          created: 1792425600000
+          modified: 1792425600000
+          isPrivate: false
+          sortKey: 8
+          description: >-
+            Set weight_required to 1 when the merchant uses weight-based shipping rules on a comparison engine.
+            Run API keys first for the authenticity token.
+        method: PATCH
+        body:
+          mimeType: application/x-www-form-urlencoded
+          params:
+            - name: authenticity_token
+              value: "{{ _.platform_authenticity_token }}"
+            - name: setting[weight_required]
+              value: "{% prompt 'Weight required', '1 or 0', '', '', false, false %}"
         headers:
           - name: Content-Type
             value: application/x-www-form-urlencoded

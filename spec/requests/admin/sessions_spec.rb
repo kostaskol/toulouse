@@ -18,7 +18,9 @@ RSpec.describe "Tenant admin sessions", type: :request do
         "staff" => {
           "id" => staff.id, "email" => staff.email, "role" => staff.role, "permissions" => staff.permissions.map(&:to_s)
         },
-        "tenant" => { "name" => tenant.name, "slug" => tenant.slug, "status" => tenant.status }
+        "tenant" => {
+          "name" => tenant.name, "slug" => tenant.slug, "status" => tenant.status, "weight_required" => false
+        }
       )
     end
 
@@ -94,6 +96,14 @@ RSpec.describe "Tenant admin sessions", type: :request do
       get "/admin/session", headers: staff_cookie(staff_session)
 
       expect(response.parsed_body.dig("staff", "id")).to eq(staff.id)
+    end
+
+    it "says whether the store needs weights to publish" do
+      as_tenant(tenant) { tenant.setting.update!(weight_required: true) }
+
+      get "/admin/session", headers: staff_cookie(staff_session)
+
+      expect(response.parsed_body.dig("tenant", "weight_required")).to be(true)
     end
 
     it "lists what the member's role permits" do

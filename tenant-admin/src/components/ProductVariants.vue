@@ -35,7 +35,8 @@ function saved() {
         <thead>
           <tr>
             <th v-if="selectable.length">{{ selectable.join(" / ") }}</th>
-            <th>SKU</th><th class="num">Τιμή</th><th class="num">Απόθεμα</th><th>Κατάσταση</th><th></th>
+            <th>SKU</th><th class="num">Τιμή</th><th class="num">Απόθεμα</th><th class="num">Βάρος</th>
+            <th>Κατάσταση</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -50,6 +51,10 @@ function saved() {
             </td>
             <td class="num">
               <template v-if="variant.track_stock">{{ variant.stock_quantity }}</template>
+              <span v-else class="muted">—</span>
+            </td>
+            <td class="num nowrap">
+              <template v-if="variant.weight_grams !== null">{{ variant.weight_grams }} g</template>
               <span v-else class="muted">—</span>
             </td>
             <td>

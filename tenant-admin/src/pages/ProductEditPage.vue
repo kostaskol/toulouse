@@ -7,6 +7,7 @@ import { PRODUCT_STATUSES } from "../labels.js";
 import { getAll } from "../list.js";
 import { formErrors } from "../messages.js";
 import { notify } from "../notice.js";
+import { missingWeight } from "../products.js";
 import { linkedFirst, specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
@@ -83,6 +84,10 @@ async function save() {
     <div v-if="product.missing_specifications.length" class="alert alert-warn">
       {{ product.status === "published" ? "Το προϊόν είναι δημοσιευμένο, αλλά" : "Για να δημοσιευτεί," }}
       λείπουν υποχρεωτικές προδιαγραφές από κάποια ενεργή παραλλαγή: {{ product.missing_specifications.join(", ") }}.
+    </div>
+    <div v-if="missingWeight(product)" class="alert alert-warn">
+      Το προϊόν είναι δημοσιευμένο, αλλά κάποια ενεργή παραλλαγή δεν έχει βάρος. Το κατάστημα θέλει βάρος για τις
+      μηχανές σύγκρισης τιμών.
     </div>
     <section class="panel">
       <h2>Στοιχεία</h2>

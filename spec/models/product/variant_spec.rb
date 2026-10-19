@@ -85,13 +85,18 @@ RSpec.describe Product::Variant, :as_tenant, type: :model do
     expect(other).to be_persisted
   end
 
-  ["price_cents", "pre_discount_price_cents", "stock_quantity"].each do |column|
+  ["price_cents", "pre_discount_price_cents", "stock_quantity", "weight_grams"].each do |column|
     it "refuses a #{column} past the column's limit" do
       variant.assign_attributes(column => described_class::MAX_INTEGER + 1)
 
       expect(variant).not_to be_valid
       expect(variant.errors.details[column.to_sym]).to include(include(error: :less_than_or_equal_to))
     end
+  end
+
+  it "needs a weight above zero when it has one" do
+    expect(variant.update(weight_grams: 0)).to be(false)
+    expect(variant.update(weight_grams: nil)).to be(true)
   end
 
   it "needs a pre-discount price above the price" do

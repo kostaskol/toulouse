@@ -38,6 +38,11 @@ RSpec.describe Product::Import::Group, :as_tenant do
     expect(variant.attributes).to include(track_stock: false, allow_oversell: true)
   end
 
+  it "reads the weight in grams" do
+    expect(group(base.merge("weight" => "250")).variants.first.attributes).to include(weight_grams: 250)
+    expect(codes(group(base.merge("weight" => "0,25")))).to eq([["invalid", "weight"]])
+  end
+
   it "reads specs from the first row, and a differing later row as that variant's override" do
     rows = [base.merge("specification:Υλικό" => "Λινό | Μετάξι"), base.merge("specification:Υλικό" => ""),
             base.merge("specification:Υλικό" => "Βαμβάκι")]

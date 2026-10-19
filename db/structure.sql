@@ -386,8 +386,10 @@ CREATE TABLE public.product_variants (
     track_stock boolean DEFAULT true NOT NULL,
     stock_quantity integer DEFAULT 0 NOT NULL,
     allow_oversell boolean DEFAULT false NOT NULL,
+    weight_grams integer,
     CONSTRAINT product_variants_pre_discount_above_price CHECK ((pre_discount_price_cents > price_cents)),
-    CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0))
+    CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0)),
+    CONSTRAINT product_variants_weight_positive CHECK ((weight_grams > 0))
 );
 
 
@@ -2003,6 +2005,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019150000'),
 ('20261019140000'),
 ('20261019130000'),
 ('20261019120000'),

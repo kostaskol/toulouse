@@ -26,6 +26,26 @@ RSpec.describe Product::Import::Writer, :as_tenant do
     expect(product.category.name).to eq("B")
   end
 
+  context "when the store needs weights" do
+    before { Current.tenant.setting.update!(weight_required: true) }
+
+    let(:published) { small.merge("status" => "published") }
+
+    it "fails a new published product with no weight" do
+      expect(write(published)[:error_details]).to contain_exactly(include(code: "weight_missing", field: "status"))
+    end
+
+    it "creates a new published product with a weight" do
+      expect(write(published.merge("weight" => "250"))).to include(result: "created")
+    end
+
+    it "adds a variant with no weight to a published product" do
+      write(published.merge("weight" => "250"))
+
+      expect(write(medium)).to include(result: "updated")
+    end
+  end
+
   it "fails a new product with no category" do
     expect(write(base)[:error_details]).to contain_exactly(include(code: "blank", field: "category"))
   end
