@@ -1,6 +1,6 @@
 # Narrows a product list by category, brand, price, attributes and stock, and counts what each choice leaves.
-# An attribute is an option or a facet spec, grouped by folded name. A group is disjunctive unless its spec says
-# all: then its values AND together and its counts narrow with its own selection.
+# An attribute is a facet spec, grouped by folded name. A group is disjunctive unless its spec says all: then its
+# values AND together and its counts narrow with its own selection.
 class Product::Filter
   KEYS = ["categories", "brands", "price_min", "price_max", "attributes", "available"].freeze
   RANGES = 4
@@ -100,13 +100,11 @@ class Product::Filter
     @conjunctive ||= Specification.where(facet: true).mode_all.pluck(:key).to_set
   end
 
-  # Each attribute of a variant: its options, and the facet specs it overrides or inherits from its product.
+  # Each attribute of a variant: the facet specs it overrides or inherits from its product.
   #
   # @param variant [String] the SQL name of the variant row
   def pairs_sql(variant)
     <<~SQL.squish
-      SELECT option.key AS name, option.value FROM jsonb_each_text(#{variant}.option_values) AS option
-      UNION ALL
       SELECT specifications.name, spec.value
       FROM product_specification_values AS spec JOIN specifications ON specifications.id = spec.specification_id
       WHERE specifications.facet AND spec.product_id = #{variant}.product_id
@@ -246,7 +244,7 @@ class Product::Filter
   # A row per value, plus a row per group with whole_group set, which counts the group's products.
   def attribute_rows(products, key)
     variants = variants(except: key).where(product_id: narrow(products).select(:id))
-                                    .select(:id, :product_id, :option_values)
+                                    .select(:id, :product_id)
     only = Product.sanitize_sql(["WHERE #{self.class.fold_sql("attribute.name")} = ?", key]) if key
     Product.connection.select_all(<<~SQL).to_a
       SELECT group_key, value_key, mode() WITHIN GROUP (ORDER BY name) AS group_label,

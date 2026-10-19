@@ -60,6 +60,14 @@ RSpec.describe "Tenant admin product images", type: :request do
       expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "too_large", "field" => "file"))
     end
 
+    it "links the image to a selectable value given in the query" do
+      selection = as_tenant(tenant) { product.variants.first.selection }
+      post "/admin/products/#{product.id}/images?#{{ selection: }.to_query}",
+           params: image_bytes, headers: headers.merge("CONTENT_TYPE" => "image/jpeg")
+
+      expect(response.parsed_body.dig("image", "selection")).to eq(selection)
+    end
+
     it "answers not found for another tenant's product" do
       other = create(:product)
       post "/admin/products/#{other.id}/images", params: image_bytes,
@@ -79,6 +87,24 @@ RSpec.describe "Tenant admin product images", type: :request do
       expect(response.parsed_body.dig("image", "alt")).to eq(product.title.reverse)
     end
 
+    it "links the image to a selectable value and back to every variant" do
+      selection = as_tenant(tenant) { product.variants.first.selection }
+      path = "/admin/products/#{product.id}/images/#{image.id}"
+      patch path, params: { selection: }, headers:, as: :json
+      expect(response.parsed_body.dig("image", "selection")).to eq(selection)
+
+      patch path, params: { selection: {} }, headers:, as: :json
+      expect(response.parsed_body.dig("image", "selection")).to eq({})
+    end
+
+    it "refuses a value the product does not use" do
+      name = as_tenant(tenant) { product.variants.first.selection.keys.first }
+      patch "/admin/products/#{product.id}/images/#{image.id}", params: { selection: { name => "#{name} other" } },
+                                                                 headers:, as: :json
+
+      expect(response.parsed_body["errors"]).to contain_exactly(include("code" => "invalid", "field" => "selection"))
+    end
+
     it "falls back to the product title when cleared" do
       as_tenant(tenant) { image.update!(alt: product.title.reverse) }
       patch "/admin/products/#{product.id}/images/#{image.id}", params: { alt: " " }, headers:, as: :json
@@ -89,16 +115,13 @@ RSpec.describe "Tenant admin product images", type: :request do
 
   describe "DELETE /admin/products/:product_id/images/:id" do
     let(:image) { as_tenant(tenant) { create(:product_image, product:) } }
-    let(:variant) { as_tenant(tenant) { product.variants.first.tap { |variant| variant.update!(image:) } } }
 
-    it "removes the image, purges its file and unlinks its variants" do
-      variant
+    it "removes the image and purges its file" do
       blob = as_tenant(tenant) { image.file.blob }
       delete "/admin/products/#{product.id}/images/#{image.id}", headers: headers
       perform_enqueued_jobs
 
       expect([image_ids, ActiveStorage::Blob.exists?(blob.id)]).to eq([[], false])
-      expect(as_tenant(tenant) { variant.reload.image_id }).to be_nil
     end
   end
 

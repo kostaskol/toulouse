@@ -2,8 +2,16 @@ require "rails_helper"
 
 RSpec.describe Product::Import::Writer, :as_tenant do
   let(:base) { { "handle" => "first", "title" => "First", "price" => "1" } }
-  let(:small) { base.merge("category" => create(:category).name, "option1_name" => "Size", "option1_value" => "S") }
-  let(:medium) { base.merge("option1_value" => "M") }
+  let(:small) { base.merge("category" => create(:category).name, "specification:Μέγεθος" => "S") }
+  let(:medium) { base.merge("specification:Μέγεθος" => "M") }
+
+  before { create(:specification, name: "Μέγεθος", kind: "size", multiple: false, selectable: true) }
+
+  # @return [Array(String, String)] the factory variant's selectable spec column and value
+  def known(product)
+    name, values = product.variants.first.specifications.first
+    ["specification:#{name}", values.first]
+  end
 
   def write(*rows) = described_class.new(Product::Import::Sheet.new(import_csv(rows)).groups.first).call
 
@@ -30,69 +38,72 @@ RSpec.describe Product::Import::Writer, :as_tenant do
     expect(entry).to include(created_brands: [], created_categories: [])
   end
 
-  it "adds new variants to an existing product and skips the known ones" do
-    product = create(:product, slug: "first", option_names: ["Size"])
-    known = product.variants.first.option_values["Size"]
-    entry = write(base.merge("option1_name" => "Size", "option1_value" => known), base.merge("option1_value" => "New"))
+  it "adds new variants to an existing product and skips the known ones, matched by selectable values" do
+    product = create(:product, slug: "first")
+    column, value = known(product)
+    entry = write(base.merge(column => value), base.merge(column => "New"))
 
     expect(entry[:result]).to eq("updated")
-    expect(product.variants.reload.map { |variant| variant.option_values["Size"] }).to include(known, "New")
+    expect(product.variants.reload.map { |variant| variant.selection.values }).to contain_exactly([value], ["New"])
   end
 
   it "skips a product whose variants all exist" do
-    product = create(:product, slug: "first", option_names: [])
+    product = create(:product, slug: "first")
     cents = product.variants.first.price_cents
     row = base.merge("title" => product.title, "price" => format("%d.%02d", cents / 100, cents % 100))
 
-    expect(write(row)).to include(result: "skipped", warnings: [])
+    expect(write(row.merge([known(product)].to_h))).to include(result: "skipped", warnings: [])
   end
 
   it "warns about each cell it ignores" do
-    create(:product, slug: "first", option_names: [])
-    entry = write(base.merge("title" => "Changed", "price" => "999", "image_urls" => "https://host/a.jpg"))
+    product = create(:product, slug: "first")
+    column, value = known(product)
+    images = column.sub("specification:", "image_urls:")
+    entry = write(base.merge("title" => "Changed", "price" => "999", "image_urls" => "https://host/a.jpg",
+                             column => value, images => "https://host/b.jpg"))
 
     expect(entry[:warnings].pluck(:code, :field)).to contain_exactly(
-      ["product_cell_ignored", "title"], ["variant_cell_ignored", "price"], ["image_urls_ignored", "image_urls"]
+      ["product_cell_ignored", "title"], ["variant_cell_ignored", "price"], ["image_urls_ignored", "image_urls"],
+      ["image_urls_ignored", images]
     )
   end
 
+  it "reports a new row with no value for a selectable spec on that row" do
+    create(:product, slug: "first")
+
+    expect(write(base)[:error_details]).to contain_exactly(include(code: "selection_incomplete", row: 2))
+  end
+
   it "writes specs on the product and overrides on its variants" do
-    write(small.merge("spec:Υλικό" => "Λινό"), medium.merge("spec:Υλικό" => "Μετάξι"))
+    write(small.merge("specification:Υλικό" => "Λινό"), medium.merge("specification:Υλικό" => "Μετάξι"))
     product = Product.find_by!(slug: "first")
 
-    expect(product.specifications).to eq("Υλικό" => ["Λινό"])
-    expect(product.variants.map(&:specifications)).to eq([{}, { "Υλικό" => ["Μετάξι"] }])
+    expect(product.specifications).to eq("Μέγεθος" => ["S"], "Υλικό" => ["Λινό"])
+    expect(product.variants.map(&:specifications)).to eq([{}, { "Μέγεθος" => ["M"], "Υλικό" => ["Μετάξι"] }])
   end
 
   it "warns once about a spec cell of an existing variant, and overrides the stored spec on a new variant" do
-    product = create(:product, slug: "first", option_names: ["Size"], specifications: { "Υλικό" => ["Λινό"] })
-    known = product.variants.first.option_values["Size"]
-    entry = write(base.merge("option1_name" => "Size", "option1_value" => known, "spec:Υλικό" => "Μετάξι"),
-                  base.merge("option1_value" => "New", "spec:Υλικό" => "Βαμβάκι"))
+    product = create(:product, slug: "first", specifications: { "Υλικό" => ["Λινό"] })
+    column, value = known(product)
+    entry = write(base.merge(column => value, "specification:Υλικό" => "Μετάξι"),
+                  base.merge(column => "New", "specification:Υλικό" => "Βαμβάκι"))
 
-    expect(entry[:warnings].select { |warning| warning[:field].start_with?("spec:") }.pluck(:code, :field, :stored))
-      .to contain_exactly(
-        ["variant_cell_ignored", "spec:Υλικό", "Λινό"]
-      )
-    added = product.variants.reload.find { |variant| variant.option_values["Size"] == "New" }
-    expect(added.specifications).to eq("Υλικό" => ["Βαμβάκι"])
+    specification_warnings = entry[:warnings].select { |warning| warning[:field].start_with?("specification:") }
+    expect(specification_warnings.pluck(:code, :field, :stored))
+      .to contain_exactly(["variant_cell_ignored", "specification:Υλικό", "Λινό"])
+    added = product.variants.reload.find { |variant| variant.selection.values == ["New"] }
+    expect(added.specifications["Υλικό"]).to eq(["Βαμβάκι"])
   end
 
   it "lets a new first row override the stored spec and a blank row inherit it" do
-    product = create(:product, slug: "first", option_names: ["Size"], specifications: { "Υλικό" => ["Λινό"] })
-    first = base.merge("title" => product.title, "option1_name" => "Size", "option1_value" => "New")
-    entry = write(first.merge("spec:Υλικό" => "Μετάξι"), first.merge("option1_value" => "Newer"))
+    product = create(:product, slug: "first", specifications: { "Υλικό" => ["Λινό"] })
+    column, = known(product)
+    first = base.merge("title" => product.title, column => "New")
+    entry = write(first.merge("specification:Υλικό" => "Μετάξι"), first.merge(column => "Newer"))
 
     expect(entry).to include(result: "updated", warnings: [])
-    added = product.variants.reload.to_h { |variant| [variant.option_values["Size"], variant.specifications] }
-    expect(added.values_at("New", "Newer")).to eq([{ "Υλικό" => ["Μετάξι"] }, {}])
-  end
-
-  it "fails an existing product whose option names differ" do
-    create(:product, slug: "first", option_names: ["Size"])
-    entry = write(base.merge("option1_name" => "Colour", "option1_value" => "Red"))
-
-    expect(entry[:error_details].pluck(:code)).to eq(["option_names_mismatch"])
+    added = product.variants.reload.to_h { |variant| [variant.selection.values.first, variant.specifications["Υλικό"]] }
+    expect(added.values_at("New", "Newer")).to eq([["Μετάξι"], nil])
   end
 
   it "reports a variant's model error on its row" do
@@ -109,7 +120,7 @@ RSpec.describe Product::Import::Writer, :as_tenant do
   end
 
   it "reports a new variant's error on its own row" do
-    create(:product, slug: "first", option_names: ["Size"])
+    create(:product, slug: "first").variants.first.update!(specifications: { "Μέγεθος" => ["S"] })
     entry = write(small, medium.merge("pre_discount_price" => "0.5"))
 
     expect(entry[:error_details]).to contain_exactly(include(row: 3, field: "pre_discount_price"))

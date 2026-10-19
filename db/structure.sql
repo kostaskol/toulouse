@@ -285,7 +285,10 @@ CREATE TABLE public.product_images (
     alt text,
     "position" integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    specification_id uuid,
+    value text,
+    CONSTRAINT product_images_link_complete CHECK (((specification_id IS NULL) = (value IS NULL)))
 );
 
 
@@ -356,7 +359,6 @@ CREATE TABLE public.product_variants (
     id uuid DEFAULT uuidv7() NOT NULL,
     tenant_id uuid NOT NULL,
     product_id uuid NOT NULL,
-    option_values jsonb DEFAULT '{}'::jsonb NOT NULL,
     sku text,
     barcode text,
     mpn text,
@@ -369,7 +371,6 @@ CREATE TABLE public.product_variants (
     track_stock boolean DEFAULT true NOT NULL,
     stock_quantity integer DEFAULT 0 NOT NULL,
     allow_oversell boolean DEFAULT false NOT NULL,
-    image_id uuid,
     CONSTRAINT product_variants_pre_discount_above_price CHECK ((pre_discount_price_cents > price_cents)),
     CONSTRAINT product_variants_price_not_negative CHECK ((price_cents >= 0))
 );
@@ -386,7 +387,6 @@ CREATE TABLE public.products (
     slug text NOT NULL,
     description text,
     status integer DEFAULT 0 NOT NULL,
-    option_names jsonb DEFAULT '[]'::jsonb NOT NULL,
     brand_id uuid,
     created_at timestamp(6) with time zone NOT NULL,
     updated_at timestamp(6) with time zone NOT NULL,
@@ -489,7 +489,10 @@ CREATE TABLE public.specifications (
     facet boolean DEFAULT false NOT NULL,
     mode integer DEFAULT 0 NOT NULL,
     created_at timestamp(6) with time zone NOT NULL,
-    updated_at timestamp(6) with time zone NOT NULL
+    updated_at timestamp(6) with time zone NOT NULL,
+    kind integer DEFAULT 0 NOT NULL,
+    multiple boolean DEFAULT true NOT NULL,
+    selectable boolean DEFAULT false NOT NULL
 );
 
 
@@ -720,14 +723,6 @@ ALTER TABLE ONLY public.product_specification_values
 
 ALTER TABLE ONLY public.product_variants
     ADD CONSTRAINT product_variants_pkey PRIMARY KEY (id);
-
-
---
--- Name: product_variants product_variants_unique_combination; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.product_variants
-    ADD CONSTRAINT product_variants_unique_combination UNIQUE (tenant_id, product_id, option_values) DEFERRABLE INITIALLY DEFERRED;
 
 
 --
@@ -966,6 +961,13 @@ CREATE INDEX index_product_images_on_tenant_id ON public.product_images USING bt
 --
 
 CREATE INDEX index_product_images_on_tenant_id_and_product_id_and_position ON public.product_images USING btree (tenant_id, product_id, "position");
+
+
+--
+-- Name: index_product_images_on_tenant_id_and_specification_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_product_images_on_tenant_id_and_specification_id ON public.product_images USING btree (tenant_id, specification_id) WHERE (specification_id IS NOT NULL);
 
 
 --
@@ -1355,6 +1357,14 @@ ALTER TABLE ONLY public.shoppers
 
 
 --
+-- Name: product_images fk_rails_2a3d6f5b28; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.product_images
+    ADD CONSTRAINT fk_rails_2a3d6f5b28 FOREIGN KEY (specification_id) REFERENCES public.specifications(id);
+
+
+--
 -- Name: specifications fk_rails_3779b1666a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1496,14 +1506,6 @@ ALTER TABLE ONLY public.product_imports
 
 ALTER TABLE ONLY public.shopper_handoffs
     ADD CONSTRAINT fk_rails_b03d328dc3 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
-
-
---
--- Name: product_variants fk_rails_b17366ce08; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.product_variants
-    ADD CONSTRAINT fk_rails_b17366ce08 FOREIGN KEY (image_id) REFERENCES public.product_images(id) ON DELETE SET NULL;
 
 
 --
@@ -1920,6 +1922,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019130000'),
 ('20261019120000'),
 ('20261014200000'),
 ('20261014190000'),

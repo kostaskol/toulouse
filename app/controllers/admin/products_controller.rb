@@ -24,7 +24,7 @@ module Admin
 
     def create
       variants = params.permit(variants: VariantsController::FIELDS).fetch(:variants, [])
-      product = Product.create!(params.permit(*FIELDS, option_names: []).merge(variants_attributes: variants))
+      product = Product.create!(params.permit(*FIELDS).merge(variants_attributes: variants))
       render status: :created, json: { product: product_json(loaded(product.id)) }
     end
 

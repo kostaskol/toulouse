@@ -3,27 +3,56 @@ require "rails_helper"
 RSpec.describe Product::Variant, :as_tenant, type: :model do
   let(:product) { create(:product) }
   let(:variant) { product.variants.first }
-  let(:option) { product.option_names.first }
 
   it "uses the product_variants table" do
     expect(described_class.table_name).to eq("product_variants")
   end
 
-  it "needs a value for each of the product's options" do
-    expect(build(:product_variant, product:, option_values: {})).not_to be_valid
-  end
+  describe "selection" do
+    it "needs a value for each selectable spec its siblings use" do
+      other = build(:product_variant, product:, specifications: {})
 
-  it "refuses an option the product does not have" do
-    values = variant.option_values.merge("#{option} extra" => variant.option_values[option])
+      expect(other).not_to be_valid
+      expect(other.errors.details[:specifications]).to eq([{ error: :selection_incomplete }])
+    end
 
-    expect(build(:product_variant, product:, option_values: values)).not_to be_valid
-  end
+    it "refuses the selectable values of another variant" do
+      other = build(:product_variant, product:, specifications: variant.specifications)
 
-  it "refuses the option values of another variant" do
-    other = build(:product_variant, product:, option_values: variant.option_values)
+      expect(other).not_to be_valid
+      expect(other.errors.details[:specifications]).to eq([{ error: :duplicate_combination }])
+    end
 
-    expect(other).not_to be_valid
-    expect(other.errors.details[:option_values]).to eq([{ error: :duplicate_combination }])
+    it "refuses a value that leaves a sibling without one" do
+      create(:product_variant, product:)
+      colour = create(:specification, multiple: false, selectable: true)
+
+      expect(variant.update(specifications: variant.specifications.merge(colour.name => ["Λευκό"]))).to be(false)
+      expect(variant.errors.details[:specifications]).to eq([{ error: :selection_incomplete }])
+    end
+
+    it "refuses a spec of a kind the product already uses" do
+      size, other = create_list(:specification, 2, kind: "size", multiple: false, selectable: true)
+      product.update!(specifications: { size.name => ["Λευκό"] })
+
+      expect(variant.update(specifications: variant.specifications.merge(other.name => ["Μαύρο"]))).to be(false)
+      expect(variant.errors.details[:specifications]).to eq([{ error: :kind_taken }])
+    end
+
+    it "is checked again when an archived variant comes back" do
+      sibling = create(:product_variant, product:, status: "archived", specifications: {})
+
+      expect(sibling.update(status: "active")).to be(false)
+      expect(sibling.errors.details[:specifications]).to eq([{ error: :selection_incomplete }])
+    end
+
+    it "lists selectable values by name, an override over the product's value" do
+      colour = create(:specification, multiple: false, selectable: true, position: -1)
+      product.update!(specifications: { colour.name => ["Λευκό"], "Υλικό" => ["Λινό"] })
+
+      expect(variant.reload.selection.keys).to eq([colour.name, *variant.specifications.keys])
+      expect(variant.selection[colour.name]).to eq("Λευκό")
+    end
   end
 
   it "keeps the SKU unique in the tenant" do

@@ -17,6 +17,8 @@ class Product::Image < ApplicationRecord
   has_paper_trail versions: { class_name: "Version" }, on: %i[create update destroy]
 
   belongs_to :product, inverse_of: :images
+  # A link to one selectable spec value. With none, the image shows on every variant.
+  belongs_to :specification, optional: true, inverse_of: :images
 
   # Strips metadata on every copy, because phone photos carry GPS in EXIF.
   has_one_attached :file do |file|
@@ -32,8 +34,22 @@ class Product::Image < ApplicationRecord
   validates :file, presence: true
   validate :file_acceptable, if: -> { file.attached? && file.blob.new_record? }
   validate :within_limit, on: :create
+  validate :link_valid
 
   before_create { self.position = product.images.maximum(:position).to_i + 1 }
+
+  # @return [Hash{String => String}] the linked spec name with its value, or empty
+  def selection = specification ? { specification.name => value } : {}
+
+  # @param selection [Hash{String => String}, nil] one spec name with its value, or none to show on every variant
+  def selection=(selection)
+    selection = selection.to_h if selection.respond_to?(:permitted?)
+    name, value = selection.first if selection.is_a?(Hash) && selection.one?
+    found = Specification.find_by(key: Specification.fold([name]).first) if name.is_a?(String) && value.is_a?(String)
+    @selection_invalid = selection.present? && found.nil?
+    self.specification = found
+    self.value = found && value.strip
+  end
 
   # Old shops keep Greek letters and spaces in file names, which URI refuses unless encoded.
   #
@@ -79,6 +95,14 @@ class Product::Image < ApplicationRecord
 
     pixels = blob.metadata[:width] * blob.metadata[:height]
     errors.add(:file, :too_many_pixels, count: MAX_PIXELS / 1_000_000) if pixels > MAX_PIXELS
+  end
+
+  def link_valid
+    return errors.add(:selection, :invalid) if @selection_invalid
+    return unless specification && (specification_id_changed? || value_changed?)
+
+    used = Product::SpecificationValue.exists?(product_id:, specification:, value:)
+    errors.add(:selection, :invalid) unless specification.selectable && used
   end
 
   def within_limit

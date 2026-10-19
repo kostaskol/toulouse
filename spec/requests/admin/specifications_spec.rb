@@ -10,7 +10,22 @@ RSpec.describe "Tenant admin specifications", type: :request do
 
     expect(response).to have_http_status(:created)
     expect(response.parsed_body["specification"])
-      .to include("name" => "Οθόνη", "position" => 0, "facet" => false, "mode" => "any")
+      .to include("name" => "Οθόνη", "position" => 0, "facet" => false, "mode" => "any", "kind" => "none",
+                  "multiple" => true, "selectable" => false)
+  end
+
+  it "makes a definition a colour that variants are picked by" do
+    patch "/admin/specifications/#{specification.id}", params: { kind: "colour", multiple: false, selectable: true },
+                                                         headers:, as: :json
+
+    expect(response.parsed_body["specification"])
+      .to include("kind" => "colour", "multiple" => false, "selectable" => true)
+  end
+
+  it "refuses a kind without variant selection" do
+    patch "/admin/specifications/#{specification.id}", params: { kind: "size" }, headers:, as: :json
+
+    expect(response.parsed_body["errors"]).to include(include("code" => "required_by_kind", "field" => "selectable"))
   end
 
   it "refuses a name that folds like one the tenant uses" do

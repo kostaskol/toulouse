@@ -14,7 +14,6 @@ module V1
           title: product.title,
           slug: product.slug,
           description: product.description,
-          option_names: product.option_names,
           specifications: specifications_json(product),
           brand: product.brand&.slice(:name, :slug),
           category_id: product.category_id,
@@ -24,8 +23,9 @@ module V1
       end
 
       def variant_json(variant)
-        variant.slice(:id, :option_values, :sku, :price_cents, :pre_discount_price_cents, :image_id)
-               .merge(available: variant.available?, specifications: specifications_json(variant))
+        variant.slice(:id, :sku, :price_cents, :pre_discount_price_cents)
+               .merge(selection: variant.selection, available: variant.available?,
+                      specifications: specifications_json(variant))
       end
 
       def specifications_json(record)

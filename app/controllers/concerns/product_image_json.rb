@@ -7,6 +7,7 @@ module ProductImageJson
     {
       id: image.id,
       alt: image.alt || image.product.title,
+      selection: image.selection,
       width: file.metadata[:width],
       height: file.metadata[:height],
       url: media_url_for(file.variant(:original), signed_id),

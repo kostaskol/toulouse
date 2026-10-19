@@ -25,24 +25,33 @@ RSpec.describe ProductImageImportJob, :as_tenant do
   it "stores one image and queues the next URL" do
     download_returns(image_bytes)
 
-    expect { described_class.perform_now(entry, ["https://host/a.jpg", "https://host/b.jpg"]) }
-      .to have_enqueued_job(described_class).with(entry, ["https://host/b.jpg"])
+    expect { described_class.perform_now(entry, [["https://host/a.jpg", {}], ["https://host/b.jpg", {}]]) }
+      .to have_enqueued_job(described_class).with(entry, [["https://host/b.jpg", {}]])
     expect(product.images.count).to eq(1)
     expect(import.reload.images_pending).to eq(1)
+  end
+
+  it "links an image to its value" do
+    download_returns(image_bytes)
+    selection = product.variants.first.selection
+
+    described_class.perform_now(entry, [["https://host/a.jpg", selection]])
+
+    expect(product.images.sole.selection).to eq(selection)
   end
 
   it "records a download error and carries on" do
     allow(Product::Image::Download).to receive(:open)
       .and_raise(Product::Image::Download::Error.new("image_address_refused", "refused"))
 
-    expect { described_class.perform_now(entry, ["https://host/a.jpg", "https://host/b.jpg"]) }
+    expect { described_class.perform_now(entry, [["https://host/a.jpg", {}], ["https://host/b.jpg", {}]]) }
       .to have_enqueued_job(described_class)
     expect(entry.reload.image_errors).to contain_exactly(include("code" => "image_address_refused"))
   end
 
   it "records the image model's own error" do
     download_returns(image_bytes("gif"))
-    described_class.perform_now(entry, ["https://host/a.jpg"])
+    described_class.perform_now(entry, [["https://host/a.jpg", {}]])
 
     expect(entry.reload.image_errors).to contain_exactly(include("code" => "content_type"))
     expect(import.reload.images_pending).to eq(1)
@@ -50,7 +59,7 @@ RSpec.describe ProductImageImportJob, :as_tenant do
 
   it "records an unexpected error as image_failed" do
     allow(Product::Image::Download).to receive(:open).and_raise(Errno::ECONNRESET)
-    described_class.perform_now(entry, ["https://host/a.jpg"])
+    described_class.perform_now(entry, [["https://host/a.jpg", {}]])
 
     expect(entry.reload.image_errors).to contain_exactly(include("code" => "image_failed"))
   end
