@@ -258,6 +258,21 @@ CREATE TABLE public.categories (
 
 
 --
+-- Name: category_specification_links; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.category_specification_links (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    category_id uuid NOT NULL,
+    specification_id uuid NOT NULL,
+    required boolean DEFAULT false NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL
+);
+
+
+--
 -- Name: login_attempts; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -678,6 +693,14 @@ ALTER TABLE ONLY public.categories
 
 
 --
+-- Name: category_specification_links category_specification_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_specification_links
+    ADD CONSTRAINT category_specification_links_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: login_attempts login_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -859,10 +882,24 @@ CREATE UNIQUE INDEX index_admins_on_email ON platform.admins USING btree (email)
 
 
 --
+-- Name: idx_on_tenant_id_category_id_specification_id_8d3dc7a751; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_on_tenant_id_category_id_specification_id_8d3dc7a751 ON public.category_specification_links USING btree (tenant_id, category_id, specification_id);
+
+
+--
 -- Name: idx_on_tenant_id_product_import_id_position_2f7e6c8cbb; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_on_tenant_id_product_import_id_position_2f7e6c8cbb ON public.product_import_entries USING btree (tenant_id, product_import_id, "position");
+
+
+--
+-- Name: idx_on_tenant_id_specification_id_1bef4a0526; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_on_tenant_id_specification_id_1bef4a0526 ON public.category_specification_links USING btree (tenant_id, specification_id);
 
 
 --
@@ -933,6 +970,13 @@ CREATE INDEX index_categories_on_tenant_id_and_parent_id_and_position ON public.
 --
 
 CREATE UNIQUE INDEX index_categories_on_tenant_id_and_slug ON public.categories USING btree (tenant_id, slug);
+
+
+--
+-- Name: index_category_specification_links_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_category_specification_links_on_tenant_id ON public.category_specification_links USING btree (tenant_id);
 
 
 --
@@ -1317,6 +1361,14 @@ ALTER TABLE ONLY public.versions
 
 
 --
+-- Name: category_specification_links fk_rails_0afbc3afa6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_specification_links
+    ADD CONSTRAINT fk_rails_0afbc3afa6 FOREIGN KEY (specification_id) REFERENCES public.specifications(id);
+
+
+--
 -- Name: product_specification_values fk_rails_0d24d9db50; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1429,6 +1481,14 @@ ALTER TABLE ONLY public.staff
 
 
 --
+-- Name: category_specification_links fk_rails_638f5ae9eb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_specification_links
+    ADD CONSTRAINT fk_rails_638f5ae9eb FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: product_variants fk_rails_66387557fd; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1458,6 +1518,14 @@ ALTER TABLE ONLY public.categories
 
 ALTER TABLE ONLY public.shopper_sessions
     ADD CONSTRAINT fk_rails_85e7542355 FOREIGN KEY (impersonator_id) REFERENCES platform.admins(id);
+
+
+--
+-- Name: category_specification_links fk_rails_89afe9cb6c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.category_specification_links
+    ADD CONSTRAINT fk_rails_89afe9cb6c FOREIGN KEY (category_id) REFERENCES public.categories(id);
 
 
 --
@@ -1648,6 +1716,12 @@ ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: category_specification_links; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.category_specification_links ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: login_attempts; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1762,6 +1836,13 @@ CREATE POLICY tenant_isolation ON public.brands USING ((tenant_id = (NULLIF(curr
 --
 
 CREATE POLICY tenant_isolation ON public.categories USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: category_specification_links tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.category_specification_links USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -1922,6 +2003,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019140000'),
 ('20261019130000'),
 ('20261019120000'),
 ('20261014200000'),

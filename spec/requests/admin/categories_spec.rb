@@ -49,6 +49,38 @@ RSpec.describe "Tenant admin categories", type: :request do
     expect(response).to have_http_status(:no_content)
   end
 
+  describe "specification links" do
+    let(:size) { as_tenant(tenant) { create(:specification) } }
+
+    it "sets the links and lists them with the category" do
+      links = [{ specification_id: size.id, required: true }]
+      patch "/admin/categories/#{root.id}", params: { specification_links: links }, headers: headers, as: :json
+      get "/admin/categories", headers: headers
+
+      expect(response.parsed_body.dig("categories", 0, "specification_links"))
+        .to eq([{ "specification_id" => size.id, "required" => true }])
+    end
+
+    it "refuses an unknown spec" do
+      links = [{ specification_id: root.id }]
+      patch "/admin/categories/#{root.id}", params: { specification_links: links }, headers: headers, as: :json
+
+      expect(response.parsed_body["errors"])
+        .to contain_exactly(include("code" => "invalid", "field" => "specification_links"))
+    end
+
+    it "names what a product misses for publishing" do
+      as_tenant(tenant) { root.update!(specification_links: [{ specification_id: size.id, required: true }]) }
+      product = as_tenant(tenant) { create(:product, category: root) }
+      patch "/admin/products/#{product.id}", params: { status: "published" }, headers: headers, as: :json
+
+      expect(response.parsed_body["errors"])
+        .to contain_exactly(include("code" => "required_specifications_missing", "field" => "status"))
+      get "/admin/products/#{product.id}", headers: headers
+      expect(response.parsed_body.dig("product", "missing_specifications")).to eq([size.name])
+    end
+  end
+
   describe "product assignment" do
     let(:product) { as_tenant(tenant) { create(:product) } }
 

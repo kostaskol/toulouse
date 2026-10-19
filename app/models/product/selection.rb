@@ -10,9 +10,8 @@ class Product::Selection
     variants = variant ? [*variant.siblings, variant] : product.variants.to_a
     ActiveRecord::Associations::Preloader.new(records: variants.select(&:persisted?),
                                               associations: { specification_values: :specification }).call
-    own = product.keyed_specifications
-    effective = variants.to_h { |each_variant| [each_variant, own.merge(each_variant.keyed_specifications)] }
-    keys = [own, *effective.values].flat_map(&:keys).uniq
+    effective = product.effective_specifications(variants)
+    keys = [product.keyed_specifications, *effective.values].flat_map(&:keys).uniq
     used = definitions ? definitions.values_at(*keys).compact : Specification.where(key: keys).to_a
 
     @faults = {}

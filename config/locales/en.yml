@@ -42,6 +42,7 @@ en:
       kind_in_use: "would give a product two specifications of this kind"
       selection_in_use: "would leave variants that repeat each other or lack a value"
       no_active_variant: "cannot be published without an active variant"
+      required_specifications_missing: "cannot be published until every active variant states %{names}"
       last_active_variant: "cannot be archived on the last active variant of a published product"
       too_many_variants: "would exceed %{count} variants for the product"
       invalid_parent: "cannot be the category itself or one below it"
