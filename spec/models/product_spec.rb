@@ -77,6 +77,56 @@ RSpec.describe Product, :as_tenant, type: :model do
     end
   end
 
+  describe "required specifications" do
+    let(:parent) { create(:category) }
+    let(:size) { create(:specification, name: "Μέγεθος") }
+
+    before { parent.update!(specification_links: [{ specification_id: size.id, required: true }]) }
+
+    # Each variant gets its own colour, so they differ.
+    def draft_with(own, *overrides)
+      overrides = overrides.each_with_index.map { |values, index| { colour.name => [index.to_s], **values } }
+      product = build_with(own, *overrides)
+      product.category = create(:category, parent:)
+      product.tap(&:save!)
+    end
+
+    it "refuses publishing while an active variant lacks a spec a category above requires" do
+      product = draft_with({}, { "Μέγεθος" => ["42"] }, {})
+
+      expect(product.update(status: "published")).to be(false)
+      expect(product.errors.details[:status]).to eq([{ error: :required_specifications_missing, names: "Μέγεθος" }])
+    end
+
+    it "publishes when the product's value covers every variant" do
+      product = draft_with({ "Μέγεθος" => ["42"] }, {}, {})
+
+      expect(product.update(status: "published")).to be(true)
+    end
+
+    it "ignores archived variants" do
+      product = draft_with({}, { "Μέγεθος" => ["42"] }, {})
+      product.variants.last.update!(status: "archived")
+
+      expect(product.reload.update(status: "published")).to be(true)
+    end
+
+    it "ignores a spec that is linked but not required" do
+      parent.update!(specification_links: [{ specification_id: size.id, required: false }])
+
+      expect(draft_with({}, {}).update(status: "published")).to be(true)
+    end
+
+    it "keeps saving a published product that lacks a spec required later" do
+      category = create(:category)
+      product = create(:product, :published, category:)
+      category.update!(specification_links: [{ specification_id: size.id, required: true }])
+
+      expect(product.update(title: "Νέος τίτλος")).to be(true)
+      expect(product.missing_specifications).to eq([size])
+    end
+  end
+
   describe "specifications" do
     def stored(record) = record.class.find(record.id).specifications
 

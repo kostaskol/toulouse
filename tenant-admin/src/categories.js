@@ -19,3 +19,19 @@ export function flatten(tree, depth = 0) {
     ...flatten(category.children, depth + 1)
   ]);
 }
+
+/**
+ * The spec links a category holds, its own and those of every category above it.
+ *
+ * @param categories [Array<Object>] flattened
+ * @param id [String, null]
+ * @return [Array<Object>] links of `specification_id` and `required`, the nearest category's first
+ */
+export function lineageLinks(categories, id) {
+  const links = [];
+  for (let category = categories.find((each) => each.id === id); category;
+    category = categories.find((each) => each.id === category.parent_id)) {
+    links.push(...category.specification_links);
+  }
+  return links;
+}

@@ -32,6 +32,8 @@ class Product < ApplicationRecord
   validate :weights_when_published
   validate :category_in_tenant
   validate :selection_valid
+  # After the selection check, which preloads the variants' values.
+  validate :required_specifications_present, if: -> { status_changed?(to: "published") }
 
   around_save :refresh_search
   # After the nested variants save, so it runs once for all of them.
@@ -84,6 +86,24 @@ class Product < ApplicationRecord
     end
   end
 
+  # @return [Array<Specification>] the specs its category or one above it requires that an active variant lacks
+  def missing_specifications
+    return [] unless category
+
+    effective = effective_specifications(variants.select(&:active?)).values
+    category.required_specifications.reject do |specification|
+      effective.all? { |values| values.key?(specification.key) }
+    end
+  end
+
+  # @param variants [Array<Product::Variant>]
+  # @return [Hash{Product::Variant => Hash{String => Array<String>}}] each variant's values by definition key. An
+  #   override wins over the product's value. Unsaved writes count.
+  def effective_specifications(variants)
+    own = keyed_specifications
+    variants.to_h { |variant| [variant, own.merge(variant.keyed_specifications)] }
+  end
+
   # Its variants skip their own selection check, since the product judges them all at once.
   def valid?(context = nil)
     @validating = true
@@ -130,6 +150,12 @@ class Product < ApplicationRecord
   # Read before the uuid cast, which turns a malformed id into nil.
   def category_in_tenant
     errors.add(:category_id, category_id_before_type_cast.present? ? :invalid : :blank) if category.nil?
+  end
+
+  # Only on the change to published, so a link added later never blocks saving a product that is already live.
+  def required_specifications_present
+    names = missing_specifications.map(&:name)
+    errors.add(:status, :required_specifications_missing, names: names.join(", ")) if names.any?
   end
 
   def active_variant_when_published

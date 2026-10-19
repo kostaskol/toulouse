@@ -7,6 +7,7 @@ class Specification < ApplicationRecord
   # Destroyed one by one, so the audit log records each removal.
   has_many :values, class_name: "Product::SpecificationValue", dependent: :destroy
   has_many :images, class_name: "Product::Image", inverse_of: :specification
+  has_many :category_links, class_name: "Category::SpecificationLink", inverse_of: :specification, dependent: :destroy
 
   # Prefixed, because `all` would replace the scope every model has.
   enum :mode, { any: 0, all: 1 }, prefix: true, validate: true

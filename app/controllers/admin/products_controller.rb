@@ -19,24 +19,29 @@ module Admin
     end
 
     def show
-      render json: { product: product_json(loaded(params[:id])) }
+      render json: { product: detail_json(loaded(params[:id])) }
     end
 
     def create
       variants = params.permit(variants: VariantsController::FIELDS).fetch(:variants, [])
       product = Product.create!(params.permit(*FIELDS).merge(variants_attributes: variants))
-      render status: :created, json: { product: product_json(loaded(product.id)) }
+      render status: :created, json: { product: detail_json(loaded(product.id)) }
     end
 
     def update
       product = Product.find(params[:id])
       product.update!(params.permit(*FIELDS))
-      render json: { product: product_json(loaded(product.id)) }
+      render json: { product: detail_json(loaded(product.id)) }
     end
 
     private
 
     def loaded(id) = Product.with_images.with_specifications.find(id)
+
+    # Left out of lists, where it would cost queries per product.
+    def detail_json(product)
+      product_json(product).merge(missing_specifications: product.missing_specifications.map(&:name))
+    end
 
     def search(scope)
       return if refuse_query(params[:q], field: "q")

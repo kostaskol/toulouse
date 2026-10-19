@@ -287,9 +287,10 @@ collection:
         meta:
           id: req_b87bc0a217a0c96a20283a231c992eac
           created: 1791830772923
-          modified: 1791830772923
+          modified: 1792396800000
           isPrivate: false
           sortKey: 8
+          description: missing_specifications names the required specs that an active variant has no value for.
         method: GET
         settings:
           renderRequestBody: true
@@ -663,7 +664,7 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 20
-          description: Also takes slug and position.
+          description: Also takes slug, position and specification_links, as in Set category specifications.
         method: POST
         body:
           mimeType: application/json
@@ -691,13 +692,44 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 21
-          description: Also takes name, slug and position.
+          description: Also takes name, slug, position and specification_links.
         method: PATCH
         body:
           mimeType: application/json
           text: |-
             {
               "parent_id": "{% prompt 'Parent id', 'The category to move under', '', '', false, false %}"
+            }
+        headers:
+          - name: Content-Type
+            value: application/json
+        settings:
+          renderRequestBody: true
+          encodeUrl: true
+          followRedirects: global
+          cookies:
+            send: true
+            store: true
+          rebuildPath: true
+      - url: "{{ _.base_url }}/admin/categories/{{ _.category_id }}"
+        name: Set category specifications
+        meta:
+          id: req_349282f43f96469439d6f0b99169216b
+          created: 1792396800000
+          modified: 1792396800000
+          isPrivate: false
+          sortKey: 21.5
+          description: >-
+            Replaces the category's spec links. A spec left out is unlinked. Categories below inherit the links.
+            A product cannot change to published while an active variant lacks a value for a required spec.
+        method: PATCH
+        body:
+          mimeType: application/json
+          text: |-
+            {
+              "specification_links": [
+                { "specification_id": "{{ _.specification_id }}", "required": true }
+              ]
             }
         headers:
           - name: Content-Type

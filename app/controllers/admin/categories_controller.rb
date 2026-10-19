@@ -16,7 +16,7 @@ module Admin
     }.freeze
 
     def index
-      render json: { categories: tree(Category.by_parent) }
+      render json: { categories: tree(Category.includes(:links).by_parent) }
     end
 
     def create
@@ -39,10 +39,12 @@ module Admin
 
     private
 
-    def category_params = params.permit(:name, :slug, :parent_id, :position)
+    def category_params
+      params.permit(:name, :slug, :parent_id, :position, specification_links: [:specification_id, :required])
+    end
 
     def category_json(category)
-      category.slice(:id, :name, :slug, :parent_id, :position)
+      category.slice(:id, :name, :slug, :parent_id, :position, :specification_links)
     end
 
     def tree(by_parent, parent_id = nil)
