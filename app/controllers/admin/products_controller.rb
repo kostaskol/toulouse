@@ -5,7 +5,9 @@ module Admin
 
     allow_any_staff
 
-    FIELDS = [:title, :slug, :description, :status, :brand_id, :category_id, { specifications: {} }].freeze
+    FIELDS = [
+      :title, :slug, :description, :status, :brand_id, :category_id, :in_comparison_feeds, { specifications: {} }
+    ].freeze
 
     def index
       scope = Product.with_images.with_specifications.includes(:brand)

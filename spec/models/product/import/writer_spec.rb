@@ -88,6 +88,22 @@ RSpec.describe Product::Import::Writer, :as_tenant do
     )
   end
 
+  it "creates a product kept out of comparison feeds" do
+    write(small.merge("in_comparison_feeds" => "false"))
+
+    expect(Product.find_by!(slug: "first").in_comparison_feeds).to be(false)
+  end
+
+  it "matches the comparison feeds flag of an existing product however the file spells it" do
+    product = create(:product, slug: "first", title: base["title"])
+    product.variants.first.update!(price_cents: 100)
+    row = base.merge([known(product)].to_h)
+
+    expect(write(row.merge("in_comparison_feeds" => "1"))[:warnings]).to eq([])
+    expect(write(row.merge("in_comparison_feeds" => "0"))[:warnings].pluck(:code, :stored))
+      .to eq([["product_cell_ignored", "true"]])
+  end
+
   it "reports a new row with no value for a selectable spec on that row" do
     create(:product, slug: "first")
 

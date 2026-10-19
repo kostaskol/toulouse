@@ -32,6 +32,12 @@ RSpec.describe Product::Import::Group, :as_tenant do
     expect(variant.attributes).not_to include(:track_stock, :allow_oversell)
   end
 
+  it "reads the comparison feeds flag, and leaves it out when blank" do
+    expect(group(base.merge("in_comparison_feeds" => "0")).product_attributes).to include(in_comparison_feeds: false)
+    expect(group(base).product_attributes).not_to have_key(:in_comparison_feeds)
+    expect(codes(group(base.merge("in_comparison_feeds" => "no")))).to eq([["invalid", "in_comparison_feeds"]])
+  end
+
   it "reads booleans" do
     variant = group(base.merge("track_stock" => "0", "allow_oversell" => "TRUE")).variants.first
 

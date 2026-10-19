@@ -14,6 +14,7 @@ module Admin
         specifications: specifications_json(product),
         brand: product.brand && brand_json(product.brand),
         category_id: product.category_id,
+        in_comparison_feeds: product.in_comparison_feeds,
         images: product.images.map { |image| image_json(image) },
         variants: product.variants.map { |variant| variant_json(variant) }
       }

@@ -44,6 +44,7 @@ class Product::Import::Group
     check_handle
     check_conflicts
     @status = parse_status
+    @in_comparison_feeds = parse_boolean(@first, "in_comparison_feeds", @first_number)
     @category_path = parse_category
     @images = parse_images(image_columns)
     @specifications = parse_specifications(@first, @first_number)
@@ -59,8 +60,8 @@ class Product::Import::Group
   def product_attributes
     {
       slug: handle, title: cell(@first, "title"), description: cell(@first, "description").presence,
-      status: @status, specifications:
-    }
+      status: @status, in_comparison_feeds: @in_comparison_feeds, specifications:
+    }.compact
   end
 
   # @param variant [Variant]
@@ -81,8 +82,11 @@ class Product::Import::Group
 
   # @return [Hash{String => String}] the product cells the file fills, keyed by column
   def filled_product_cells
-    Product::Import::Sheet::PRODUCT_COLUMNS.excluding("handle")
-                                           .to_h { |column| [column, cell(@first, column)] }.compact_blank
+    cells = Product::Import::Sheet::PRODUCT_COLUMNS.excluding("handle")
+                                                   .to_h { |column| [column, cell(@first, column)] }.compact_blank
+    # Compared with the stored value as text, so "1" and "true" match.
+    cells["in_comparison_feeds"] = @in_comparison_feeds.to_s if cells.key?("in_comparison_feeds")
+    cells
   end
 
   private
@@ -107,6 +111,15 @@ class Product::Import::Group
         add_error("product_cell_conflict", column, number) unless value.empty? || value == cell(@first, column)
       end
     end
+  end
+
+  # @return [Boolean, nil] nil when blank, which keeps the model's default
+  def parse_boolean(row, column, number)
+    value = cell(row, column)
+    return if value.empty?
+
+    add_error("invalid", column, number) unless BOOLEANS.key?(value.downcase)
+    BOOLEANS[value.downcase]
   end
 
   def parse_status
