@@ -17,8 +17,9 @@ const error = ref(null);
 const selected = reactive({});
 const cartNote = ref(false);
 
-const matches = (variant, choice) =>
-  product.value.option_names.every((name) => variant.option_values[name] === choice[name]);
+// Every active variant has a value for each selectable spec, so the first one names the pickers in order.
+const names = computed(() => Object.keys(product.value.variants[0]?.selection ?? {}));
+const matches = (variant, choice) => names.value.every((name) => variant.selection[name] === choice[name]);
 const variant = computed(() => product.value.variants.find((candidate) => matches(candidate, selected)));
 // The merchant writes the Markdown, so it is sanitized before it becomes HTML.
 const description = computed(() => DOMPurify.sanitize(marked.parse(product.value.description ?? "")));
@@ -30,26 +31,26 @@ const specifications = computed(() => {
   return [...merged];
 });
 
-const valuesOf = (name) => [...new Set(product.value.variants.map((candidate) => candidate.option_values[name]))];
-// Only the options up to this one count, so no buyable variant is ever out of reach.
+const valuesOf = (name) => [...new Set(product.value.variants.map((candidate) => candidate.selection[name]))];
+// Only the pickers up to this one count, so no buyable variant is ever out of reach.
 const buyableWith = (name, value) => {
-  const names = product.value.option_names.slice(0, product.value.option_names.indexOf(name) + 1);
+  const earlier = names.value.slice(0, names.value.indexOf(name) + 1);
   const choice = { ...selected, [name]: value };
   return product.value.variants.find((candidate) =>
-    candidate.available && names.every((option) => candidate.option_values[option] === choice[option]));
+    candidate.available && earlier.every((picker) => candidate.selection[picker] === choice[picker]));
 };
 
 const select = (name, value) => {
   const fallback = buyableWith(name, value);
   selected[name] = value;
-  if (!variant.value?.available) Object.assign(selected, fallback.option_values);
+  if (!variant.value?.available) Object.assign(selected, fallback.selection);
   cartNote.value = false;
 };
 
 try {
   ({ product: product.value } = await shop.getProduct(props.slug));
   const first = product.value.variants.find((candidate) => candidate.available) ?? product.value.variants[0];
-  Object.assign(selected, first.option_values);
+  Object.assign(selected, first.selection);
   document.title = `${product.value.title} · ${SHOP_NAME}`;
 } catch (failure) {
   if (failure.code === "not_found") notFound.value = true;
@@ -67,7 +68,7 @@ try {
       <h1>{{ product.title }}</h1>
       <ProductPrice v-if="variant" :price="variant.price_cents" :pre-discount="variant.pre_discount_price_cents" />
 
-      <fieldset v-for="name in product.option_names" :key="name" class="option">
+      <fieldset v-for="name in names" :key="name" class="option">
         <legend>{{ name }}: <strong>{{ selected[name] }}</strong></legend>
         <button v-for="value in valuesOf(name)" :key="value" type="button" class="option-value"
                 :class="{ selected: selected[name] === value }" :disabled="!buyableWith(name, value)"

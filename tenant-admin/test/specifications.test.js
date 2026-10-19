@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { specificationRows, specificationsParam } from "../src/specifications.js";
+import { singleValue, specificationRows, specificationsParam } from "../src/specifications.js";
 
 test("round-trips the API's specifications through rows", () => {
   const specifications = [{ id: "1", name: "A", values: ["x, with a comma", "y"] }];
@@ -35,4 +35,12 @@ test("refuses a second row whose name folds like an earlier one", () => {
 
   assert.deepEqual(param, { Χρώμα: ["Κόκκινο"] });
   assert.deepEqual(Object.keys(errors), ["1"]);
+});
+
+test("finds a single-value spec by its folded name", () => {
+  const definitions = [{ name: "Χρώμα", multiple: false }, { name: "Υλικό", multiple: true }];
+
+  assert.equal(singleValue(definitions, " ΧΡΩΜΑ "), true);
+  assert.equal(singleValue(definitions, "Υλικό"), false);
+  assert.equal(singleValue(definitions, "Οθόνη"), false);
 });

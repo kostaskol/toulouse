@@ -19,6 +19,16 @@ const fold = (name) =>
   name.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/ς/g, "σ").replace(/[[\]]/g, "");
 
 /**
+ * Whether the named spec takes one value only.
+ *
+ * @param definitions [Array<Object>] as the API returns them
+ * @param name [String]
+ * @return [Boolean]
+ */
+export const singleValue = (definitions, name) =>
+  definitions.some((definition) => !definition.multiple && fold(definition.name) === fold(name.trim()));
+
+/**
  * Rows as the API takes them. A fully blank row is left out. A half-filled one is an error, as the API refuses it.
  *
  * @param rows [Array<Object>]

@@ -4,6 +4,7 @@ export const PRODUCT_STATUSES = { draft: "Πρόχειρο", published: "Δημ�
 export const PRODUCT_STATUS_BADGES = { draft: "badge-yellow", published: "badge-green", archived: "" };
 export const VAT_CLASSES = { standard: "Κανονικός", reduced: "Μειωμένος", super_reduced: "Υπερμειωμένος" };
 export const VARIANT_STATUSES = { active: "Ενεργή", archived: "Αρχειοθετημένη" };
+export const SPECIFICATION_KINDS = { none: "Κανένα", colour: "Χρώμα", size: "Μέγεθος" };
 
 export const STAFF_STATUSES = { pending: "Σε αναμονή", active: "Ενεργό" };
 export const IMPORT_STATUSES = { queued: "Σε αναμονή", running: "Σε εξέλιξη", done: "Ολοκληρώθηκε", failed: "Απέτυχε" };

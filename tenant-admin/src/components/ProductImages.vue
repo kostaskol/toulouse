@@ -20,14 +20,28 @@ const dragged = ref(null);
 const target = ref(null);
 const path = () => `/products/${props.product.id}/images`;
 
-async function upload(event) {
+// One link per selectable value the variants hold, as [name, value]. An image shows on the variants with its value.
+const links = computed(() => {
+  const pairs = props.product.variants.flatMap((variant) => Object.entries(variant.selection));
+  return [...new Map(pairs.map((pair) => [pair.join("\u0000"), pair])).values()];
+});
+const linkKey = (selection) => Object.entries(selection).flat().join("\u0000");
+const linkLabel = (selection) => Object.entries(selection).map(([name, value]) => `${name}: ${value}`)[0];
+
+/**
+ * @param event [Event] the file input's change
+ * @param selection [Object] the value the images show for, or none for every variant
+ */
+async function upload(event, selection = {}) {
   const files = [...event.target.files];
   event.target.value = "";
   failures.value = [];
+  const query = new URLSearchParams(Object.entries(selection).map(([name, value]) => [`selection[${name}]`, value]));
+  const target = query.size ? `${path()}?${query}` : path();
   await uploading.run(async () => {
     for (const file of files) {
       // One at a time, so the images keep the order they were picked in.
-      await request("POST", path(), { body: file, type: file.type })
+      await request("POST", target, { body: file, type: file.type })
         .catch((caught) => failures.value.push(`${file.name}: ${errorMessage(caught)}`));
     }
   });
@@ -44,6 +58,12 @@ async function saveAlt(image, alt) {
   // In place rather than a reload, which would reset another alt input being typed in.
   image.alt = saved.alt;
   notify("Η περιγραφή αποθηκεύτηκε.");
+}
+
+async function link(image, key) {
+  const pair = links.value.find((candidate) => candidate.join("\u0000") === key);
+  const selection = pair ? { [pair[0]]: pair[1] } : {};
+  if (await run(() => patch(`${path()}/${image.id}`, { selection }))) emit("changed");
 }
 
 async function move(from, to) {
@@ -86,6 +106,16 @@ async function remove(image) {
         >
       </label>
     </div>
+    <div v-if="links.length" class="row">
+      <span class="muted small">Ανέβασμα για μία τιμή:</span>
+      <label v-for="pair in links" :key="pair.join('\u0000')" class="button button-small">
+        + {{ pair[0] }}: {{ pair[1] }}
+        <input
+          type="file" class="visually-hidden" :accept="ACCEPT" multiple :disabled="uploading.busy.value"
+          @change="upload($event, { [pair[0]]: pair[1] })"
+        >
+      </label>
+    </div>
     <div v-for="message in failures" :key="message" class="alert alert-error">{{ message }}</div>
     <div v-if="error" class="alert alert-error">{{ errorMessage(error) }}</div>
     <p v-if="product.images.length > 1" class="hint">Σύρετε μια φωτογραφία για να αλλάξετε τη σειρά.</p>
@@ -103,6 +133,22 @@ async function remove(image) {
         >
         <div class="image-body">
           <input :value="image.alt" placeholder="Περιγραφή" @change="saveAlt(image, $event.target.value)">
+          <select
+            v-if="links.length || linkKey(image.selection)" :value="linkKey(image.selection)" :disabled="locked"
+            aria-label="Παραλλαγές της φωτογραφίας" @change="link(image, $event.target.value)"
+          >
+            <option value="">Όλες οι παραλλαγές</option>
+            <option v-for="pair in links" :key="pair.join('\u0000')" :value="pair.join('\u0000')">
+              {{ pair[0] }}: {{ pair[1] }}
+            </option>
+            <!-- A value no variant holds any more still shows, so the select does not hide the link. -->
+            <option
+              v-if="linkKey(image.selection) && !links.some((pair) => pair.join('\u0000') === linkKey(image.selection))"
+              :value="linkKey(image.selection)"
+            >
+              {{ linkLabel(image.selection) }}
+            </option>
+          </select>
           <div class="image-actions">
             <button
               class="button button-small" aria-label="Μετακίνηση αριστερά" :disabled="locked || index === 0"

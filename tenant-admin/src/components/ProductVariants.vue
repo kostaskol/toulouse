@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { VARIANT_STATUSES } from "../labels.js";
 import { formatPrice } from "../money.js";
 import StockEditor from "./StockEditor.vue";
@@ -13,7 +13,10 @@ const emit = defineEmits(["changed"]);
 // What the panel below the table shows: { kind: "variant" | "stock", variant }.
 const open = ref(null);
 
-const optionLabel = (variant) => props.product.option_names.map((name) => variant.option_values[name]).join(" / ");
+// Archived variants may lack a value, so the names come from every variant.
+const selectable = computed(() =>
+  [...new Set(props.product.variants.flatMap((variant) => Object.keys(variant.selection)))]);
+const selectionLabel = (variant) => selectable.value.map((name) => variant.selection[name] ?? "—").join(" / ");
 
 function saved() {
   open.value = null;
@@ -31,13 +34,13 @@ function saved() {
       <table>
         <thead>
           <tr>
-            <th v-if="product.option_names.length">{{ product.option_names.join(" / ") }}</th>
+            <th v-if="selectable.length">{{ selectable.join(" / ") }}</th>
             <th>SKU</th><th class="num">Τιμή</th><th class="num">Απόθεμα</th><th>Κατάσταση</th><th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="variant in product.variants" :key="variant.id">
-            <td v-if="product.option_names.length">{{ optionLabel(variant) }}</td>
+            <td v-if="selectable.length">{{ selectionLabel(variant) }}</td>
             <td class="muted nowrap">{{ variant.sku }}</td>
             <td class="num nowrap">
               {{ formatPrice(variant.price_cents) }}
