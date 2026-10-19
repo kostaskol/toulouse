@@ -7,6 +7,7 @@ import { PRODUCT_STATUSES } from "../labels.js";
 import { getAll } from "../list.js";
 import { formErrors } from "../messages.js";
 import { notify } from "../notice.js";
+import { missingWeight } from "../products.js";
 import { specificationRows, specificationsParam } from "../specifications.js";
 import FormErrors from "../components/FormErrors.vue";
 import FormField from "../components/FormField.vue";
@@ -78,6 +79,10 @@ async function save() {
   <FormErrors :messages="formErrors(loading.error.value).base" />
 
   <template v-if="product">
+    <div v-if="missingWeight(product)" class="alert alert-warn">
+      Το προϊόν είναι δημοσιευμένο, αλλά κάποια ενεργή παραλλαγή δεν έχει βάρος. Το κατάστημα θέλει βάρος για τις
+      μηχανές σύγκρισης τιμών.
+    </div>
     <section class="panel">
       <h2>Στοιχεία</h2>
       <FormErrors :messages="errors.base" />

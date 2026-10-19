@@ -6,7 +6,7 @@ import { flatten, loadCategories } from "../categories.js";
 import { PRODUCT_STATUS_BADGES, PRODUCT_STATUSES } from "../labels.js";
 import { getAll, useList } from "../list.js";
 import { baseErrors } from "../messages.js";
-import { priceRange, stockTotal, thumbnail } from "../products.js";
+import { missingWeight, priceRange, stockTotal, thumbnail } from "../products.js";
 import FormErrors from "../components/FormErrors.vue";
 import LoadMore from "../components/LoadMore.vue";
 
@@ -93,6 +93,7 @@ function reload() {
             <span class="badge" :class="PRODUCT_STATUS_BADGES[product.status]">
               {{ PRODUCT_STATUSES[product.status] }}
             </span>
+            <span v-if="missingWeight(product)" class="badge badge-red">Χωρίς βάρος</span>
           </td>
           <td>{{ product.brand?.name }}</td>
           <td class="num">{{ product.variants.length }}</td>

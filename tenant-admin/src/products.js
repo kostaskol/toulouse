@@ -1,4 +1,5 @@
 import { formatPrice } from "./money.js";
+import { session } from "./session.js";
 
 /**
  * @param product [Object]
@@ -29,3 +30,10 @@ export function stockTotal(product) {
  * @return [String, undefined] the smallest size of the first image
  */
 export const thumbnail = (product) => product.images[0]?.sizes[0]?.url ?? product.images[0]?.url;
+
+/**
+ * @param product [Object]
+ * @return [Boolean] true when the store needs weights and a published product has an active variant without one
+ */
+export const missingWeight = (product) => Boolean(session.tenant?.weight_required) && product.status === "published" &&
+  product.variants.some((variant) => variant.status === "active" && variant.weight_grams === null);
