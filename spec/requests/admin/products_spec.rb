@@ -21,7 +21,7 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response).to have_http_status(:created)
       product = response.parsed_body["product"]
-      expect(product).to include("status" => "draft", "category_id" => category.id)
+      expect(product).to include("status" => "draft", "category_id" => category.id, "in_comparison_feeds" => true)
       expect(product["variants"]).to contain_exactly(include("price_cents" => variant[:price_cents]))
     end
 
@@ -199,6 +199,13 @@ RSpec.describe "Tenant admin products", type: :request do
 
       expect(response).to have_http_status(:ok)
       expect(find_product(product.id)).to be_published
+    end
+
+    it "keeps the product out of comparison feeds" do
+      patch "/admin/products/#{product.id}", params: { in_comparison_feeds: false }, headers:, as: :json
+
+      expect(response.parsed_body.dig("product", "in_comparison_feeds")).to be(false)
+      expect(find_product(product.id).in_comparison_feeds).to be(false)
     end
 
     it "replaces the product's specs" do

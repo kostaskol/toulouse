@@ -345,7 +345,8 @@ collection:
           modified: 1791830772923
           isPrivate: false
           sortKey: 10
-          description: Also takes title, slug, description, brand_id, category_id and specifications.
+          description: >-
+            Also takes title, slug, description, brand_id, category_id, in_comparison_feeds and specifications.
         method: PATCH
         body:
           mimeType: application/json

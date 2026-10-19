@@ -409,7 +409,8 @@ CREATE TABLE public.products (
     updated_at timestamp(6) with time zone NOT NULL,
     search_document tsvector DEFAULT ''::tsvector NOT NULL,
     search_text text DEFAULT ''::text NOT NULL,
-    category_id uuid NOT NULL
+    category_id uuid NOT NULL,
+    in_comparison_feeds boolean DEFAULT true NOT NULL
 );
 
 
@@ -2005,6 +2006,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019160000'),
 ('20261019150000'),
 ('20261019140000'),
 ('20261019130000'),

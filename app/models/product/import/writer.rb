@@ -114,7 +114,8 @@ class Product::Import::Writer
   def warn_product_cells(product)
     stored = {
       "title" => product.title, "description" => product.description.to_s, "status" => product.status,
-      "brand" => product.brand&.name.to_s, "category" => product.category.name
+      "brand" => product.brand&.name.to_s, "category" => product.category.name,
+      "in_comparison_feeds" => product.in_comparison_feeds.to_s
     }
     @group.filled_product_cells.each do |column, value|
       next add_warning("image_urls_ignored", column, nil) if column == "image_urls"
