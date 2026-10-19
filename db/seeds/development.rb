@@ -97,7 +97,7 @@ Tenancy.with_tenant(demo) do
     end
 
     Product.create!(title:, description:, status: "published", option_names: options.keys, specifications:,
-                    brand: Brand.find_or_create_by!(name: brand), categories: [categories.fetch(category)],
+                    brand: Brand.find_or_create_by!(name: brand), category: categories.fetch(category),
                     variants_attributes: variants)
   end
   demo_products.each { |product| seed_product.call(**product) }

@@ -21,12 +21,12 @@ RSpec.describe Product::Filter, :as_tenant do
   describe "filtering" do
     it "narrows to a category's subtree, several categories together" do
       parent = create(:category)
-      child = create(:product, category_ids: [create(:category, parent:).id])
-      other = create(:product, category_ids: [create(:category).id])
+      child = create(:product, category: create(:category, parent:))
+      other = create(:product)
       create(:product)
 
       expect(filtered("categories" => [parent.slug])).to eq([child])
-      expect(filtered("categories" => [parent.slug, other.categories.first.slug])).to contain_exactly(child, other)
+      expect(filtered("categories" => [parent.slug, other.category.slug])).to contain_exactly(child, other)
     end
 
     it "narrows to brands" do
@@ -172,8 +172,8 @@ RSpec.describe Product::Filter, :as_tenant do
       root = create(:category)
       child = create(:category, parent: root)
       create(:category, parent: root)
-      create(:product, category_ids: [root.id])
-      create(:product, category_ids: [child.id])
+      create(:product, category: root)
+      create(:product, category: child)
 
       expect(facets[:categories]).to eq([
         root.slice(:id, :name, :slug).merge(count: 2, children: [
@@ -185,7 +185,7 @@ RSpec.describe Product::Filter, :as_tenant do
     it "starts the tree below the page's category" do
       root = create(:category)
       child = create(:category, parent: root)
-      create(:product, category_ids: [child.id])
+      create(:product, category: child)
 
       expect(facets(root:)[:categories].pluck(:id)).to eq([child.id])
     end
@@ -193,9 +193,9 @@ RSpec.describe Product::Filter, :as_tenant do
     it "counts a group without its own selection and with every other" do
       picked, other = create_list(:category, 2)
       brand = create(:brand)
-      create(:product, brand:, category_ids: [picked.id])
-      create(:product, brand:, category_ids: [other.id])
-      create(:product, category_ids: [other.id])
+      create(:product, brand:, category: picked)
+      create(:product, brand:, category: other)
+      create(:product, category: other)
 
       result = facets({ "categories" => [picked.slug], "brands" => [brand.slug] })
 

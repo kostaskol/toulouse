@@ -2,26 +2,30 @@ require "rails_helper"
 
 RSpec.describe Product::Import::Writer, :as_tenant do
   let(:base) { { "handle" => "first", "title" => "First", "price" => "1" } }
-  let(:small) { base.merge("option1_name" => "Size", "option1_value" => "S") }
+  let(:small) { base.merge("category" => create(:category).name, "option1_name" => "Size", "option1_value" => "S") }
   let(:medium) { base.merge("option1_value" => "M") }
 
   def write(*rows) = described_class.new(Product::Import::Sheet.new(import_csv(rows)).groups.first).call
 
   it "creates a product with its variants, brand and category path" do
-    entry = write(small.merge("brand" => "Maker", "categories" => "A > B"), medium.merge("price" => "2"))
+    entry = write(small.merge("brand" => "Maker", "category" => "A > B"), medium.merge("price" => "2"))
     product = Product.find_by!(slug: "first")
 
     expect(entry).to include(
       result: "created", product_id: product.id, created_brands: ["Maker"], created_categories: ["A", "A > B"]
     )
     expect(product.variants.map(&:price_cents)).to eq([100, 200])
-    expect(product.categories.map(&:name)).to eq(["B"])
+    expect(product.category.name).to eq("B")
+  end
+
+  it "fails a new product with no category" do
+    expect(write(base)[:error_details]).to contain_exactly(include(code: "blank", field: "category"))
   end
 
   it "reuses an existing brand and category" do
     parent = create(:category)
     create(:brand, name: "Maker")
-    entry = write(base.merge("brand" => "Maker", "categories" => parent.name))
+    entry = write(base.merge("brand" => "Maker", "category" => parent.name))
 
     expect(entry).to include(created_brands: [], created_categories: [])
   end

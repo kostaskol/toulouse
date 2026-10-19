@@ -5,20 +5,16 @@ class Category < ApplicationRecord
   has_paper_trail versions: { class_name: "Version" }
 
   belongs_to :parent, class_name: "Category", optional: true
-  # Before the links, so a refused delete leaves them in place.
   has_many :children, class_name: "Category", foreign_key: :parent_id, inverse_of: :parent,
                       dependent: :restrict_with_error
-  has_many :categorizations, class_name: "Product::Categorization", dependent: :destroy
+  has_many :products, dependent: :restrict_with_error
 
   validates :name, presence: true
   validates :position, numericality: { only_integer: true }
   validate :parent_in_tenant
   validate :parent_outside_subtree, if: -> { persisted? && parent_id_changed? }
 
-  # Before the links go, so their products are known.
-  before_destroy(prepend: true) { @product_ids = categorizations.pluck(:product_id) }
   after_update_commit :refresh_product_search, if: -> { saved_change_to_name? || saved_change_to_parent_id? }
-  after_destroy_commit { ProductSearchRefreshJob.perform_later(@product_ids) if @product_ids.any? }
 
   # @return [Hash{String, nil => Array<Category>}] siblings in menu order, keyed by parent id
   def self.by_parent
@@ -82,9 +78,9 @@ class Category < ApplicationRecord
 
   def slug_source = name
 
-  # A product's document holds the names of its categories' ancestors too, so the whole subtree changes.
+  # A product's document holds the names of its category's ancestors too, so the whole subtree changes.
   def refresh_product_search
-    ids = Product::Categorization.where(category_id: subtree_ids).distinct.pluck(:product_id)
+    ids = Product.where(category_id: subtree_ids).ids
     ProductSearchRefreshJob.perform_later(ids) if ids.any?
   end
 

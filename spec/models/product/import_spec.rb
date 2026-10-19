@@ -32,7 +32,8 @@ RSpec.describe Product::Import, :as_tenant, type: :model do
     let(:staff) { create(:staff) }
     let(:rows) do
       [
-        { "handle" => "first", "title" => "First", "price" => "1", "brand" => "Maker" },
+        { "handle" => "first", "title" => "First", "price" => "1", "brand" => "Maker",
+          "category" => create(:category).name },
         { "handle" => "second", "title" => "Second", "price" => "1", "pre_discount_price" => "0.5" }
       ]
     end

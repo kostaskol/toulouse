@@ -51,11 +51,11 @@ RSpec.describe Category, :as_tenant, type: :model do
       expect(described_class.exists?(root.id)).to be(true)
     end
 
-    it "drops its product links and keeps the products" do
-      product = create(:product, category_ids: [root.id])
-      root.destroy!
+    it "is refused while products sit in it" do
+      create(:product, category: root)
 
-      expect(product.reload.category_ids).to be_empty
+      expect(root.destroy).to be(false)
+      expect(described_class.exists?(root.id)).to be(true)
     end
   end
 end

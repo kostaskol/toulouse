@@ -9,15 +9,14 @@ class Product < ApplicationRecord
   has_paper_trail versions: { class_name: "Version" }, skip: [:search_document, :search_text]
 
   belongs_to :brand, optional: true
+  # Optional here, so a missing or unknown id fails as category_id, the field a client sends.
+  belongs_to :category, optional: true
   has_many :variants, -> { order(:id) }, inverse_of: :product, index_errors: true
   has_many :active_variants, -> { active.order(:id) }, class_name: "Product::Variant"
   has_many :images, -> { order(:position, :id) }, inverse_of: :product
   # The product's own values. A variant's overrides sit on the variant.
   has_many :specification_values, -> { where(variant_id: nil) }, class_name: "Product::SpecificationValue",
            autosave: true
-  has_many :categorizations, dependent: :destroy
-  # Destroys the links one by one, so the audit log records each removal.
-  has_many :categories, through: :categorizations, dependent: :destroy
 
   accepts_nested_attributes_for :variants
 
@@ -34,7 +33,7 @@ class Product < ApplicationRecord
   validate :option_names_distinct
   validate :brand_in_tenant
   validate :active_variant_when_published
-  validate :categories_in_tenant
+  validate :category_in_tenant
 
   around_save :refresh_search
 
@@ -92,16 +91,6 @@ class Product < ApplicationRecord
     end
   end
 
-  # Replaces the product's categories. An id outside the tenant fails validation.
-  #
-  # @param ids [Array<String>]
-  def category_ids=(ids)
-    @unknown_category_ids = false
-    super(Array(ids).uniq { |id| id.to_s.downcase })
-  rescue ActiveRecord::RecordNotFound
-    @unknown_category_ids = true
-  end
-
   # True while the product saves, variants included.
   def saving? = @saving
 
@@ -127,8 +116,9 @@ class Product < ApplicationRecord
     errors.add(:brand_id, :invalid) if brand_id_before_type_cast.present? && brand.nil?
   end
 
-  def categories_in_tenant
-    errors.add(:category_ids, :invalid) if @unknown_category_ids
+  # Read before the uuid cast, which turns a malformed id into nil.
+  def category_in_tenant
+    errors.add(:category_id, category_id_before_type_cast.present? ? :invalid : :blank) if category.nil?
   end
 
   def active_variant_when_published

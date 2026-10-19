@@ -79,14 +79,16 @@ RSpec.describe Product::Import::Group, :as_tenant do
     expect(group(base, base.merge("title" => " First ")).errors).to be_empty
   end
 
-  it "splits category paths" do
-    paths = group(base.merge("categories" => "A > B|C")).category_paths
-
-    expect(paths).to eq([["A", "B"], ["C"]])
+  it "splits the category path into levels" do
+    expect(group(base.merge("category" => "A > B")).category_path).to eq(["A", "B"])
   end
 
   it "refuses an empty category level" do
-    expect(codes(group(base.merge("categories" => "A >  > B")))).to eq([["invalid", "categories"]])
+    expect(codes(group(base.merge("category" => "A >  > B")))).to eq([["invalid", "category"]])
+  end
+
+  it "refuses a list of categories" do
+    expect(codes(group(base.merge("category" => "A > B|C")))).to eq([["invalid", "category"]])
   end
 
   it "refuses an image URL that is not http" do

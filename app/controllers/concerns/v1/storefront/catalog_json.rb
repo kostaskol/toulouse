@@ -17,6 +17,7 @@ module V1
           option_names: product.option_names,
           specifications: specifications_json(product),
           brand: product.brand&.slice(:name, :slug),
+          category_id: product.category_id,
           images: product.images.map { |image| image_json(image) },
           variants: product.active_variants.map { |variant| variant_json(variant) }
         }

@@ -17,9 +17,9 @@ RSpec.describe Product::Search, :as_tenant do
       expect(found("παπούτσια")).to eq([product])
     end
 
-    it "takes the brand, the categories with their ancestors, and active option values" do
+    it "takes the brand, the category with its ancestors, and active option values" do
       parent = create(:category, name: "Παπούτσια")
-      product = create(:product, brand: create(:brand), category_ids: [create(:category, parent:).id])
+      product = create(:product, brand: create(:brand), category: create(:category, parent:))
       option = product.variants.first.option_values.values.first
 
       expect(found(product.brand.name)).to eq([product])
@@ -83,16 +83,15 @@ RSpec.describe Product::Search, :as_tenant do
 
     it "follows a rename of an ancestor category through a job" do
       parent = create(:category)
-      product = create(:product, category_ids: [create(:category, parent:).id])
+      product = create(:product, category: create(:category, parent:))
       perform_enqueued_jobs { parent.update!(name: "Παπούτσια") }
 
       expect(found("παπούτσια")).to eq([product])
     end
 
-    it "drops a deleted category through a job" do
-      category = create(:category, name: "Παπούτσια")
-      create(:product, category_ids: [category.id])
-      perform_enqueued_jobs { category.destroy! }
+    it "drops the old category when the product moves" do
+      product = create(:product, category: create(:category, name: "Παπούτσια"))
+      product.update!(category: create(:category))
 
       expect(found("παπούτσια")).to be_empty
     end

@@ -7,7 +7,7 @@ class Product::Import::Writer
   }.freeze
   # Model attributes reported under the file's column names.
   COLUMNS = Product::Import::Group::VARIANT_ATTRIBUTES.invert
-    .merge(slug: "handle", brand_id: "brand", category_ids: "categories").transform_keys(&:to_s).freeze
+    .merge(slug: "handle", brand_id: "brand", category_id: "category").transform_keys(&:to_s).freeze
 
   # Carries the file row of a variant that failed validation.
   class RowInvalid < ActiveRecord::RecordInvalid
@@ -59,7 +59,7 @@ class Product::Import::Writer
 
   def create_product
     product = Product.create!(
-      **@group.product_attributes, brand:, category_ids: @group.category_paths.map { |path| category(path).id }.uniq,
+      **@group.product_attributes, brand:, category: @group.category_path && category(@group.category_path),
       variants_attributes: @group.variants.map do |variant|
         @group.variant_attributes(variant, @group.keyed(@group.specifications))
       end
@@ -115,11 +115,11 @@ class Product::Import::Writer
   def warn_product_cells(product)
     stored = {
       "title" => product.title, "description" => product.description.to_s, "status" => product.status,
-      "brand" => product.brand&.name.to_s, "categories" => product.categories.map(&:name).join(" | ")
+      "brand" => product.brand&.name.to_s, "category" => product.category.name
     }
     @group.filled_product_cells.each do |column, value|
       next add_warning("image_urls_ignored", column, nil) if column == "image_urls"
-      next if column == "categories" ? same_categories?(product) : value == stored[column]
+      next if column == "category" ? same_category?(product) : value == stored[column]
 
       add_warning("product_cell_ignored", column, stored[column])
     end
@@ -128,10 +128,7 @@ class Product::Import::Writer
   # @return [Hash{String => Array<String>}] the record's own spec values by definition key
   def stored_by_key(record) = record.specification_entries.to_h { |specification, values| [specification.key, values] }
 
-  def same_categories?(product)
-    ids = @group.category_paths.map { |path| category(path, create: false)&.id }
-    ids.all? && ids.uniq.sort == product.category_ids.sort
-  end
+  def same_category?(product) = category(@group.category_path, create: false)&.id == product.category_id
 
   # On an existing product every spec cell is a variant cell, as a new variant's cell becomes its override.
   def warn_variant_cells(variant, existing, inherited)
@@ -171,7 +168,7 @@ class Product::Import::Writer
   def field(record, attribute)
     return if attribute == "base"
     return "brand" if record.is_a?(Brand)
-    return "categories" if record.is_a?(Category)
+    return "category" if record.is_a?(Category)
     return "option1_value" if attribute == "option_values" && @group.option_names.any?
 
     COLUMNS.fetch(attribute, attribute)

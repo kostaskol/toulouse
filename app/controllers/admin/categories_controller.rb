@@ -7,6 +7,11 @@ module Admin
         status: :unprocessable_content,
         code: "category_has_children",
         message: "The category has categories below it. Move or remove them first."
+      ),
+      category_has_products: Failure.new(
+        status: :unprocessable_content,
+        code: "category_has_products",
+        message: "The category has products. Move them to another category first."
       )
     }.freeze
 
@@ -26,9 +31,10 @@ module Admin
     end
 
     def destroy
-      return head :no_content if Category.find(params[:id]).destroy
+      category = Category.find(params[:id])
+      return head :no_content if category.destroy
 
-      render_failure(FAILURES.fetch(:category_has_children))
+      render_failure(FAILURES.fetch(category.children.exists? ? :category_has_children : :category_has_products))
     end
 
     private
