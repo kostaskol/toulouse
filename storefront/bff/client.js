@@ -35,7 +35,8 @@ export function onSignedOut(listener) {
 
 /**
  * @param details [Object] `email` and `password`
- * @return [Object] `shopper`, `expires_at` and `read_only`
+ * @return [Object] `shopper`, `expires_at` and `read_only`, and `warnings` with `carts_merged` when a guest cart
+ *   joined a cart the shopper already had
  */
 export const signIn = ({ email, password }) => request("POST", "session", { body: { email, password } });
 
@@ -83,7 +84,8 @@ export const requestSignupCode = (email) => request("POST", "signup", { body: { 
  * Creates the account and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper`, `expires_at` and `read_only`
+ * @return [Object] `shopper`, `expires_at` and `read_only`, and `warnings` with `carts_merged` when a guest cart
+ *   joined a cart the shopper already had
  */
 export const completeSignup = ({ email, code, password }) =>
   request("PUT", "signup", { body: { email, code, password } });
@@ -99,7 +101,8 @@ export const requestPasswordResetCode = (email) => request("POST", "password_res
  * Sets the new password and signs the shopper in.
  *
  * @param details [Object] `email`, `code` and `password`
- * @return [Object] `shopper`, `expires_at` and `read_only`
+ * @return [Object] `shopper`, `expires_at` and `read_only`, and `warnings` with `carts_merged` when a guest cart
+ *   joined a cart the shopper already had
  */
 export const completePasswordReset = ({ email, code, password }) =>
   request("PUT", "password_reset", { body: { email, code, password } });
@@ -144,6 +147,44 @@ export const listCategoryProducts = (slug, { limit, after, filter } = {}) =>
  */
 export const search = (query, { limit, after, filter } = {}) =>
   request("GET", `search/${encodeURIComponent(query)}`, { query: { limit, after, ...filterQuery(filter) } });
+
+/**
+ * @return [Object] `cart`, which is empty when the shopper has none yet
+ */
+export const getCart = () => request("GET", "cart");
+
+/**
+ * Adds to the variant's line, up to the stock left.
+ *
+ * @param variantId [String]
+ * @param quantity [Number]
+ * @return [Object] `cart`, and `warnings` with `quantity_reduced` when the stock left cut the quantity
+ */
+export const addToCart = (variantId, quantity = 1) =>
+  request("POST", "cart/lines", { body: { variant_id: variantId, quantity } });
+
+/**
+ * Sets the quantity of a line already in the cart, up to the stock left.
+ *
+ * @param variantId [String]
+ * @param quantity [Number] 1 or more. Use removeFromCart to remove the line.
+ * @return [Object] `cart`, and `warnings` with `quantity_reduced` when the stock left cut the quantity
+ */
+export const setCartQuantity = (variantId, quantity) =>
+  request("PUT", `cart/lines/${encodeURIComponent(variantId)}`, { body: { quantity } });
+
+/**
+ * @param variantId [String]
+ * @return [Object] `cart`
+ */
+export const removeFromCart = (variantId) => request("DELETE", `cart/lines/${encodeURIComponent(variantId)}`);
+
+/**
+ * @param response [Object] a response body
+ * @param code [String] such as `carts_merged` or `quantity_reduced`
+ * @return [Boolean] whether the response carries a warning with this code
+ */
+export const hasWarning = (response, code) => Boolean(response?.warnings?.some((warning) => warning.code === code));
 
 /**
  * Turns a filter into one URL path segment. The same filter gives the same segment whatever order it was picked

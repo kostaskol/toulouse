@@ -3,7 +3,7 @@ import { computed, reactive, ref } from "vue";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { shop } from "../shop.js";
-import { SHOP_NAME } from "../store.js";
+import { store, SHOP_NAME } from "../store.js";
 import { errorMessage } from "../messages.js";
 import ProductImage from "../components/ProductImage.vue";
 import ProductPrice from "../components/ProductPrice.vue";
@@ -15,7 +15,9 @@ const product = ref(null);
 const notFound = ref(false);
 const error = ref(null);
 const selected = reactive({});
-const cartNote = ref(false);
+const cartNote = ref(null);
+const cartError = ref(null);
+const adding = ref(false);
 
 // Every active variant has a value for each selectable spec, so the first one names the pickers in order.
 const names = computed(() => Object.keys(product.value.variants[0]?.selection ?? {}));
@@ -44,8 +46,26 @@ const select = (name, value) => {
   const fallback = buyableWith(name, value);
   selected[name] = value;
   if (!variant.value?.available) Object.assign(selected, fallback.selection);
-  cartNote.value = false;
+  cartNote.value = null;
+  cartError.value = null;
 };
+
+async function addToCart() {
+  adding.value = true;
+  cartNote.value = null;
+  cartError.value = null;
+  try {
+    const response = await shop.addToCart(variant.value.id);
+    store.cart = response.cart;
+    cartNote.value = shop.hasWarning(response, "quantity_reduced")
+      ? "Έχετε ήδη στο καλάθι όλα τα διαθέσιμα κομμάτια."
+      : "Προστέθηκε στο καλάθι.";
+  } catch (failure) {
+    cartError.value = errorMessage(failure);
+  } finally {
+    adding.value = false;
+  }
+}
 
 try {
   ({ product: product.value } = await shop.getProduct(props.slug));
@@ -78,10 +98,11 @@ try {
       </fieldset>
 
       <p v-if="variant && !variant.available" class="stock-out">Εξαντλήθηκε</p>
-      <button class="button button-wide" :disabled="!variant?.available" @click="cartNote = true">
+      <button class="button button-wide" :disabled="!variant?.available || adding" @click="addToCart">
         Προσθήκη στο καλάθι
       </button>
-      <p v-if="cartNote" class="muted">Το καλάθι έρχεται σύντομα.</p>
+      <p v-if="cartError" class="form-error">{{ cartError }}</p>
+      <p v-if="cartNote" class="muted">{{ cartNote }} <RouterLink to="/cart">Δείτε το καλάθι</RouterLink></p>
 
       <div class="description" v-html="description" />
 

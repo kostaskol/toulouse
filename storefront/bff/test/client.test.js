@@ -54,6 +54,24 @@ describe("requests", () => {
     assert.equal(calls[0].url, new URL("categories/a%2Fb/products?after=cursor", BFF_URL).toString());
   });
 
+  test("sends a cart line's variant and quantity, and keeps the variant id in one path segment", async () => {
+    await client.addToCart("a/b");
+    replies.push(json(200, {}));
+    await client.setCartQuantity("a/b", 2);
+
+    assert.deepEqual(JSON.parse(calls[0].body), { variant_id: "a/b", quantity: 1 });
+    assert.equal(calls[1].url, new URL("cart/lines/a%2Fb", BFF_URL).toString());
+    assert.deepEqual(JSON.parse(calls[1].body), { quantity: 2 });
+  });
+
+  test("finds a warning by code", () => {
+    const response = { warnings: [{ code: "carts_merged", message: "" }] };
+
+    assert.equal(client.hasWarning(response, "carts_merged"), true);
+    assert.equal(client.hasWarning(response, "quantity_reduced"), false);
+    assert.equal(client.hasWarning({}, "carts_merged"), false);
+  });
+
   test("keeps a slash in a search query inside one path segment", async () => {
     await client.search("a/b");
 
