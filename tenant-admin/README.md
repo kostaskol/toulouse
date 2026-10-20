@@ -27,8 +27,12 @@ must trust it. Otherwise every request looks like it comes from the proxy.
 ## Development
 
 1. Start it with `docker compose up tenant-admin`. It starts the API too.
-2. Open `http://localhost:5174` and log in with a store slug and a staff
-   member's email and password.
+2. Open `http://localhost:5174` and log in with a staff member's email and
+   password.
+
+Vite serves `/store.json` from `STORE_SLUG`, which defaults to the seeded
+store. To log in to another store by slug, start it with `STORE_SLUG=` set
+empty.
 
 Vite forwards `/admin` to the API, as the production proxy does. Development
 invite and password reset emails link to this port, so it must not change.
