@@ -1,7 +1,8 @@
 # Storefront BFF
 
 A small server that sits between a storefront and the API. It holds the store's
-API key and the shopper's session token, so the browser never sees either.
+API key, the shopper's session token and a guest's cart token, so the browser
+never sees any of them.
 
 Every request to `/<path>` goes to `/<version>/storefront/<path>` on the API.
 A new storefront endpoint works here with no change.
