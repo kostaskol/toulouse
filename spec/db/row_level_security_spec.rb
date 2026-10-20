@@ -37,6 +37,7 @@ RSpec.describe "Row-level security" do
       create(:shopper_session, tenant: tenant)
       create(:shopper_handoff, tenant: tenant)
       create(:login_attempt, tenant: tenant)
+      create(:cart_line, tenant: tenant)
       product = create(:product, tenant: tenant, brand: create(:brand, tenant: tenant),
                                  specifications: { "Spec" => ["Value"] })
       create(:product_image, tenant: tenant, product:)

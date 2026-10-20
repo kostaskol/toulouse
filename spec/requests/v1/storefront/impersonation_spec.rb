@@ -22,6 +22,7 @@ RSpec.describe "Storefront read-only impersonation", :platform, type: :request d
         patch "probe" => "shopper_probe#update"
         delete "v1/storefront/session" => "v1/storefront/sessions#destroy"
         get "v1/storefront/session" => "v1/storefront/sessions#show"
+        post "v1/storefront/handoff" => "v1/storefront/handoffs#create"
       end
       example.run
     end
@@ -59,5 +60,16 @@ RSpec.describe "Storefront read-only impersonation", :platform, type: :request d
     as_app { get("/v1/storefront/session", headers:) }
 
     expect(response.parsed_body["read_only"]).to be(true)
+  end
+
+  it "leaves the admin's own guest cart out of the shopper's cart" do
+    guest = as_app { as_tenant(tenant) { Cart.create! } }
+    token = guest.token
+    headers = { Tenancy::RequiresTenant::HEADER => api_key.token,
+                V1::Storefront::BaseController::CART_TOKEN_HEADER => token }
+    as_app { post("/v1/storefront/handoff", params: { token: handoff.token }, headers:, as: :json) }
+
+    expect(response).to have_http_status(:created)
+    expect(as_tenant(tenant) { [Cart.exists?(guest.id), Cart.exists?(shopper:)] }).to eq([true, false])
   end
 end

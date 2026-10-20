@@ -31,6 +31,9 @@ Rails.application.routes.draw do
       resource :handoff, only: :create
       resource :signup, only: [:create, :update]
       resource :password_reset, only: [:create, :update]
+      resource :cart, only: :show do
+        resources :lines, only: [:create, :update, :destroy], param: :variant_id, controller: "cart_lines"
+      end
       resources :products, only: [:index, :show], param: :slug
       resources :categories, only: :index, param: :slug do
         resources :products, only: :index, controller: "category_products"
