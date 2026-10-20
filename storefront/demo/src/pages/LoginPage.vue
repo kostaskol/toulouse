@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { shop } from "../shop.js";
-import { store, SHOP_NAME } from "../store.js";
+import { signedIn, SHOP_NAME } from "../store.js";
 import { errorMessage } from "../messages.js";
 
 document.title = `Σύνδεση · ${SHOP_NAME}`;
@@ -17,7 +17,7 @@ async function signIn() {
   busy.value = true;
   error.value = null;
   try {
-    store.session = await shop.signIn({ email: email.value, password: password.value });
+    signedIn(await shop.signIn({ email: email.value, password: password.value }));
     router.push("/");
   } catch (failure) {
     error.value = errorMessage(failure);

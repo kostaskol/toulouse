@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { store } from "../store.js";
+import { signedIn } from "../store.js";
 import { errorMessage } from "../messages.js";
 
 // Signup and password reset share this shape: an email step, then a code and password step.
@@ -45,7 +45,7 @@ const resend = () => run(async () => {
 });
 
 const finish = () => run(async () => {
-  store.session = await props.complete({ email: email.value, code: code.value, password: password.value });
+  signedIn(await props.complete({ email: email.value, code: code.value, password: password.value }));
   router.push("/");
 });
 </script>

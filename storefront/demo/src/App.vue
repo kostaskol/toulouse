@@ -36,9 +36,17 @@ async function signOut() {
           <span v-if="signOutError" class="form-error">{{ signOutError }}</span>
         </template>
         <RouterLink v-else to="/login">Σύνδεση</RouterLink>
+        <RouterLink to="/cart" class="cart-link">Καλάθι ({{ store.cart?.line_count ?? 0 }})</RouterLink>
       </div>
     </div>
   </header>
+
+  <div v-if="store.notice" class="notice" role="status">
+    <div class="container notice-row">
+      <span>{{ store.notice }}</span>
+      <button class="link-button" @click="store.notice = null">Κλείσιμο</button>
+    </div>
+  </div>
 
   <main class="container">
     <RouterView v-slot="{ Component, route }">

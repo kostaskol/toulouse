@@ -9,6 +9,17 @@ module V1
       # The BFF sends every request, so the shopper's own IP arrives in this
       # header. The API key vouches for the BFF that sets it.
       SHOPPER_IP_HEADER = "X-Shopper-Ip"
+      # The BFF keeps a guest's cart token in a cookie and sends it back here.
+      CART_TOKEN_HEADER = "Cart-Token"
+      CART_EXPIRES_HEADER = "Cart-Expires"
+
+      # A notice beside a successful response, in the shape of an error.
+      Warning = Data.define(:code, :message)
+
+      CARTS_MERGED = Warning.new(
+        code: "carts_merged",
+        message: "The guest cart was added to the cart this shopper already had."
+      )
 
       EMAIL_CODE_FAILURES = {
         invalid_email: Failure.new(
@@ -40,7 +51,25 @@ module V1
       end
 
       def render_new_session(session)
-        render status: :created, json: { token: session.token, **session_body(session) }
+        body = { token: session.token, **session_body(session), **warnings_json(merge_guest_cart(session)) }
+        render status: :created, json: body
+      end
+
+      # Skipped under impersonation, where the cart cookie is the admin's own.
+      #
+      # @param session [Shopper::Session]
+      # @return [Warning, nil] when the shopper's cart already held lines
+      def merge_guest_cart(session)
+        return if session.impersonated?
+
+        CARTS_MERGED if Cart.merge_guest!(request.headers[CART_TOKEN_HEADER], session.shopper)
+      end
+
+      # @param warnings [Array<Warning, nil, false>]
+      # @return [Hash] a warnings key when any is present
+      def warnings_json(*warnings)
+        warnings = warnings.select(&:itself)
+        warnings.any? ? { warnings: warnings.map(&:to_h) } : {}
       end
 
       def session_body(session)

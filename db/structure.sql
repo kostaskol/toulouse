@@ -242,6 +242,39 @@ CREATE TABLE public.brands (
 
 
 --
+-- Name: cart_lines; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cart_lines (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    cart_id uuid NOT NULL,
+    variant_id uuid NOT NULL,
+    quantity integer NOT NULL,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    CONSTRAINT cart_lines_quantity_positive CHECK ((quantity > 0))
+);
+
+
+--
+-- Name: carts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.carts (
+    id uuid DEFAULT uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    shopper_id uuid,
+    token_digest text,
+    expires_at timestamp(6) with time zone,
+    created_at timestamp(6) with time zone NOT NULL,
+    updated_at timestamp(6) with time zone NOT NULL,
+    CONSTRAINT carts_shopper_or_token CHECK (((shopper_id IS NULL) = (token_digest IS NOT NULL))),
+    CONSTRAINT carts_token_expires CHECK (((token_digest IS NULL) = (expires_at IS NULL)))
+);
+
+
+--
 -- Name: categories; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -688,6 +721,22 @@ ALTER TABLE ONLY public.brands
 
 
 --
+-- Name: cart_lines cart_lines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_lines
+    ADD CONSTRAINT cart_lines_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: carts carts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carts
+    ADD CONSTRAINT carts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: categories categories_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -952,6 +1001,55 @@ CREATE UNIQUE INDEX index_brands_on_tenant_id_and_name ON public.brands USING bt
 --
 
 CREATE UNIQUE INDEX index_brands_on_tenant_id_and_slug ON public.brands USING btree (tenant_id, slug);
+
+
+--
+-- Name: index_cart_lines_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cart_lines_on_tenant_id ON public.cart_lines USING btree (tenant_id);
+
+
+--
+-- Name: index_cart_lines_on_tenant_id_and_cart_id_and_variant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_cart_lines_on_tenant_id_and_cart_id_and_variant_id ON public.cart_lines USING btree (tenant_id, cart_id, variant_id);
+
+
+--
+-- Name: index_cart_lines_on_variant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_cart_lines_on_variant_id ON public.cart_lines USING btree (variant_id);
+
+
+--
+-- Name: index_carts_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_carts_on_tenant_id ON public.carts USING btree (tenant_id);
+
+
+--
+-- Name: index_carts_on_tenant_id_and_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_carts_on_tenant_id_and_expires_at ON public.carts USING btree (tenant_id, expires_at) WHERE (expires_at IS NOT NULL);
+
+
+--
+-- Name: index_carts_on_tenant_id_and_shopper_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_carts_on_tenant_id_and_shopper_id ON public.carts USING btree (tenant_id, shopper_id);
+
+
+--
+-- Name: index_carts_on_token_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_carts_on_token_digest ON public.carts USING btree (token_digest);
 
 
 --
@@ -1380,6 +1478,14 @@ ALTER TABLE ONLY public.product_specification_values
 
 
 --
+-- Name: carts fk_rails_0fba167755; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carts
+    ADD CONSTRAINT fk_rails_0fba167755 FOREIGN KEY (shopper_id) REFERENCES public.shoppers(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tenant_domains fk_rails_1987f42a92; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1508,6 +1614,14 @@ ALTER TABLE ONLY public.shopper_handoffs
 
 
 --
+-- Name: cart_lines fk_rails_725ad8e2c3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_lines
+    ADD CONSTRAINT fk_rails_725ad8e2c3 FOREIGN KEY (cart_id) REFERENCES public.carts(id) ON DELETE CASCADE;
+
+
+--
 -- Name: categories fk_rails_82f48f7407; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1529,6 +1643,14 @@ ALTER TABLE ONLY public.shopper_sessions
 
 ALTER TABLE ONLY public.category_specification_links
     ADD CONSTRAINT fk_rails_89afe9cb6c FOREIGN KEY (category_id) REFERENCES public.categories(id);
+
+
+--
+-- Name: cart_lines fk_rails_8bf72e572b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_lines
+    ADD CONSTRAINT fk_rails_8bf72e572b FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -1684,6 +1806,14 @@ ALTER TABLE ONLY public.product_imports
 
 
 --
+-- Name: cart_lines fk_rails_f83ebd25c6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cart_lines
+    ADD CONSTRAINT fk_rails_f83ebd25c6 FOREIGN KEY (variant_id) REFERENCES public.product_variants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: products fk_rails_fb915499a4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1700,6 +1830,14 @@ ALTER TABLE ONLY public.products
 
 
 --
+-- Name: carts fk_rails_ffdbb9c88f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.carts
+    ADD CONSTRAINT fk_rails_ffdbb9c88f FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: tenant_api_keys api_key_lookup; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1711,6 +1849,18 @@ CREATE POLICY api_key_lookup ON public.tenant_api_keys FOR SELECT USING ((token_
 --
 
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: cart_lines; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.cart_lines ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: carts; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.carts ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: categories; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1832,6 +1982,20 @@ ALTER TABLE public.tenant_domains ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.brands USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: cart_lines tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.cart_lines USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
+
+
+--
+-- Name: carts tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.carts USING ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid)) WITH CHECK ((tenant_id = (NULLIF(current_setting('app.tenant_id'::text, true), ''::text))::uuid));
 
 
 --
@@ -2006,6 +2170,7 @@ GRANT USAGE ON SCHEMA platform TO "toulouse_platform";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA platform TO "toulouse_platform";
 ALTER DEFAULT PRIVILEGES IN SCHEMA platform GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO "toulouse_platform";
 INSERT INTO "schema_migrations" (version) VALUES
+('20261020120000'),
 ('20261019160000'),
 ('20261019150000'),
 ('20261019140000'),

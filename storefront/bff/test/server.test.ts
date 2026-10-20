@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { createBff, SESSION_COOKIE, type Config } from "../server.ts";
+import { CART_COOKIE, createBff, SESSION_COOKIE, type Config } from "../server.ts";
 
 type Recorded = { method: string; url: string; headers: http.IncomingHttpHeaders; body: string };
 type Reply = { status: number; headers?: Record<string, string>; body?: string; cutOff?: boolean };
@@ -14,6 +14,7 @@ const API_KEY = "test-api-key";
 const STOREFRONT_ORIGIN = "http://storefront.localhost";
 const OTHER_ORIGIN = "http://other.localhost";
 const SESSION_TOKEN = "test-session-token";
+const CART_TOKEN = "test-cart-token";
 
 let recorded: Recorded | undefined;
 let reply: Reply;
@@ -258,6 +259,66 @@ describe("session cookie", () => {
 
     const res = await call(port, "/session", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
 
+    assert.equal(res.headers["set-cookie"], undefined);
+  });
+});
+
+describe("cart cookie", () => {
+  test("moves a new cart token into the cookie and out of the headers", async () => {
+    const expiresAt = new Date(Date.now() + 60_000).toUTCString();
+    reply = { status: 200, headers: { ...JSON_HEADERS, "cart-token": CART_TOKEN, "cart-expires": expiresAt } };
+
+    const res = await call(port, "/cart/lines", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
+    const cookie = res.headers["set-cookie"]?.[0] ?? "";
+
+    assert.ok(cookie.startsWith(`${CART_COOKIE}=${CART_TOKEN};`));
+    for (const attribute of ["Path=/", "Secure", "HttpOnly", "SameSite=Lax", `Expires=${expiresAt}`]) {
+      assert.ok(cookie.includes(attribute), `missing ${attribute}`);
+    }
+    assert.equal(res.headers["cart-token"], undefined);
+    assert.equal(res.headers["cart-expires"], undefined);
+  });
+
+  test("sends the cart cookie as Cart-Token and replaces one the browser sends", async () => {
+    await call(port, "/cart", { headers: { cookie: `${CART_COOKIE}=${CART_TOKEN}`, "cart-token": "forged" } });
+
+    assert.equal(recorded?.headers["cart-token"], CART_TOKEN);
+  });
+
+  test("forwards no Cart-Token the browser sends on its own", async () => {
+    await call(port, "/cart", { headers: { "cart-token": "forged" } });
+
+    assert.equal(recorded?.headers["cart-token"], undefined);
+  });
+
+  test("clears the cart cookie when a session is issued", async () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const body = JSON.stringify({ token: SESSION_TOKEN, expires_at: expiresAt });
+    reply = { status: 201, headers: JSON_HEADERS, body };
+
+    const res = await call(port, "/session", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
+    const cookies = res.headers["set-cookie"] ?? [];
+
+    assert.ok(cookies.some((cookie) => cookie.startsWith(`${SESSION_COOKIE}=${SESSION_TOKEN};`)));
+    assert.ok(cookies.some((cookie) => new RegExp(`^${CART_COOKIE}=;.*Expires=Thu, 01 Jan 1970`).test(cookie)));
+  });
+
+  test("keeps the cart cookie when a read-only session is issued", async () => {
+    const expiresAt = new Date(Date.now() + 60_000).toISOString();
+    const body = JSON.stringify({ token: SESSION_TOKEN, expires_at: expiresAt, read_only: true });
+    reply = { status: 201, headers: JSON_HEADERS, body };
+
+    const res = await call(port, "/handoff", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
+
+    assert.deepEqual(res.headers["set-cookie"]?.map((cookie) => cookie.split("=")[0]), [SESSION_COOKIE]);
+  });
+
+  test("fails without setting a cookie when a cart token has no expiry", async () => {
+    reply = { status: 200, headers: { ...JSON_HEADERS, "cart-token": CART_TOKEN } };
+
+    const res = await call(port, "/cart/lines", { method: "POST", headers: { origin: STOREFRONT_ORIGIN } });
+
+    assert.equal(res.status, 500);
     assert.equal(res.headers["set-cookie"], undefined);
   });
 });

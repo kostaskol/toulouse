@@ -42,8 +42,14 @@ class Product::Variant < ApplicationRecord
   scope :available, -> { where(track_stock: false).or(where(allow_oversell: true)).or(where(stock_quantity: 1..)) }
 
   def available?
-    !track_stock || allow_oversell || stock_quantity.positive?
+    !limits_stock? || stock_quantity.positive?
   end
+
+  # Whether a shopper can put it in a cart now, whatever the quantity.
+  def sellable? = active? && product.published? && available?
+
+  # Whether the stock caps how many can be sold.
+  def limits_stock? = track_stock && !allow_oversell
 
   # @return [Hash{String => String}] the value of each selectable spec by name, in definition order. An override
   #   wins over the product's value.

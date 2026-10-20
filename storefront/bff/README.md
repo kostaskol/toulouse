@@ -1,7 +1,8 @@
 # Storefront BFF
 
 A small server that sits between a storefront and the API. It holds the store's
-API key and the shopper's session token, so the browser never sees either.
+API key, the shopper's session token and a guest's cart token, so the browser
+never sees any of them.
 
 Every request to `/<path>` goes to `/<version>/storefront/<path>` on the API.
 A new storefront endpoint works here with no change.
@@ -25,6 +26,10 @@ It is one ES module with no dependencies and no build step: `client.js`.
 - `currentSession()` resolves to `null` when the shopper is signed out. When
   the page URL has `#handoff=<token>`, it first removes it from the URL and
   exchanges it for a session.
+- A response can carry `warnings`, in the same shape as errors. Signing in
+  says `carts_merged` when the guest cart joined lines the shopper already
+  had. A cart change says `quantity_reduced` when the stock left cut the
+  quantity.
 - `onSignedOut(listener)` calls the listener when a request finds the session
   gone. It returns a function that removes the listener.
 
@@ -42,6 +47,10 @@ It is one ES module with no dependencies and no build step: `client.js`.
 | `listCategories()` | `GET /categories` |
 | `listCategoryProducts(slug, { limit, after, filter })` | `GET /categories/<slug>/products` |
 | `search(query, { limit, after, filter })` | `GET /search/<query>` |
+| `getCart()` | `GET /cart` |
+| `addToCart(variantId, quantity = 1)` | `POST /cart/lines` |
+| `setCartQuantity(variantId, quantity)` | `PUT /cart/lines/<variantId>` |
+| `removeFromCart(variantId)` | `DELETE /cart/lines/<variantId>` |
 
 Helpers that make no request:
 
@@ -49,6 +58,7 @@ Helpers that make no request:
 | --- | --- |
 | `filterPath(filter)` | Turns a filter into one URL path segment. The same filter always gives the same segment. |
 | `parseFilterPath(segment)` | Reads a filter back from a segment. Give it the segment as it is in the URL. |
+| `hasWarning(response, code)` | Tells whether a response body carries a warning with this code. |
 | `categoryLeaves(categories)` | Returns the categories with no children from `facets.categories`. |
 
 ## Config

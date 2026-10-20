@@ -7,6 +7,7 @@ import SignupPage from "./pages/SignupPage.vue";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage.vue";
 import NotFoundPage from "./pages/NotFoundPage.vue";
 import SearchPage from "./pages/SearchPage.vue";
+import CartPage from "./pages/CartPage.vue";
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -16,6 +17,7 @@ export const router = createRouter({
     { path: "/categories/:slug/:filters?", component: CategoryPage, props: ({ params }) => ({ slug: params.slug }) },
     { path: "/products/:slug", component: ProductPage, props: true },
     { path: "/search/:query/:filters?", component: SearchPage, props: ({ params }) => ({ query: params.query }) },
+    { path: "/cart", component: CartPage },
     { path: "/login", component: LoginPage },
     { path: "/signup", component: SignupPage },
     { path: "/forgot-password", component: ForgotPasswordPage },
