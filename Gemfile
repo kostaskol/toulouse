@@ -44,7 +44,7 @@ gem "ruby-vips", "~> 2.0"
 gem "aws-sdk-s3", require: false
 
 # Platform admin's second factor.
-gem "rotp", "~> 6.3"
+gem "rotp", "~> 6.4"
 
 # A bundled gem from Ruby 3.4, so it is listed rather than assumed.
 gem "csv"
